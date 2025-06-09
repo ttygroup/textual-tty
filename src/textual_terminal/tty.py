@@ -15,9 +15,10 @@ it serves two main purposes:
 It does NOT generate ANSI escape codes for screen drawing; that task is
 delegated to the Textual renderer.
 """
+
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, Any
 
 
 class Terminal:
@@ -37,7 +38,7 @@ class Terminal:
             overrides: A string of user-defined overrides, like in tmux.conf.
         """
         self.name: str = term_name
-        self.capabilities: Dict[str, Any] = {} # Populated by _read_terminfo
+        self.capabilities: Dict[str, Any] = {}  # Populated by _read_terminfo
         self._read_terminfo(term_name)
         self._apply_overrides(overrides)
 

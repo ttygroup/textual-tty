@@ -1,0 +1,48 @@
+[project]
+name = "textual_terminal"
+description = "A tty for Textual UIs"
+version = "0.0.1"
+authors = [
+    { name = "Gareth Davidson", email = "gaz@bitplane.net" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: Public Domain",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+]
+
+dependencies = [
+    "textual"
+]
+
+[project.urls]
+Homepage = "https://bitplane.net/dev/python/textual-terminal"
+"Bug Tracker" = "https://github.com/bitplane/textual-terminal/issues"
+"Source Code" = "https://github.com/bitplane/textual-terminal"
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "pytest",
+    "coverage",
+    "pytest-cov",
+    "pydoc-markdown",
+    "build",
+    "twine",
+    "ruff",
+    "mkdocs"
+]
+
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

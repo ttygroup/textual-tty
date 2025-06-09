@@ -11,9 +11,9 @@ finite state machine described by Paul Williams (https://vt100.net/emu/).
 The core logic is in the `feed()` method, which processes each byte, moves
 between states, and calls the appropriate handler methods for escape sequences.
 """
+
 from __future__ import annotations
 
-from collections import deque
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 if TYPE_CHECKING:
@@ -52,13 +52,13 @@ class Parser:
         self.intermediate_chars: List[str] = []
         self.param_buffer: str = ""
         self.parsed_params: List[int | str] = []
-        self.string_buffer: str = "" # For OSC, DCS, APC strings
+        self.string_buffer: str = ""  # For OSC, DCS, APC strings
 
         # --- Saved Cursor and Attribute State (for DECSC/DECRC) ---
         self.saved_cx: int = 0
         self.saved_cy: int = 0
         self.saved_style: Optional[Style] = None
-        self.saved_charset: Dict[str, str] = {} # G0/G1 charset state
+        self.saved_charset: Dict[str, str] = {}  # G0/G1 charset state
 
         # --- Current Cell Attributes ---
         # A `Style` object representing the style to be applied to the next
@@ -330,7 +330,6 @@ class Parser:
     def _handle_rename_dispatch(self) -> None:
         """Handles the `screen` program's window renaming sequence."""
         pass
-
 
     # --- Functions That Will Be Re-implemented Differently ---
 

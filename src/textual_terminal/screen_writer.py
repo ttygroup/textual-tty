@@ -12,6 +12,7 @@ will later consume the state of the `Grid` to draw the UI.
 All methods that in C would cause a write to the tty are instead translated
 into modifications of the `self.screen` and `self.grid` objects.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

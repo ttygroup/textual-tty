@@ -16,10 +16,11 @@ The primary responsibilities of this class are:
 2.  Providing an API to read and write styled text at specific (x, y) coordinates.
 3.  Handling scrolling and clearing operations by manipulating the list of lines.
 """
+
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, Deque, List, Tuple
+from typing import TYPE_CHECKING, Deque, List
 
 if TYPE_CHECKING:
     from rich.segment import Segment
@@ -92,11 +93,11 @@ class Grid:
 
     def set_cell(self, x: int, y: int, character: str, style: Style) -> None:
         """
-        Sets a single character and its style at a specific coordinate.
+                Sets a single character and its style at a specific coordinate.
 
-        This is a core write operation and will involve potentially splitting
-        an existing segment, inserting the new one, and merging adjacent
--       segments if they now share the same style.
+                This is a core write operation and will involve potentially splitting
+                an existing segment, inserting the new one, and merging adjacent
+        -       segments if they now share the same style.
         """
         pass
 

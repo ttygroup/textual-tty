@@ -13,7 +13,7 @@ the renderer expects.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import Optional, Tuple
 from textual.color import Color
 
 
@@ -624,7 +624,6 @@ def parse_color(name: str) -> Color:
     Raises:
         ValueError: If the color string cannot be parsed.
     """
-    from textual.color import Color
 
     # Implementation Note: This would first try Color.parse() and on failure",
     # would check the X11_NAMES dictionary.
