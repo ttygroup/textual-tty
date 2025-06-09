@@ -1,47 +1,18 @@
-"""
-The Grid: A data structure for representing terminal content.
-
-This module provides the `Grid` class, which stores the state of a terminal
-screen, including the visible lines and the scrollback history.
-
-Unlike tmux's C implementation, which is a grid of fixed-size `grid_cell`
-structs, this version is designed to be more Pythonic and leverage the power of
-the Rich library. Each line in the grid is represented as a list of
-`rich.segment.Segment` objects, which bundle characters and their style
-together. This approach delegates rendering, line wrapping, and complex character
-handling (like emoji) to Rich and Textual.
-
-The primary responsibilities of this class are:
-1.  Managing the scrollback buffer (a deque).
-2.  Providing an API to read and write styled text at specific (x, y) coordinates.
-3.  Handling scrolling and clearing operations by manipulating the list of lines.
-"""
+"""Terminal grid data structure for screen content and scrollback."""
 
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, Deque, List
-
-if TYPE_CHECKING:
-    from rich.segment import Segment
-    from rich.style import Style
+from typing import Deque, List, Tuple
+from rich.segment import Segment
+from rich.style import Style
 
 
 class Grid:
     """A data structure representing the grid of a terminal screen."""
 
     def __init__(self, width: int, height: int, history: int) -> None:
-        """
-        Initializes the grid. This replaces `grid_create()`.
-
-        The grid is composed of a list of visible lines and a deque for the
-        scrollback history. Each line is a list of `rich.segment.Segment`s.
-
-        Args:
-            width: The width of the grid.
-            height: The height (number of visible lines) of the grid.
-            history: The maximum number of lines to keep in the scrollback buffer.
-        """
+        """Initialize grid with dimensions and scrollback history size."""
         self.width: int = width
         self.height: int = height
         self.history_size: int = history
@@ -56,140 +27,152 @@ class Grid:
         self.scroll_offset: int = 0
 
     def resize(self, width: int, height: int) -> None:
-        """
-        Resizes the grid to new dimensions.
+        """Resize grid, moving lines to/from history as needed."""
+        old_height = self.height
+        self.width = width
+        self.height = height
 
-        This handles adjusting the visible `lines` list and can involve moving
-        lines to or from the scrollback `history` if the height changes.
-        The complex manual line reflowing from tmux is NOT needed here, as Textual
-        handles that automatically during rendering.
-        """
-        pass
+        if height < old_height:
+            # Shrinking - move top lines to history
+            lines_to_move = old_height - height
+            for i in range(lines_to_move):
+                if self.lines:
+                    self.history.append(self.lines.pop(0))
+        elif height > old_height:
+            # Growing - pull lines from history if available
+            lines_to_add = height - old_height
+            pulled_lines = []
+
+            # Pull from history in reverse order (most recent first)
+            while lines_to_add > 0 and self.history:
+                pulled_lines.insert(0, self.history.pop())
+                lines_to_add -= 1
+
+            # Add empty lines for the rest
+            while lines_to_add > 0:
+                pulled_lines.insert(0, [])
+                lines_to_add -= 1
+
+            # Prepend pulled lines to existing lines
+            self.lines = pulled_lines + self.lines
+
+        # Ensure we have exactly the right number of lines
+        while len(self.lines) < height:
+            self.lines.append([])
+        while len(self.lines) > height:
+            self.lines.pop()
 
     def clear(self, sx: int, sy: int, ex: int, ey: int, style: Style) -> None:
-        """
-        Clears a rectangular region of the grid to a specific style.
+        """Clear rectangular region with given style."""
+        for y in range(max(0, sy), min(self.height, ey + 1)):
+            if sx == 0 and ex >= self.width - 1:
+                # Clear entire line
+                self.lines[y] = []
+            else:
+                # Clear partial line - more complex
+                # For now, just clear character by character
+                for x in range(max(0, sx), min(self.width, ex + 1)):
+                    self.set_cell(x, y, " ", style)
 
-        This involves complex `Segment` manipulation to split and replace
-        segments within the specified region.
-        """
-        pass
+    def clear_rect(self, sx: int, sy: int, ex: int, ey: int, style: Style) -> None:
+        """Clear rectangular region with given style (alias for clear)."""
 
-    def get_cell(self, x: int, y: int) -> tuple[str, Style]:
-        """
-        Gets the character and style at a specific coordinate.
+    def get_cell(self, x: int, y: int) -> Tuple[str, Style]:
+        """Get character and style at (x, y)."""
+        if y < 0 or y >= self.height:
+            return " ", Style()
 
-        This requires iterating through the segments on the given line to find
-        which segment contains the character at column `x`.
+        line = self.lines[y]
+        current_x = 0
 
-        Args:
-            x: The column index.
-            y: The row (line) index.
+        for segment in line:
+            segment_len = Segment.get_line_length([segment])
+            if current_x + segment_len > x:
+                # Found the segment containing position x
+                offset = x - current_x
+                # Find the character at this offset
+                char_pos = 0
+                for ch in segment.text:
+                    if char_pos == offset:
+                        return ch, segment.style
+                    char_pos += Segment.get_line_length([Segment(ch, segment.style)])
+                return " ", segment.style
+            current_x += segment_len
 
-        Returns:
-            A tuple containing the character and its `rich.style.Style`.
-        """
-        pass
+        # Position is beyond content
+        return " ", Style()
 
     def set_cell(self, x: int, y: int, character: str, style: Style) -> None:
-        """
-                Sets a single character and its style at a specific coordinate.
+        """Set character and style at (x, y), handling segment splits/merges."""
+        if y < 0 or y >= self.height:
+            return
 
-                This is a core write operation and will involve potentially splitting
-                an existing segment, inserting the new one, and merging adjacent
-        -       segments if they now share the same style.
-        """
-        pass
+        line = self.lines[y]
 
-    def get_line_segments(self, y: int) -> list[Segment]:
-        """
-        Returns the raw list of Segments for a given line.
+        # Simple approach: rebuild the line character by character
+        # First, extract all current characters with their styles
+        chars_and_styles = []
+        for segment in line:
+            for ch in segment.text:
+                chars_and_styles.append((ch, segment.style))
 
-        This is the primary way the display layer will get content from the grid
-        to render it.
-        """
-        pass
+        # Extend with spaces if needed
+        while len(chars_and_styles) <= x:
+            chars_and_styles.append((" ", Style()))
+
+        # Set the character at position x
+        chars_and_styles[x] = (character, style)
+
+        # Rebuild segments by grouping consecutive characters with same style
+        new_segments = []
+        if chars_and_styles:
+            current_text = chars_and_styles[0][0]
+            current_style = chars_and_styles[0][1]
+
+            for ch, ch_style in chars_and_styles[1:]:
+                if ch_style == current_style:
+                    current_text += ch
+                else:
+                    new_segments.append(Segment(current_text, current_style))
+                    current_text = ch
+                    current_style = ch_style
+
+            new_segments.append(Segment(current_text, current_style))
+
+        self.lines[y] = new_segments
+
+    def get_line_segments(self, y: int) -> List[Segment]:
+        """Get segments for line y."""
+        if 0 <= y < self.height:
+            return self.lines[y]
+        return []
 
     def scroll_up(self, style: Style) -> None:
-        """
-        Scrolls the visible grid content up by one line.
-
-        The top-most line of the visible area is moved into the scrollback
-        history. A new, blank line is added at the bottom.
-        """
-        pass
+        """Scroll up: top line to history, new blank line at bottom."""
+        if self.height > 0:
+            # Move top line to history
+            self.history.append(self.lines[0])
+            # Shift all lines up
+            self.lines[:-1] = self.lines[1:]
+            # Add blank line at bottom
+            self.lines[-1] = []
 
     def compare(self, other: Grid) -> bool:
-        """
-        Compares this grid to another to see if they are identical.
-
-        Used for optimizing redraws by checking if the screen content has
-        actually changed.
-        """
-        pass
+        """Check if this grid equals another."""
+        if self.width != other.width or self.height != other.height:
+            return False
+        if self.history != other.history:
+            return False
+        if len(self.lines) != len(other.lines):
+            return False
+        for i in range(len(self.lines)):
+            if self.lines[i] != other.lines[i]:
+                return False
+        return True
 
     def duplicate_lines(self, dest_grid: Grid, dest_y: int, src_y: int, count: int) -> None:
-        """
-        Copies a range of lines from this grid to another.
-
-        This is essential for implementing the alternate screen buffer, where the
-        original screen's state must be saved and later restored.
-        """
-        pass
-
-
-# --- Unnecessary Functions (Handled by Rich/Textual or Obsolete) ---
-
-# def grid_reflow(grid: Grid, new_width: int) -> None:
-#     """
-#     REMOVED: This functionality is now handled by Textual's compositor.
-#
-#     In the C implementation, this function was critical for manually
-#     re-wrapping lines when the terminal width changed. In a Textual-based
-#     emulator, the grid's responsibility ends at providing a list of styled
-#     line segments. Textual's layout and rendering engine is responsible for
-#     all wrapping and reflowing, which greatly simplifies our grid logic.
-#     """
-#     pass
-
-# def grid_string_cells(grid: Grid, ...) -> str:
-#     """
-#     REMOVED: This functionality is obsolete.
-#
-#     This function's purpose in tmux was to convert a portion of the grid back
-#     into a string, often including ANSI escape codes for styling. Our emulator's
-#     role is to *consume* ANSI codes, not produce them for display. The display
-#     layer (Textual) consumes `Segment` objects directly.
-#     """
-#     pass
-
-# def _grid_expand_line(grid: Grid, y: int, new_size: int) -> None:
-#     """
-#     REMOVED: This is a low-level memory management detail.
-#
-#     In C, memory for each line's cells had to be manually allocated and grown.
-#     Python's dynamic lists handle this automatically, making an explicit
-#     "expand" function unnecessary.
-#     """
-#     pass
-
-# def grid_set_padding(grid: Grid, x: int, y: int) -> None:
-#     """
-#     REMOVED: Wide character handling is implicit in Rich Segments.
-#
-#     This function inserted special placeholder cells after a wide character.
-#     A `rich.segment.Segment` containing a wide character (like an emoji)
-#     will have a `cell_len` of 2, and the Textual renderer will automatically
-#     handle the spacing correctly. We do not need to manage padding cells.
-#     """
-#     pass
-
-# def _grid_compact_line(grid: Grid, y: int) -> None:
-#     """
-#     REMOVED: Obsolete C memory management.
-#
-#     This function was used to clean up unused "extended cell" data. Our
-#     Segment-based approach doesn't have a separate storage area that would
-#     require manual compaction.
-#     """
-#     pass
+        """Copy lines between grids (for alternate screen buffer)."""
+        for i in range(count):
+            if src_y + i < self.height and dest_y + i < dest_grid.height:
+                # Deep copy the segments
+                dest_grid.lines[dest_y + i] = [Segment(s.text, s.style) for s in self.lines[src_y + i]]

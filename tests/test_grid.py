@@ -45,6 +45,18 @@ def populated_grid(empty_grid: Grid, basic_style: Style) -> Grid:
     return g
 
 
+@pytest.fixture
+def multi_segment_line_grid(empty_grid: Grid, basic_style: Style, red_style: Style) -> Grid:
+    """Provides a grid with a line composed of multiple segments."""
+    grid = empty_grid
+    grid.lines[1] = [
+        Segment("Hello ", basic_style),
+        Segment("World", red_style),
+        Segment("!", basic_style),
+    ]
+    return grid
+
+
 # --- Initialization Tests ---
 
 
@@ -106,7 +118,7 @@ def test_set_cell_merges_with_adjacent_segment_of_same_style(empty_grid: Grid, r
 
 
 def test_set_cell_with_wide_character_handles_width(empty_grid: Grid, basic_style: Style):
-    """Writing a wide character should correctly occupy two cells."""
+    """Writing a wide character should correctly occupy two cells and remove underlying content."""
     grid = empty_grid
     grid.lines[0] = [Segment("AB", basic_style)]
 
@@ -117,6 +129,93 @@ def test_set_cell_with_wide_character_handles_width(empty_grid: Grid, basic_styl
     expected = [Segment("🚀", basic_style)]
     assert grid.lines[0] == expected
     assert Segment.get_line_length(grid.lines[0]) == 2
+
+
+def test_set_cell_overwriting_second_half_of_wide_char(empty_grid: Grid, basic_style: Style):
+    """Writing over the right-hand side of a wide char should split it."""
+    grid = empty_grid
+    grid.lines[0] = [Segment("🚀", basic_style)]  # At columns 0 and 1
+
+    grid.set_cell(1, 0, "X", basic_style)
+
+    # The wide char is broken. It should be replaced by a placeholder and the new char.
+    expected = [Segment("?X", basic_style)]  # Or similar placeholder logic
+    assert grid.lines[0] == expected
+
+
+# --- `get_cell` Method Tests (Core Read Logic) ---
+
+
+def test_get_cell_from_simple_line(populated_grid: Grid, basic_style: Style):
+    """It should retrieve the correct character and style from a simple line."""
+    char, style = populated_grid.get_cell(1, 0)
+    assert char == "i"
+    assert style == basic_style
+
+
+def test_get_cell_from_multi_segment_line(multi_segment_line_grid: Grid, red_style: Style):
+    """It should retrieve a character from the correct segment in a complex line."""
+    char, style = multi_segment_line_grid.get_cell(7, 1)  # The 'r' in "World"
+    assert char == "r"
+    assert style == red_style
+
+
+def test_get_cell_from_wide_character_returns_full_character(empty_grid: Grid, basic_style: Style):
+    """Querying any column of a wide char should return the char itself."""
+    grid = empty_grid
+    grid.set_cell(2, 0, "🚀", basic_style)
+
+    # Check the left side of the character
+    char1, style1 = grid.get_cell(2, 0)
+    assert char1 == "🚀"
+    assert style1 == basic_style
+
+    # Check the right side of the character
+    char2, style2 = grid.get_cell(3, 0)
+    assert char2 == "🚀"
+    assert style2 == basic_style
+
+
+def test_get_cell_out_of_bounds_returns_default_blank_cell(empty_grid: Grid):
+    """Querying a coordinate outside the line's content should return a blank default cell."""
+    char, style = empty_grid.get_cell(5, 1)
+    assert char == " "
+    assert style == Style()
+
+
+# --- `clear_rect` Method Tests ---
+
+
+def test_clear_rect_clears_a_full_line(populated_grid: Grid, basic_style: Style):
+    """Clearing a full line should replace it with a single blank segment."""
+    grid = populated_grid
+    clear_style = Style(bgcolor="blue")
+
+    grid.clear_rect(0, 1, 10, 1, clear_style)
+
+    expected = [Segment("          ", clear_style)]
+    assert grid.lines[1] == expected
+    # Other lines should be untouched
+    assert grid.lines[0] == [Segment("Line 0", basic_style)]
+
+
+def test_clear_rect_in_middle_of_line_splits_and_replaces(
+    multi_segment_line_grid: Grid, basic_style: Style, red_style: Style
+):
+    """Clearing a section in the middle of a line should correctly split and insert."""
+    grid = multi_segment_line_grid
+    clear_style = Style(bgcolor="green")
+
+    # Clear "o Wor" from "Hello World!"
+    grid.clear_rect(4, 1, 5, 1, clear_style)
+
+    expected = [
+        Segment("Hell", basic_style),
+        Segment("     ", clear_style),
+        Segment("ld", red_style),
+        Segment("!", basic_style),
+    ]
+    assert grid.lines[1] == expected
 
 
 # --- `scroll_up` Method Tests ---
@@ -187,3 +286,10 @@ def test_resize_height_increase_pulls_lines_from_history(populated_grid: Grid, b
     assert len(grid.history) == original_history_count - 2
     assert grid.lines[0] == [Segment("H-1", basic_style)]
     assert grid.lines[1] == [Segment("H-2", basic_style)]
+
+
+def test_resize_width_updates_width_attribute(empty_grid: Grid):
+    """Resizing the width should update the internal width attribute."""
+    grid = empty_grid
+    grid.resize(width=20, height=3)
+    assert grid.width == 20
