@@ -59,6 +59,18 @@ def test_parse_color_raises_valueerror_for_invalid_name():
         color_module.parse_color("not a real color")
 
 
+def test_parse_color_handles_invalid_color_n_format():
+    """`parse_color` should raise ValueError for invalid color(n) format."""
+    with pytest.raises(ValueError, match="Unknown color"):
+        color_module.parse_color("color(abc)")  # Not a number
+
+    with pytest.raises(ValueError, match="Unknown color"):
+        color_module.parse_color("color(256)")  # Out of range
+
+    with pytest.raises(ValueError, match="Unknown color"):
+        color_module.parse_color("color(-1)")  # Negative
+
+
 # --- Tests for Palette Management ---
 
 
@@ -114,3 +126,15 @@ def test_palette_clear_resets_all_entries_to_none():
     color_module.palette_clear(palette)
 
     assert palette == expected
+
+
+def test_palette_get_returns_none_for_out_of_bounds():
+    """`palette_get` should return None for indices outside 0-255 range."""
+    palette = color_module.palette_init()
+
+    # Test negative index
+    assert color_module.palette_get(palette, -1) is None
+
+    # Test index >= 256
+    assert color_module.palette_get(palette, 256) is None
+    assert color_module.palette_get(palette, 1000) is None
