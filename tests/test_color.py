@@ -4,6 +4,7 @@ Test cases for the terminal color handling module.
 
 import pytest
 from textual.color import Color
+from rich.color import Color as RichColor
 from textual_terminal import color as color_module
 
 # --- Tests for parse_color() ---
@@ -25,7 +26,7 @@ def test_parse_color_handles_hex_code():
 
 def test_parse_color_handles_8bit_color_string():
     """`parse_color` should correctly parse a 'color(n)' string."""
-    expected = Color.from_ansi(21)
+    expected = Color.from_rich_color(RichColor.from_ansi(21))
     actual = color_module.parse_color("color(21)")
     assert actual == expected, "Should handle 8-bit color strings"
 

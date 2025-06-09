@@ -1,26 +1,13 @@
-"""
-Color handling for the terminal emulator.
-
-This module is responsible for parsing color strings and managing the dynamic
-256-color palette that legacy terminal applications can modify.
-
-While the final display is handled by Textual, which has its own sophisticated
-`Color` class, this module acts as a translation layer. It handles legacy
-terminal color commands (like redefining palette entries or using X11 color
-names) and converts them into the modern `textual.color.Color` objects that
-the renderer expects.
-"""
+"""Color handling for terminal emulator - parsing and palette management."""
 
 from __future__ import annotations
 
 from typing import Optional, Tuple
 from textual.color import Color
+from rich.color import Color as RichColor
 
 
-# A dictionary to hold the mapping of X11 color names to their hex codes.
-# This is necessary because tmux supports a wider range of names than standard
-# CSS, and a high-fidelity emulator must recognize them. This dictionary will
-# be populated with the extensive list from tmux's colour.c.
+# X11 color names mapped to hex codes (tmux compatibility)
 X11_NAMES = {
     "AliceBlue": "#f0f8ff",
     "AntiqueWhite": "#faebd7",
@@ -604,166 +591,53 @@ X11_NAMES = {
 
 
 def parse_color(name: str) -> Color:
-    """
-    Parse a color string into a Textual Color object.
+    """Parse color string to Textual Color. Tries Color.parse() first, then X11 names."""
+    # Handle color(n) format for 8-bit colors
+    if name.startswith("color(") and name.endswith(")"):
+        try:
+            index = int(name[6:-1])
+            if 0 <= index <= 255:
+                return Color.from_rich_color(RichColor.from_ansi(index))
+        except ValueError:
+            pass
 
-    This function acts as the main entry point for color parsing. It first
-    attempts to parse the color using Textual's built-in `Color.parse()`",
-    which handles modern formats like CSS names, rgb(), and hex codes.
+    # Try standard parsing first
+    try:
+        return Color.parse(name)
+    except Exception:
+        pass
 
-    If that fails, it falls back to a lookup in the X11_NAMES dictionary to
-    support the extended color names found in legacy terminals.
+    # Fall back to X11 names (case-insensitive)
+    # Create a lowercase mapping for case-insensitive lookup
+    for key, value in X11_NAMES.items():
+        if key.lower() == name.lower():
+            return Color.parse(value)
 
-    Args:
-        name: The color string to parse (e.g., "red", "#ff0000", "color(21)"",
-              "DarkSlateGray4").
-
-    Returns:
-        A textual.color.Color object.
-
-    Raises:
-        ValueError: If the color string cannot be parsed.
-    """
-
-    # Implementation Note: This would first try Color.parse() and on failure",
-    # would check the X11_NAMES dictionary.
-    pass
+    raise ValueError(f"Unknown color: {name}")
 
 
-# --- Palette Management Functions (Required) ---
-# These functions are necessary because Textual does not have a concept of a
-# dynamic, remappable 256-color palette. We must implement this logic to
-# correctly handle escape sequences from applications that modify the palette
-# (such as OSC 4).
+# Palette management for dynamic 256-color palette (OSC 4 support)
 
 
 def palette_init() -> list[Optional[Tuple[int, int, int]]]:
-    """
-    Initializes and returns a new 256-entry color palette.
-
-    Each entry can hold an RGB tuple or be None if it's unset (default).
-    This represents the terminal's internal palette state.
-
-    Returns:
-        A list of 256 None values.
-    """
-    pass
+    """Initialize 256-entry palette (all None)."""
+    return [None] * 256
 
 
 def palette_clear(palette: list) -> None:
-    """
-    Resets all entries in the given palette to their default (unset) state.
-
-    This is used when an application sends a sequence to reset the palette.
-
-    Args:
-        palette: The palette list to clear.
-    """
-    pass
+    """Reset palette to default state."""
+    for i in range(len(palette)):
+        palette[i] = None
 
 
 def palette_get(palette: list, index: int) -> Optional[Tuple[int, int, int]]:
-    """
-    Gets the currently defined RGB value for a palette index.
-
-    If the color has not been dynamically redefined by an application, this
-    should return None, indicating the terminal's default color for that
-    index should be used.
-
-    Args:
-        palette: The palette list to query.
-        index: The palette index (0-255).
-
-    Returns:
-        An RGB tuple (r, g, b) if set, otherwise None.
-    """
-    pass
+    """Get RGB for palette index, None if unset."""
+    if 0 <= index < len(palette):
+        return palette[index]
+    return None
 
 
 def palette_set(palette: list, index: int, color: Tuple[int, int, int]) -> None:
-    """
-    Sets a new RGB value for a color in the palette.
-
-    This is called when the emulator processes an escape sequence like OSC 4
-    that redefines a palette color.
-
-    Args:
-        palette: The palette list to modify.
-        index: The palette index to set (0-255).
-        color: The new RGB tuple (r, g, b) for this index.
-    """
-    pass
-
-
-# --- Unnecessary Functions (Handled by Textual) ---
-
-# def color_join_rgb(r: int, g: int, b: int) -> Color:
-#     """
-#     REMOVED: This functionality is provided by the Textual Color constructor.
-#
-#     To create a color from RGB components, simply use:
-#         `from textual.color import Color`
-#         `my_color = Color(r, g, b)`
-#     """
-#     pass
-
-# def color_split_rgb(color: Color) -> tuple[int, int, int]:
-#     """
-#     REMOVED: This functionality is provided by Textual Color object attributes.
-#
-#     To get RGB components from a Color object, access its properties:
-#         `r, g, b = my_color.r, my_color.g, my_color.b`
-#     """
-#     pass
-
-# def color_find_rgb(color: Color) -> int:
-#     """
-#     REMOVED: This functionality is provided by the `to_8_bit()` method.
-#
-#     To find the closest 8-bit (256 palette) color index for a truecolor
-#     value, use:
-#         `index = my_color.to_8_bit()`
-#
-#     Textual's implementation is also more perceptually accurate than the
-#     simple Euclidean distance used in tmux.
-#     """
-#     pass
-
-# def color_256toRGB(index: int) -> Color:
-#     """
-#     REMOVED: This functionality is provided by the `from_8_bit()` class method.
-#
-#     To convert a 256-palette index to its standard RGB color object, use:
-#         `my_color = Color.from_8_bit(index)`
-#     """
-#     pass
-
-# def color_256to16(color: Color) -> int:
-#     """
-#     REMOVED: This functionality is provided by the `to_4_bit()` method.
-#
-#     To downgrade a color to its closest 4-bit (16 color) equivalent, use:
-#         `index_16_color = my_color.to_4_bit()`
-#     """
-#     pass
-
-# def color_totheme(color: Color) -> str:
-#     """
-#     REMOVED: This functionality can be replicated using the `.luminance` property.
-#
-#     The original tmux function determined if a color was 'light' or 'dark'.
-#     The same can be achieved more flexibly with Textual's Color objects:
-#         `theme = "light" if my_color.luminance > 0.5 else "dark"`
-#     """
-#     pass
-
-# def color_force_rgb(color: Color) -> Color:
-#     """
-#     REMOVED: This concept is implicit in Textual's design.
-#
-#     In Textual, all `Color` objects fundamentally represent a truecolor RGB
-#     value internally. When a color like "red" or "color(21)" is parsed, it is
-#     immediately converted to its RGB equivalent. There is no need for an
-#     explicit conversion function.
-#     """
-#     pass
+    """Set RGB value for palette index."""
+    if 0 <= index < len(palette):
+        palette[index] = color
