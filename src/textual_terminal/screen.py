@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from rich.console import Console
 from rich.style import Style
-from rich.text import Text
+from rich.text import Text, Span
 
 
 class TerminalScreen:
@@ -151,13 +151,10 @@ class TerminalScreen:
             # Insert character at cursor position
             if self.cursor_x < len(line.plain):
                 # Insert in middle of existing line
-                new_line = Text()
-                new_line.append(line.plain[: self.cursor_x])
-                new_line.append(character, style)
-                new_line.append(line.plain[self.cursor_x :])
+                new_line = line[: self.cursor_x] + Text(character, style) + line[self.cursor_x :]
             else:
                 # Append to end of line
-                new_line = Text(line.plain)
+                new_line = line.copy()
                 # Pad with spaces if needed
                 while len(new_line.plain) < self.cursor_x:
                     new_line.append(" ")
@@ -165,23 +162,19 @@ class TerminalScreen:
 
             # Truncate if line becomes too long
             if len(new_line.plain) > self.width:
-                new_line = Text(new_line.plain[: self.width])
+                # Preserve styles when truncating
+                new_line = new_line[: self.width]
 
             self.lines[self.cursor_y] = new_line
         else:
             # Overwrite character
             if self.cursor_x < len(line.plain):
                 # Replace character in existing line
-                new_line = Text()
-                if self.cursor_x > 0:
-                    new_line.append(line.plain[: self.cursor_x])
-                new_line.append(character, style)
-                if self.cursor_x + 1 < len(line.plain):
-                    new_line.append(line.plain[self.cursor_x + 1 :])
+                new_line = line[: self.cursor_x] + Text(character, style) + line[self.cursor_x + 1 :]
                 self.lines[self.cursor_y] = new_line
             else:
                 # Append to end of line
-                new_line = Text(line.plain)
+                new_line = line.copy()
                 # Pad with spaces if needed
                 while len(new_line.plain) < self.cursor_x:
                     new_line.append(" ")
@@ -199,16 +192,50 @@ class TerminalScreen:
 
         for y in range(max(0, sy), min(self.height, ey + 1)):
             line = self.lines[y]
-            plain_text = list(line.plain)
+
+            # If line is empty or sx is beyond line length, nothing to clear
+            if not line.plain or sx >= len(line.plain):
+                continue
+
+            # Build character array and span list
+            plain_chars = list(line.plain)
+            spans = []
 
             # Clear the specified range
-            for x in range(max(0, sx), min(len(plain_text), ex + 1)):
-                plain_text[x] = " "
+            clear_start = max(0, sx)
+            clear_end = min(len(plain_chars), ex + 1)
+            for x in range(clear_start, clear_end):
+                plain_chars[x] = " "
 
-            # Rebuild line
-            new_line = Text()
-            for char in plain_text:
-                new_line.append(char, style)
+            # Reconstruct spans properly
+            plain_text = "".join(plain_chars)
+
+            # Copy original spans that don't overlap with cleared region
+            for span in line.spans:
+                if span.end <= clear_start:
+                    # Span is completely before cleared region
+                    spans.append(span)
+                elif span.start >= clear_end:
+                    # Span is completely after cleared region
+                    spans.append(span)
+                else:
+                    # Span overlaps with cleared region, need to split it
+                    if span.start < clear_start:
+                        # Part before cleared region
+                        spans.append(Span(span.start, clear_start, span.style))
+                    if span.end > clear_end:
+                        # Part after cleared region
+                        spans.append(Span(clear_end, span.end, span.style))
+
+            # Add span for the cleared region if it exists
+            if clear_end > clear_start:
+                spans.append(Span(clear_start, clear_end, style))
+
+            # Sort spans by start position
+            spans.sort(key=lambda s: s.start)
+
+            # Create new Text with explicit spans
+            new_line = Text(plain_text, spans=spans)
             self.lines[y] = new_line
 
     def clear_screen(self, mode: int = 0) -> None:
