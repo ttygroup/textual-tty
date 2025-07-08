@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from .screen import Screen
+    from .screen import TerminalScreen
 
 from rich.style import Style
 
@@ -31,12 +31,12 @@ class Parser:
     state and/or execute a handler for a recognized escape sequence.
     """
 
-    def __init__(self, screen: Screen) -> None:
+    def __init__(self, screen: TerminalScreen) -> None:
         """
         Initializes the parser state. Replaces `input_init()`.
 
         Args:
-            screen: A Screen object that the parser will manipulate.
+            screen: A TerminalScreen object that the parser will manipulate.
         """
         self.screen = screen
 

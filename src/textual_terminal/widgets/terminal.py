@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import signal
 import subprocess
 from typing import Any, Optional
 
@@ -18,10 +17,8 @@ from textual.widgets import RichLog
 from textual.widget import Widget
 from textual.reactive import reactive
 from textual.message import Message
-from rich.console import Console
-from rich.text import Text
 
-from ..screen import Screen
+from ..screen import TerminalScreen
 from ..parser import Parser
 from ..pty_handler import create_pty, spawn_process, set_terminal_size, read_pty, write_pty
 
@@ -35,7 +32,7 @@ class Terminal(Widget):
         color: white;
         scrollbar-gutter: stable;
     }
-    
+
     Terminal > RichLog {
         background: black;
         color: white;
@@ -78,8 +75,8 @@ class Terminal(Widget):
         self.height_chars = height
 
         # Terminal state
-        self.screen = Screen(width, height)
-        self.parser = Parser(self.screen)
+        self.terminal_screen = TerminalScreen(width, height)
+        self.parser = Parser(self.terminal_screen)
 
         # PTY management
         self.process: Optional[subprocess.Popen] = None
@@ -217,7 +214,7 @@ class Terminal(Widget):
             return
 
         # Get the current screen content as Rich renderables
-        content = self.screen.get_content()
+        content = self.terminal_screen.get_content()
 
         # Clear and update the display
         self.rich_log.clear()
@@ -293,5 +290,5 @@ class Terminal(Widget):
         if new_width != self.width_chars or new_height != self.height_chars:
             self.width_chars = new_width
             self.height_chars = new_height
-            self.screen.resize(new_width, new_height)
+            self.terminal_screen.resize(new_width, new_height)
             self._set_terminal_size()

@@ -8,16 +8,14 @@ buffers and provides methods for the Parser to manipulate terminal state.
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-from io import StringIO
+from typing import List, Optional
 
 from rich.console import Console
 from rich.style import Style
 from rich.text import Text
-from rich.segment import Segment
 
 
-class Screen:
+class TerminalScreen:
     """
     A terminal screen that uses rich.Console for content representation.
 
