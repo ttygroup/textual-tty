@@ -16,6 +16,7 @@ from textual.widgets import Header, Footer
 from textual.containers import Vertical
 
 from .terminal import Terminal
+from ..log import info
 
 
 class Program(Widget):
@@ -95,8 +96,22 @@ class Program(Widget):
         This method can be overridden in subclasses to customize
         behavior when the process exits.
         """
-        # By default, do nothing - let parent widgets handle it
-        pass
+        info(f"Program: Terminal process exited with code: {event.exit_code}")
+
+        # Schedule window close on next tick so exit code can be retrieved
+        # self.call_later(self._close_containing_window)
+
+    def _close_containing_window(self) -> None:
+        """Close the window containing this program."""
+        # Walk up the widget tree to find the containing window
+        parent = self.parent
+        while parent:
+            if hasattr(parent, "close") and "Window" in str(type(parent)):
+                info(f"Program: Closing containing window {getattr(parent, 'id', 'unknown')}")
+                parent.close()
+                return
+            parent = parent.parent
+        info("Program: Could not find containing window to close")
 
     def set_command(self, command: str) -> None:
         """Set a new command for the terminal."""

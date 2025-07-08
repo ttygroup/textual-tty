@@ -54,3 +54,28 @@ def test_alignment_test():
         line = screen.lines[y]
         assert len(line.plain) == screen.width
         assert all(char == expected_char for char in line.plain)
+
+
+def test_set_and_clear_modes():
+    screen = TerminalScreen(width=80, height=24)
+
+    # Test setting a private mode
+    screen.set_mode(7, private=True)
+    assert screen.auto_wrap
+
+    # Test clearing a private mode
+    screen.clear_mode(7, private=True)
+    assert not screen.auto_wrap
+
+    # Test setting a non-private mode
+    screen.set_mode(4, private=False)
+    assert screen.insert_mode
+
+    # Test clearing a non-private mode
+    screen.clear_mode(4, private=False)
+    assert not screen.insert_mode
+
+    # Test an unknown mode
+    screen.set_mode(999, private=True)
+    # No attribute should be set
+    assert not hasattr(screen, "unknown_mode")

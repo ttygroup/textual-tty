@@ -20,11 +20,14 @@ from textual.message import Message
 from ..screen import TerminalScreen
 from ..parser import Parser
 from ..pty import create_pty
-from ..log import info, warning, error
+from ..log import debug, info, warning, error
 
 
 class Terminal(Widget):
     """A terminal emulator widget that can run shell commands."""
+
+    # Make terminal focusable so it can receive key events
+    can_focus = True
 
     DEFAULT_CSS = """
     Terminal {
@@ -229,10 +232,14 @@ class Terminal(Widget):
 
     async def on_key(self, event) -> None:
         """Handle key events and send to terminal."""
+        debug(f"Terminal received key: {repr(event.key)}")
         # Convert Textual key events to terminal input
         key_data = self._convert_key_event(event)
         if key_data:
+            debug(f"Sending to terminal: {repr(key_data)}")
             self.write(key_data)
+        else:
+            debug(f"No data generated for key: {repr(event.key)}")
 
     def _convert_key_event(self, event) -> Optional[bytes]:
         """Convert Textual key event to terminal input bytes."""

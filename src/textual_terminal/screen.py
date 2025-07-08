@@ -146,10 +146,6 @@ class TerminalScreen:
         # Ensure the line exists and has enough content
         line = self.lines[self.cursor_y]
 
-        # Extend line if needed
-        while len(line.plain) <= self.cursor_x:
-            line.append(" ")
-
         # Insert or overwrite character
         if self.insert_mode:
             # Insert character at cursor position
@@ -193,7 +189,8 @@ class TerminalScreen:
                 self.lines[self.cursor_y] = new_line
 
         # Move cursor forward
-        self.cursor_x += 1
+        if self.auto_wrap or self.cursor_x < self.width - 1:
+            self.cursor_x += 1
 
     def clear_rect(self, sx: int, sy: int, ex: int, ey: int, style: Optional[Style] = None) -> None:
         """Clear a rectangular region."""
@@ -376,12 +373,17 @@ class TerminalScreen:
     def alternate_screen_on(self) -> None:
         """Switch to alternate screen buffer."""
         if not self.in_alt_screen:
+            self.saved_lines = self.lines[:]
+            self.lines = [Text() for _ in range(self.height)]
             self.in_alt_screen = True
             self.current_console = self.alt_console
 
     def alternate_screen_off(self) -> None:
         """Switch back to main screen buffer."""
         if self.in_alt_screen:
+            if self.saved_lines is not None:
+                self.lines = self.saved_lines
+                self.saved_lines = None
             self.in_alt_screen = False
             self.current_console = self.main_console
 
@@ -394,10 +396,14 @@ class TerminalScreen:
             if mode in self._mode_map:
                 setattr(self, self._mode_map[mode], True)
 
-    def clear_mode(self, mode: int) -> None:
+    def clear_mode(self, mode: int, private: bool) -> None:
         """Clear terminal mode."""
-        # Simplified mode handling - expand as needed
-        pass
+        if private:
+            if mode in self._mode_map:
+                setattr(self, self._mode_map[mode], False)
+        else:
+            if mode in self._mode_map:
+                setattr(self, self._mode_map[mode], False)
 
     def alignment_test(self) -> None:
         """Fill screen with 'E' characters for alignment test."""

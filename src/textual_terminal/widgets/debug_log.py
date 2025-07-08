@@ -6,6 +6,7 @@ import logging
 from typing import List
 from textual.widgets import RichLog
 from textual.widget import Widget
+from ..log import get_logger
 
 
 class DebugLogHandler(logging.Handler):
@@ -65,7 +66,6 @@ class DebugLog(Widget):
 
     def on_mount(self) -> None:
         """Set up the debug log handler when mounted."""
-        from ..log import get_logger
 
         # Set up handler to capture logs
         self.handler = DebugLogHandler(self)
@@ -79,8 +79,6 @@ class DebugLog(Widget):
     def on_unmount(self) -> None:
         """Clean up the debug log handler when unmounted."""
         if self.handler:
-            from ..log import get_logger
-
             logger = get_logger()
             logger.removeHandler(self.handler)
 

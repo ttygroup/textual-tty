@@ -13,7 +13,7 @@ from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 from textual_window import Window
 
-from textual_terminal.widgets import Terminal, Program, DebugLog
+from textual_terminal.widgets import Program, DebugLog
 from textual_terminal.log import setup_logger
 
 
@@ -212,38 +212,6 @@ class DemoApp(App):
         # Clear the input for next command
         input_widget.value = self.default_shell
         input_widget.focus()
-
-    def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
-        """Handle terminal process exit by removing the window."""
-        from ..log import info
-
-        info(f"DemoApp: Terminal process exited with code: {event.exit_code}")
-        info(f"DemoApp: Event sender: {event.sender}")
-        info(f"DemoApp: Event sender type: {type(event.sender)}")
-
-        # Stop the event from bubbling up further
-        event.stop()
-
-        # Find the window containing the terminal that exited
-        terminal = event.sender
-        if terminal:
-            info("DemoApp: Looking for window containing terminal...")
-            # Find the window that contains this terminal (through Program widget)
-            windows = list(self.query(Window))
-            info(f"DemoApp: Found {len(windows)} windows")
-            for window in windows:
-                info(f"DemoApp: Checking window {window.id}")
-                # Check if this window contains a program with the terminal that exited
-                programs = list(window.query(Program))
-                info(f"DemoApp: Window {window.id} has {len(programs)} programs")
-                for program in programs:
-                    info(f"DemoApp: Program terminal: {program.terminal}, looking for: {terminal}")
-                    if program.terminal is terminal:
-                        info(f"DemoApp: Found matching terminal, closing window {window.id}")
-                        window.close()
-                        return
-
-        info("DemoApp: Could not find window to close")
 
 
 def main():
