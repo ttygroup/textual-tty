@@ -1,7 +1,5 @@
 """
-Demo application showing multiple terminal windows.
-
-This demo allows spawning multiple terminal instances with custom commands.
+Demo: Launch programs in a window in Textual
 """
 
 from __future__ import annotations
@@ -84,7 +82,7 @@ class DemoApp(App):
 
     CSS = """
     Screen {
-        background: $surface;
+        background: black;
     }
 
     #command-bar {
@@ -242,11 +240,16 @@ class DemoApp(App):
 
     def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
         """Handle terminal process exit by removing the window."""
-        # Find the window containing this terminal
-        terminal_widget = event.sender
-        window = terminal_widget.parent
-        if window and hasattr(window, "remove"):
-            window.remove()
+        # Find all windows and remove any that contain terminated terminals
+        for window in self.query(Window):
+            # Check if this window contains a terminal
+            terminals = window.query(Terminal)
+            if terminals:
+                # Check if any terminal in this window has exited
+                for terminal in terminals:
+                    if terminal.process is None or terminal.process.poll() is not None:
+                        window.remove()
+                        break
 
 
 def main():
