@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import asyncio
 import subprocess
+import time
 from typing import Any, Optional
 
 from textual.app import ComposeResult
@@ -144,16 +145,23 @@ class Terminal(Widget):
             except (ValueError, OSError):
                 pass  # Reader may already be removed
 
-        # Close PTY to break the read loop
+        # Close PTY to break the read loop and trigger SIGHUP
         if self.pty is not None:
             self.pty.close()
             self.pty = None
 
         # Post exit message if process was running
         if self.process:
+            # Give the process a moment to exit after PTY close (kernel sends SIGHUP)
             exit_code = self.process.poll()
+            if exit_code is None:
+                # Wait briefly for process to handle SIGHUP
+                time.sleep(0.1)
+                exit_code = self.process.poll()
+
             info(f"Process exited with code: {exit_code}")
             if exit_code is None:
+                info("Process did not exit after PTY close (may be disowned/nohup)")
                 exit_code = 0
             self.post_message(self.ProcessExited(exit_code))
 

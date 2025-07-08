@@ -129,13 +129,24 @@ class UnixPTY:
         if "LC_ALL" not in process_env:
             process_env["LC_ALL"] = process_env.get("LANG", "en_US.UTF-8")
 
+        def preexec_fn():
+            """Set up the child process to use PTY as controlling terminal."""
+            import termios
+            import fcntl
+
+            # Create new session and become process group leader
+            os.setsid()
+
+            # Make the PTY the controlling terminal
+            fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+
         process = subprocess.Popen(
             command,
             shell=True,
             stdin=self.slave_fd,
             stdout=self.slave_fd,
             stderr=self.slave_fd,
-            start_new_session=True,
+            preexec_fn=preexec_fn,
             env=process_env,
         )
 
@@ -223,7 +234,9 @@ class WindowsPTY:
         if "LC_ALL" not in process_env:
             process_env["LC_ALL"] = process_env.get("LANG", "en_US.UTF-8")
 
-        # Windows subprocess handling is different
+        # Windows: Use winpty to spawn the process attached to the PTY
+        # For now, fallback to regular subprocess - winpty integration needs more work
+        # TODO: Properly integrate winpty process spawning
         return subprocess.Popen(
             command,
             shell=True,
