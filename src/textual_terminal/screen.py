@@ -100,7 +100,7 @@ class TerminalScreen:
         self.current_console = self.alt_console if self.in_alt_screen else self.main_console
 
         # Adjust scroll region
-        self.scroll_bottom = min(self.scroll_bottom, height - 1)
+        self.scroll_bottom = height - 1
 
         # Resize content buffer
         if len(self.lines) < height:
@@ -145,12 +145,23 @@ class TerminalScreen:
         # Insert or overwrite character
         if self.insert_mode:
             # Insert character, shifting existing content right
-            line.insert(self.cursor_x, character, style)
+            plain_text = list(line.plain)
+            plain_text.insert(self.cursor_x, character)
+
+            # Rebuild the line with styling
+            new_line = Text()
+            for i, char in enumerate(plain_text):
+                if i == self.cursor_x:
+                    new_line.append(char, style)
+                else:
+                    # Preserve existing style (simplified - real implementation would be more complex)
+                    new_line.append(char)
+
             # Truncate if line becomes too long
-            if len(line.plain) > self.width:
-                line = Text(line.plain[: self.width])
-                line.apply_style(style)
-                self.lines[self.cursor_y] = line
+            if len(new_line.plain) > self.width:
+                new_line = Text(new_line.plain[: self.width])
+
+            self.lines[self.cursor_y] = new_line
         else:
             # Overwrite character
             # Create a new Text object with the character replaced
@@ -221,7 +232,7 @@ class TerminalScreen:
         if mode == 0:  # Clear from cursor to end of line
             plain_text = plain_text[: self.cursor_x]
         elif mode == 1:  # Clear from beginning of line to cursor
-            plain_text = [" "] * (self.cursor_x + 1) + plain_text[self.cursor_x + 1 :]
+            plain_text = [" "] * self.cursor_x + plain_text[self.cursor_x :]
         elif mode == 2:  # Clear entire line
             plain_text = []
 

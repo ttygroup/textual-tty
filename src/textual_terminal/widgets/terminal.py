@@ -110,8 +110,11 @@ class Terminal(Widget):
     async def _start_process(self) -> None:
         """Start the child process with PTY."""
         try:
+            self.log.info(f"Starting terminal process: {self.command}")
+
             # Create PTY using platform-specific handler
             self.master_fd, self.slave_fd = create_pty()
+            self.log.info(f"Created PTY: master_fd={self.master_fd}, slave_fd={self.slave_fd}")
 
             # Configure terminal size
             self._set_terminal_size()
@@ -122,6 +125,7 @@ class Terminal(Widget):
                 self.slave_fd,
                 env=dict(os.environ, TERM="xterm-256color"),
             )
+            self.log.info(f"Spawned process: pid={self.process.pid}")
 
             # Close slave fd in parent (child has its own copy)
             os.close(self.slave_fd)
@@ -173,7 +177,9 @@ class Terminal(Widget):
 
     def _set_terminal_size(self) -> None:
         """Set the terminal window size."""
-        if self.slave_fd is not None:
+        if self.master_fd is not None:
+            set_terminal_size(self.master_fd, self.height_chars, self.width_chars)
+        elif self.slave_fd is not None:
             set_terminal_size(self.slave_fd, self.height_chars, self.width_chars)
 
     async def _read_from_master(self) -> None:
@@ -185,6 +191,7 @@ class Terminal(Widget):
                 data = await loop.run_in_executor(None, self._read_master_fd)
 
                 if not data:
+                    self.log.warning("Read returned empty data, process may have exited")
                     break
 
                 # Process the data through the parser
@@ -198,7 +205,10 @@ class Terminal(Widget):
         finally:
             # Process has exited
             if self.process:
-                exit_code = self.process.poll() or 0
+                exit_code = self.process.poll()
+                self.log.info(f"Process exited with code: {exit_code}")
+                if exit_code is None:
+                    exit_code = 0
                 self.post_message(self.ProcessExited(exit_code))
 
     def _read_master_fd(self) -> bytes:
@@ -206,7 +216,11 @@ class Terminal(Widget):
         if self.master_fd is None:
             return b""
 
-        return read_pty(self.master_fd, 4096)
+        try:
+            return read_pty(self.master_fd, 4096)
+        except OSError:
+            # PTY is closed, process has exited
+            return b""
 
     async def _update_display(self) -> None:
         """Update the RichLog display with current screen content."""
@@ -288,10 +302,12 @@ class Terminal(Widget):
         new_height = max(5, min(100, event.size.height // 16))  # Rough char height
 
         if new_width != self.width_chars or new_height != self.height_chars:
+            self.log.info(f"Terminal resize: {self.width_chars}x{self.height_chars} -> {new_width}x{new_height}")
             self.width_chars = new_width
             self.height_chars = new_height
             self.terminal_screen.resize(new_width, new_height)
             self._set_terminal_size()
+            self._send_sigwinch()
 
     def terminate(self) -> None:
         """Terminate the running process."""
