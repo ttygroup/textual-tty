@@ -34,11 +34,13 @@ class ProgramWindow(Window):
         margin: 0;
         width: 83;
         height: 28;
+        background: black;
     }
 
     ProgramWindow #content_pane {
         padding: 0;
         margin: 0;
+        background: black;
     }
 
     ProgramWindow Terminal RichLog {
@@ -82,6 +84,16 @@ class ProgramWindow(Window):
         """Compose the program window."""
         self.program = Program(command=self.command, show_header=self.show_header, show_footer=self.show_footer)
         yield self.program
+
+    def on_mount(self) -> None:
+        """Handle when the window is mounted."""
+        # Auto-focus the terminal when the window opens (after refresh)
+        self.call_after_refresh(self._focus_terminal)
+
+    def _focus_terminal(self) -> None:
+        """Focus the terminal inside the program."""
+        if self.program and self.program.terminal:
+            self.program.terminal.focus()
 
     def on_program_program_exited(self, event: Program.ProgramExited) -> None:
         """Handle when the program process exits."""
