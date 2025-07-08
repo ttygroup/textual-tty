@@ -22,7 +22,7 @@ from textual.message import Message
 from ..screen import TerminalScreen
 from ..parser import Parser
 from ..pty_handler import create_pty
-from ..log import info, warning, error
+from ..log import info, warning, error, exception
 
 
 class Terminal(Widget):
@@ -128,7 +128,7 @@ class Terminal(Widget):
             loop.add_reader(self.pty.master_fd, self._read_from_pty)
 
         except Exception as e:
-            error(f"Failed to start terminal process: {e}")
+            exception(f"Failed to start terminal process: {e}")
             self._stop_process()
 
     def _stop_process(self) -> None:
@@ -202,7 +202,7 @@ class Terminal(Widget):
             info(f"PTY read error: {e}")
             self._stop_process()
         except Exception as e:
-            error(f"Error reading from terminal: {e}")
+            exception(f"Error reading from terminal: {e}")
             self._stop_process()
 
     async def _update_display(self) -> None:

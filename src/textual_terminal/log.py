@@ -57,3 +57,8 @@ def warning(msg: str) -> None:
 def error(msg: str) -> None:
     """Log an error message."""
     get_logger().error(msg)
+
+
+def exception(msg: str) -> None:
+    """Log an exception message with traceback."""
+    get_logger().exception(msg)

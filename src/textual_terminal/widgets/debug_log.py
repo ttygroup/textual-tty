@@ -7,6 +7,7 @@ from typing import List
 from textual.app import ComposeResult
 from textual.widgets import RichLog
 from textual.widget import Widget
+from rich.text import Text
 from ..log import get_logger, setup_logger
 
 
@@ -21,7 +22,7 @@ class DebugLogHandler(logging.Handler):
         """Emit a log record to the widget."""
         try:
             msg = self.format(record)
-            self.widget.add_log(msg)
+            self.widget.add_log(msg, record.levelname)
         except (AttributeError, ValueError, TypeError):
             # Don't let logging errors crash the app
             # AttributeError: widget is None or missing methods
@@ -67,8 +68,8 @@ class DebugLog(Widget):
     def compose(self) -> ComposeResult:
         """Compose the debug log widget."""
         self.rich_log = RichLog(
-            highlight=False,
-            markup=False,
+            highlight=True,
+            markup=True,
             wrap=True,
             auto_scroll=True,
         )
@@ -93,16 +94,19 @@ class DebugLog(Widget):
             logger = get_logger()
             logger.removeHandler(self.handler)
 
-    def add_log(self, message: str) -> None:
+    def add_log(self, message: str, level: str = "INFO") -> None:
         """Add a log message to the widget.
 
         Args:
             message: The log message to add
+            level: The log level (DEBUG, INFO, WARNING, ERROR, etc.)
         """
         if self.rich_log is None:
             return
 
-        self.log_lines.append(message)
+        # Create colored text based on log level
+        colored_message = self._colorize_message(message, level)
+        self.log_lines.append(colored_message)
 
         # Keep only the last max_lines to prevent memory bloat
         if len(self.log_lines) > self.max_lines:
@@ -112,3 +116,31 @@ class DebugLog(Widget):
         self.rich_log.clear()
         for line in self.log_lines:
             self.rich_log.write(line)
+
+    def _colorize_message(self, message: str, level: str) -> Text:
+        """Apply color formatting to log messages based on level.
+
+        Args:
+            message: The log message
+            level: The log level
+
+        Returns:
+            Rich Text object with appropriate styling
+        """
+        text = Text(message)
+
+        # Apply colors based on log level
+        if level == "DEBUG":
+            text.stylize("dim cyan")
+        elif level == "INFO":
+            text.stylize("white")
+        elif level == "WARNING":
+            text.stylize("yellow")
+        elif level == "ERROR":
+            text.stylize("red")
+        elif level == "CRITICAL":
+            text.stylize("bold red")
+        else:
+            text.stylize("white")
+
+        return text
