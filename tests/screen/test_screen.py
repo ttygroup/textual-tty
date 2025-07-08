@@ -1,5 +1,5 @@
 from rich.style import Style
-from rich.text import Text
+from rich.text import Text, Span
 
 from textual_terminal.screen import TerminalScreen
 
@@ -7,18 +7,30 @@ from textual_terminal.screen import TerminalScreen
 def test_clear_rect():
     screen = TerminalScreen(width=10, height=5)
     screen.lines = [
-        Text("0123456789"),
-        Text("0123456789"),
-        Text("0123456789"),
-        Text("0123456789"),
-        Text("0123456789"),
+        Text("0123456789", spans=[Span(0, 10, Style(color="red"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="green"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="blue"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="yellow"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="magenta"))]),
     ]
     screen.clear_rect(2, 1, 5, 3)
-    assert screen.lines[0].plain == "0123456789"
-    assert screen.lines[1].plain == "01    6789"
-    assert screen.lines[2].plain == "01    6789"
-    assert screen.lines[3].plain == "01    6789"
-    assert screen.lines[4].plain == "0123456789"
+    expected_lines = [
+        Text("0123456789", spans=[Span(0, 10, Style(color="red"))]),
+        Text(
+            "01    6789",
+            spans=[Span(0, 2, Style(color="green")), Span(2, 6, Style()), Span(6, 10, Style(color="green"))],
+        ),
+        Text(
+            "01    6789", spans=[Span(0, 2, Style(color="blue")), Span(2, 6, Style()), Span(6, 10, Style(color="blue"))]
+        ),
+        Text(
+            "01    6789",
+            spans=[Span(0, 2, Style(color="yellow")), Span(2, 6, Style()), Span(6, 10, Style(color="yellow"))],
+        ),
+        Text("0123456789", spans=[Span(0, 10, Style(color="magenta"))]),
+    ]
+    for i in range(5):
+        assert screen.lines[i] == expected_lines[i]
 
 
 def test_write_cell_no_auto_wrap():
@@ -26,11 +38,12 @@ def test_write_cell_no_auto_wrap():
     screen.auto_wrap = False
     screen.cursor_x = 4
     screen.cursor_y = 0
-    screen.write_cell("a")
+    screen.write_cell("a", style=Style(color="red"))
     assert screen.cursor_x == 4
-    screen.write_cell("b")
+    screen.write_cell("b", style=Style(color="blue"))
     assert screen.cursor_x == 4
-    assert screen.lines[0].plain == "    b"
+    expected_line = Text("    b", spans=[Span(4, 5, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_clip_at_width():
@@ -38,81 +51,90 @@ def test_write_cell_clip_at_width():
     screen.auto_wrap = False
     screen.cursor_x = 5  # Set cursor beyond width
     screen.cursor_y = 0
-    screen.write_cell("X")
+    screen.write_cell("X", style=Style(color="red"))
     assert screen.cursor_x == 4  # Should be clamped to width - 1
-    assert screen.lines[0].plain == "    X"
+    expected_line = Text("    X", spans=[Span(4, 5, Style(color="red"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_delete_characters_from_middle_of_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("123456789")
+    screen.lines[0] = Text("123456789", spans=[Span(0, 9, Style(color="blue"))])
     screen.cursor_x = 2
     screen.cursor_y = 0
     screen.delete_characters(3)
-    assert screen.lines[0].plain == "126789"
+    expected_line = Text("126789", spans=[Span(0, 2, Style(color="blue")), Span(2, 6, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_delete_characters_at_end_of_line_no_effect():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("abc")
+    screen.lines[0] = Text("abc", spans=[Span(0, 3, Style(color="blue"))])
     screen.cursor_x = 3
     screen.cursor_y = 0
     screen.delete_characters(1)
-    assert screen.lines[0].plain == "abc"
+    expected_line = Text("abc", spans=[Span(0, 3, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_delete_characters_beyond_end_of_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 2
     screen.cursor_y = 0
     screen.delete_characters(10)  # Attempt to delete more than available
-    assert screen.lines[0].plain == "12"
+    expected_line = Text("12", spans=[Span(0, 2, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_delete_characters_from_empty_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("")
+    screen.lines[0] = Text("", spans=[Span(0, 0, Style(color="blue"))])
     screen.cursor_x = 0
     screen.cursor_y = 0
     screen.delete_characters(5)
-    assert screen.lines[0].plain == ""
+    expected_line = Text("", spans=[Span(0, 0, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_delete_last_character_on_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("abcde")
+    screen.lines[0] = Text("abcde", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 4
     screen.cursor_y = 0
     screen.delete_characters(1)
-    assert screen.lines[0].plain == "abcd"
+    expected_line = Text("abcd", spans=[Span(0, 4, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_overwrite_at_end_of_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("abc")
+    screen.lines[0] = Text("abc", spans=[Span(0, 3, Style(color="blue"))])
     screen.cursor_x = 3
     screen.cursor_y = 0
-    screen.write_cell("X")
-    assert screen.lines[0].plain == "abcX"
+    screen.write_cell("X", style=Style(color="red"))
+    expected_line = Text("abcX", spans=[Span(0, 3, Style(color="blue")), Span(3, 4, Style(color="red"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_overwrite_empty_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("")
+    screen.lines[0] = Text("", spans=[Span(0, 0, Style(color="blue"))])
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.write_cell("A")
-    assert screen.lines[0].plain == "A"
+    screen.write_cell("A", style=Style(color="green"))
+    expected_line = Text("A", spans=[Span(0, 1, Style(color="green"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_insert_characters_at_end_of_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="magenta"))])
     screen.cursor_x = 5
     screen.cursor_y = 0
     screen.insert_characters(2)
-    assert screen.lines[0].plain == "12345  "
+    expected_line = Text("12345  ", spans=[Span(0, 5, Style(color="magenta")), Span(5, 7, Style())])
+    assert screen.lines[0] == expected_line
 
 
 def test_clear_line_invalid_cursor():
@@ -153,77 +175,250 @@ def test_delete_characters_invalid_cursor():
 
 def test_write_cell_overwrite_with_style():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 2
     screen.cursor_y = 0
     style = Style(color="red")
     screen.write_cell("X", style)
-    assert screen.lines[0].plain == "12X45"
+    expected_line = Text(
+        "12X45", spans=[Span(0, 2, Style(color="blue")), Span(2, 3, style), Span(3, 5, Style(color="blue"))]
+    )
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_insert_with_style():
     screen = TerminalScreen(width=10, height=5)
     screen.insert_mode = True
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 2
     screen.cursor_y = 0
     style = Style(color="red")
     screen.write_cell("X", style)
-    assert screen.lines[0].plain == "12X345"
+    expected_line = Text(
+        "12X345", spans=[Span(0, 2, Style(color="blue")), Span(2, 3, style), Span(3, 6, Style(color="blue"))]
+    )
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_insert_at_end_of_line():
     screen = TerminalScreen(width=10, height=5)
     screen.insert_mode = True
-    screen.lines[0] = Text("123")
+    screen.lines[0] = Text("123", spans=[Span(0, 3, Style(color="blue"))])
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.write_cell("X")
-    assert screen.lines[0].plain == "123  X"
+    screen.write_cell("X", style=Style(color="red"))
+    expected_line = Text(
+        "123  X", spans=[Span(0, 3, Style(color="blue")), Span(3, 5, Style()), Span(5, 6, Style(color="red"))]
+    )
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_overwrite_at_start_of_line():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.write_cell("X")
-    assert screen.lines[0].plain == "X2345"
+    screen.write_cell("X", style=Style(color="red"))
+    expected_line = Text("X2345", spans=[Span(0, 1, Style(color="red")), Span(1, 5, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
 
 
 def test_write_cell_insert_and_truncate():
     screen = TerminalScreen(width=5, height=5)
     screen.insert_mode = True
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 2
     screen.cursor_y = 0
-    screen.write_cell("X")
-    assert screen.lines[0].plain == "12X34"
+    screen.write_cell("X", style=Style(color="red"))
+    expected_line = Text(
+        "12X34",
+        spans=[Span(0, 2, Style(color="blue")), Span(2, 3, Style(color="red")), Span(3, 5, Style(color="blue"))],
+    )
+    assert screen.lines[0] == expected_line
 
 
 def test_clear_rect_with_style():
     screen = TerminalScreen(width=10, height=5)
     screen.lines = [
-        Text("0123456789"),
-        Text("0123456789"),
-        Text("0123456789"),
-        Text("0123456789"),
-        Text("0123456789"),
+        Text("0123456789", spans=[Span(0, 10, Style(color="red"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="green"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="blue"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="yellow"))]),
+        Text("0123456789", spans=[Span(0, 10, Style(color="magenta"))]),
     ]
     style = Style(color="red")
     screen.clear_rect(2, 1, 5, 3, style)
-    assert screen.lines[0].plain == "0123456789"
-    assert screen.lines[1].plain == "01    6789"
-    assert screen.lines[2].plain == "01    6789"
-    assert screen.lines[3].plain == "01    6789"
-    assert screen.lines[4].plain == "0123456789"
+    expected_lines = [
+        Text("0123456789", spans=[Span(0, 10, Style(color="red"))]),
+        Text(
+            "01    6789", spans=[Span(0, 2, Style(color="green")), Span(2, 6, style), Span(6, 10, Style(color="green"))]
+        ),
+        Text(
+            "01    6789", spans=[Span(0, 2, Style(color="blue")), Span(2, 6, style), Span(6, 10, Style(color="blue"))]
+        ),
+        Text(
+            "01    6789",
+            spans=[Span(0, 2, Style(color="yellow")), Span(2, 6, style), Span(6, 10, Style(color="yellow"))],
+        ),
+        Text("0123456789", spans=[Span(0, 10, Style(color="magenta"))]),
+    ]
+    for i in range(5):
+        assert screen.lines[i] == expected_lines[i]
 
 
 def test_write_cell_overwrite_at_start_of_line_with_style():
     screen = TerminalScreen(width=10, height=5)
-    screen.lines[0] = Text("12345")
+    screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 0
     screen.cursor_y = 0
     style = Style(color="red")
     screen.write_cell("X", style)
-    assert screen.lines[0].plain == "X2345"
+    expected_line = Text("X2345", spans=[Span(0, 1, style), Span(1, 5, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_overwrite_middle_of_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="blue"))])
+    screen.cursor_x = 5
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text(
+        "01234X6789", spans=[Span(0, 5, Style(color="blue")), Span(5, 6, style), Span(6, 10, Style(color="blue"))]
+    )
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_insert_middle_of_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.insert_mode = True
+    screen.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="blue"))])
+    screen.cursor_x = 5
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text(
+        "01234X56789", spans=[Span(0, 5, Style(color="blue")), Span(5, 6, style), Span(6, 11, Style(color="blue"))]
+    )
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_insert_at_start_of_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.insert_mode = True
+    screen.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="blue"))])
+    screen.cursor_x = 0
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text("X0123456789", spans=[Span(0, 1, style), Span(1, 11, Style(color="blue"))])
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_insert_at_end_of_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.insert_mode = True
+    screen.lines[0] = Text("012345678", spans=[Span(0, 9, Style(color="blue"))])
+    screen.cursor_x = 9
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text("012345678X", spans=[Span(0, 9, Style(color="blue")), Span(9, 10, style)])
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_insert_into_empty_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.insert_mode = True
+    screen.cursor_x = 0
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text("X", spans=[Span(0, 1, style)])
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_overwrite_into_empty_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.cursor_x = 0
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text("X", spans=[Span(0, 1, style)])
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_overwrite_beyond_end_of_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("abc", spans=[Span(0, 3, Style(color="blue"))])
+    screen.cursor_x = 5
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text("abc  X", spans=[Span(0, 3, Style(color="blue")), Span(3, 5, Style()), Span(5, 6, style)])
+    assert screen.lines[0] == expected_line
+
+
+def test_write_cell_insert_beyond_end_of_line_with_style():
+    screen = TerminalScreen(width=10, height=5)
+    screen.insert_mode = True
+    screen.lines[0] = Text("abc", spans=[Span(0, 3, Style(color="blue"))])
+    screen.cursor_x = 5
+    screen.cursor_y = 0
+    style = Style(color="red")
+    screen.write_cell("X", style)
+    expected_line = Text("abc  X", spans=[Span(0, 3, Style(color="blue")), Span(3, 5, Style()), Span(5, 6, style)])
+    assert screen.lines[0] == expected_line
+
+
+def test_clear_line_from_cursor_to_end():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="red"))])
+    screen.cursor_x = 5
+    screen.cursor_y = 0
+    screen.clear_line(0)
+    expected_line = Text("01234", spans=[Span(0, 5, Style(color="red"))])
+    assert screen.lines[0] == expected_line
+
+
+def test_clear_line_from_beginning_to_cursor():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="red"))])
+    screen.cursor_x = 5
+    screen.cursor_y = 0
+    screen.clear_line(1)
+    expected_line = Text("     56789", spans=[Span(0, 5, Style()), Span(5, 10, Style(color="red"))])
+    assert screen.lines[0] == expected_line
+
+
+def test_clear_line_entire_line():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="red"))])
+    screen.cursor_y = 0
+    screen.clear_line(2)
+    expected_line = Text("")
+    assert screen.lines[0] == expected_line
+
+
+def test_clear_line_with_mixed_styles():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text.assemble(
+        ("ABC", Style(color="red")), ("DEF", Style(color="green")), ("GHI", Style(color="blue"))
+    )
+    screen.cursor_x = 3
+    screen.cursor_y = 0
+    screen.clear_line(0)  # Clear from cursor to end
+    expected_line = Text("ABC", spans=[Span(0, 3, Style(color="red"))])
+    assert screen.lines[0] == expected_line
+
+    screen.lines[1] = Text.assemble(
+        ("ABC", Style(color="red")), ("DEF", Style(color="green")), ("GHI", Style(color="blue"))
+    )
+    screen.cursor_x = 3
+    screen.cursor_y = 1
+    screen.clear_line(1)  # Clear from beginning to cursor
+    expected_line = Text(
+        "   DEF", spans=[Span(0, 3, Style()), Span(3, 6, Style(color="green")), Span(6, 9, Style(color="blue"))]
+    )
+    assert screen.lines[1] == expected_line

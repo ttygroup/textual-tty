@@ -1,6 +1,5 @@
-from rich.text import Text
-
 from textual_terminal.screen import TerminalScreen
+from rich.text import Text
 
 
 def test_resize():
