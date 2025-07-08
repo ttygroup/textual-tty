@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import Mock
 from textual_terminal.parser import Parser
-from textual_terminal.screen import Screen
+from textual_terminal.screen import TerminalScreen
 
 
 @pytest.fixture
 def screen():
     """Return a mock Screen object with necessary attributes."""
-    screen = Mock(spec=Screen)
+    screen = Mock(spec=TerminalScreen)
     screen.current_style = Mock()  # Mock the Style object
     screen.width = 80
     screen.height = 24
