@@ -199,7 +199,7 @@ class Terminal(Widget):
             # Process has exited
             if self.process:
                 exit_code = self.process.poll() or 0
-                await self.emit(self.ProcessExited(exit_code))
+                await self.post_message(self.ProcessExited(exit_code))
 
     def _read_master_fd(self) -> bytes:
         """Read from master FD (blocking operation for executor)."""

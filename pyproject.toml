@@ -37,7 +37,8 @@ dev = [
     "build",
     "twine",
     "ruff",
-    "mkdocs"
+    "mkdocs",
+    "textual-window"
 ]
 window = [
     "textual-window"
