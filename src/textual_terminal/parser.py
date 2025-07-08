@@ -132,10 +132,10 @@ class Parser:
                 # Unknown escape sequence, go back to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_ENTRY":
-            if byte in (ord("?"), ord(">"), ord("<"), ord("=")):  # Private mode intermediate characters
+            if 0x3C <= byte <= 0x3F:  # Private mode intermediate characters (<, =, >, ?)
                 self.intermediate_chars.append(chr(byte))
-                self.current_state = "CSI_PARAM"  # Still transition to CSI_PARAM to collect numeric params
-            elif 0x30 <= byte <= 0x3F:  # Parameter bytes (0-9, :, ;)
+                self.current_state = "CSI_PARAM"
+            elif 0x30 <= byte <= 0x3B:  # Parameter bytes (0-9, :, ;)
                 self.param_buffer += chr(byte)
                 self.current_state = "CSI_PARAM"
             elif 0x20 <= byte <= 0x2F:  # Intermediate bytes (general)
@@ -148,7 +148,7 @@ class Parser:
                 # Invalid, return to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_PARAM":
-            if 0x30 <= byte <= 0x3F:  # Parameter bytes
+            if 0x30 <= byte <= 0x3B:  # Parameter bytes
                 self.param_buffer += chr(byte)
             elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
                 self.intermediate_chars.append(chr(byte))
@@ -160,7 +160,7 @@ class Parser:
                 # Invalid, return to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_INTERMEDIATE":
-            if 0x30 <= byte <= 0x3F:  # Parameter bytes
+            if 0x30 <= byte <= 0x3B:  # Parameter bytes
                 self.param_buffer += chr(byte)
             elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
                 self.intermediate_chars.append(chr(byte))
@@ -231,17 +231,30 @@ class Parser:
             return
 
         parts = param_string.split(";")
-        for part in parts:
+        for i, part in enumerate(parts):
             if ":" in part:
-                # Sub-parameters - for now, just take the first one
+                # Sub-parameters - validate all parts, not just the first
                 sub_parts = part.split(":")
                 try:
-                    self.parsed_params.append(int(sub_parts[0]) if sub_parts[0] else None)
+                    # Validate the main parameter
+                    if sub_parts[0]:
+                        main_param = int(sub_parts[0])
+                        # Also validate sub-parameters (but don't store them for now)
+                        for sub_part in sub_parts[1:]:
+                            if sub_part:  # Skip empty sub-parts
+                                int(sub_part)  # Just validate, don't store
+                        self.parsed_params.append(main_param)
+                    else:
+                        self.parsed_params.append(None)
                 except ValueError:
                     self.parsed_params.append(0)
             else:
                 try:
-                    self.parsed_params.append(int(part) if part else None)
+                    if part:
+                        self.parsed_params.append(int(part))
+                    elif i < len(parts) - 1:  # Only add None for empty parts in the middle, not at the end
+                        self.parsed_params.append(None)
+                    # Skip empty parts at the end (trailing semicolons)
                 except ValueError:
                     self.parsed_params.append(0)
 

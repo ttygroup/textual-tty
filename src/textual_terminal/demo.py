@@ -12,7 +12,7 @@ from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 from textual_window import Window
 
-from .widgets import Terminal
+from .widgets import Terminal, Program
 
 
 def get_user_shell() -> str:
@@ -182,12 +182,12 @@ class DemoApp(App):
 
         window_title = f"{cmd_name}_{self.window_count}"
 
-        # Create the terminal widget
-        terminal = Terminal(command=command)
+        # Create the program widget
+        program = Program(command=command)
 
         # Create and show the window
         window = Window(
-            terminal,
+            program,
             id=window_title,
             name=f"{cmd_name} [{self.window_count}]",
             start_open=True,
@@ -235,16 +235,17 @@ class DemoApp(App):
 
     def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
         """Handle terminal process exit by removing the window."""
-        # Find all windows and remove any that contain terminated terminals
-        for window in self.query(Window):
-            # Check if this window contains a terminal
-            terminals = window.query(Terminal)
-            if terminals:
-                # Check if any terminal in this window has exited
-                for terminal in terminals:
-                    if terminal.process is None or terminal.process.poll() is not None:
+        # Find the window containing the terminal that exited
+        terminal = event._sender
+        if terminal:
+            # Find the window that contains this terminal (through Program widget)
+            for window in self.query(Window):
+                # Check if this window contains a program with the terminal that exited
+                programs = window.query(Program)
+                for program in programs:
+                    if program.terminal is terminal:
                         window.remove()
-                        break
+                        return
 
 
 def main():

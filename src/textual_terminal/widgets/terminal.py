@@ -292,3 +292,19 @@ class Terminal(Widget):
             self.height_chars = new_height
             self.terminal_screen.resize(new_width, new_height)
             self._set_terminal_size()
+
+    def terminate(self) -> None:
+        """Terminate the running process."""
+        if self.process and self.process.poll() is None:
+            try:
+                self.process.terminate()
+            except ProcessLookupError:
+                pass
+
+    def kill(self) -> None:
+        """Force kill the running process."""
+        if self.process and self.process.poll() is None:
+            try:
+                self.process.kill()
+            except ProcessLookupError:
+                pass
