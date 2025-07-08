@@ -120,11 +120,6 @@ class DemoApp(App):
         color: $text;
     }
 
-    Window {
-        padding: 0;
-        margin: 0;
-    }
-
     Window > * {
         padding: 0;
         margin: 0;

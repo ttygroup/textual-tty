@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from textual_terminal.parser import Parser
 from textual_terminal.screen import TerminalScreen
 from rich.style import Style
+from rich.color import Color
 
 
 @pytest.fixture
@@ -73,7 +74,7 @@ def test_sgr_hidden(screen):
     """Test SGR 8 (hidden)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[8m")
-    assert screen.current_style.hidden is True
+    assert screen.current_style.conceal is True
 
 
 def test_sgr_strike(screen):
@@ -87,42 +88,42 @@ def test_sgr_foreground_color_ansi(screen):
     """Test SGR 30-37 (ANSI foreground colors)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[31m")  # Red foreground
-    assert screen.current_style.color == "ansi_1"
+    assert screen.current_style.color == Color.from_ansi(1)
 
 
 def test_sgr_background_color_ansi(screen):
     """Test SGR 40-47 (ANSI background colors)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[42m")  # Green background
-    assert screen.current_style.bgcolor == "ansi_2"
+    assert screen.current_style.bgcolor == Color.from_ansi(2)
 
 
 def test_sgr_foreground_color_256(screen):
     """Test SGR 38;5;N (256-color foreground)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[38;5;201m")  # Orchid foreground
-    assert screen.current_style.color == "ansi_201"
+    assert screen.current_style.color == Color.from_ansi(201)
 
 
 def test_sgr_background_color_256(screen):
     """Test SGR 48;5;N (256-color background)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[48;5;123m")  # Light blue background
-    assert screen.current_style.bgcolor == "ansi_123"
+    assert screen.current_style.bgcolor == Color.from_ansi(123)
 
 
 def test_sgr_foreground_color_rgb(screen):
     """Test SGR 38;2;R;G;B (Truecolor foreground)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[38;2;255;0;0m")  # Red foreground
-    assert screen.current_style.color == "#ff0000"
+    assert screen.current_style.color == Color.from_rgb(255, 0, 0)
 
 
 def test_sgr_background_color_rgb(screen):
     """Test SGR 48;2;R;G;B (Truecolor background)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[48;2;0;255;0m")  # Green background
-    assert screen.current_style.bgcolor == "#00ff00"
+    assert screen.current_style.bgcolor == Color.from_rgb(0, 255, 0)
 
 
 def test_sgr_reset_foreground(screen):
@@ -130,7 +131,7 @@ def test_sgr_reset_foreground(screen):
     parser = Parser(screen)
     screen.current_style = Style(color="red")
     parser.feed(b"\x1b[39m")
-    assert screen.current_style.color is None
+    assert screen.current_style.color == Color.default()
 
 
 def test_sgr_reset_background(screen):
@@ -138,7 +139,7 @@ def test_sgr_reset_background(screen):
     parser = Parser(screen)
     screen.current_style = Style(bgcolor="blue")
     parser.feed(b"\x1b[49m")
-    assert screen.current_style.bgcolor is None
+    assert screen.current_style.bgcolor == Color.default()
 
 
 def test_sgr_multiple_params(screen):
@@ -147,22 +148,22 @@ def test_sgr_multiple_params(screen):
     parser.feed(b"\x1b[1;4;32;44m")  # Bold, Underline, Green FG, Blue BG
     assert screen.current_style.bold is True
     assert screen.current_style.underline is True
-    assert screen.current_style.color == "ansi_2"
-    assert screen.current_style.bgcolor == "ansi_4"
+    assert screen.current_style.color == Color.from_ansi(2)
+    assert screen.current_style.bgcolor == Color.from_ansi(4)
 
 
 def test_sgr_bright_foreground_color_ansi(screen):
     """Test SGR 90-97 (Bright ANSI foreground colors)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[91m")  # Bright Red foreground
-    assert screen.current_style.color == "ansi_9"
+    assert screen.current_style.color == Color.from_ansi(9)
 
 
 def test_sgr_bright_background_color_ansi(screen):
     """Test SGR 100-107 (Bright ANSI background colors)."""
     parser = Parser(screen)
     parser.feed(b"\x1b[103m")  # Bright Yellow background
-    assert screen.current_style.bgcolor == "ansi_11"
+    assert screen.current_style.bgcolor == Color.from_ansi(11)
 
 
 def test_sgr_disable_bold(screen):
@@ -209,9 +210,9 @@ def test_sgr_disable_reverse(screen):
 def test_sgr_disable_hidden(screen):
     """Test SGR 28 (disable hidden)."""
     parser = Parser(screen)
-    screen.current_style = Style(hidden=True)
+    screen.current_style = Style(conceal=True)
     parser.feed(b"\x1b[28m")
-    assert screen.current_style.hidden is False
+    assert screen.current_style.conceal is False
 
 
 def test_sgr_disable_strike(screen):
@@ -227,7 +228,7 @@ def test_sgr_malformed_256_color(screen):
     parser = Parser(screen)
     screen.current_style = Style(color="red")
     parser.feed(b"\x1b[38;5;m")  # Malformed: missing color code
-    assert screen.current_style.color == "red"  # Should not change
+    assert screen.current_style.color == Color.parse("red")  # Should not change
 
 
 def test_sgr_malformed_rgb_color(screen):
@@ -235,7 +236,7 @@ def test_sgr_malformed_rgb_color(screen):
     parser = Parser(screen)
     screen.current_style = Style(color="red")
     parser.feed(b"\x1b[38;2;255;0;m")  # Malformed: missing blue component
-    assert screen.current_style.color == "red"  # Should not change
+    assert screen.current_style.color == Color.parse("red")  # Should not change
 
 
 def test_sgr_empty_params_resets(screen):

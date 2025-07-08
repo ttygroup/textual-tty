@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .screen import TerminalScreen
 
 from rich.style import Style
+from rich.color import Color
 
 
 class Parser:
@@ -562,7 +563,7 @@ class Parser:
             elif param == 7:
                 self.screen.current_style += Style(reverse=True)
             elif param == 8:
-                self.screen.current_style += Style(hidden=True)
+                self.screen.current_style += Style(conceal=True)
             elif param == 9:
                 self.screen.current_style += Style(strike=True)
             elif param == 21:  # Not bold/double underline
@@ -578,57 +579,63 @@ class Parser:
             elif param == 27:  # Not reversed
                 self.screen.current_style += Style(reverse=False)
             elif param == 28:  # Not hidden
-                self.screen.current_style += Style(hidden=False)
+                self.screen.current_style += Style(conceal=False)
             elif param == 29:  # Not strikethrough
                 self.screen.current_style += Style(strike=False)
             elif 30 <= param <= 37:
                 # Standard 16-color foreground
-                self.screen.current_style += Style(color=f"ansi_{param - 30}")
+                self.screen.current_style += Style(color=Color.from_ansi(param - 30))
             elif param == 38:
                 # Extended foreground color
+                new_color = None
                 try:
                     color_type = next(it)
                     if color_type == 5:  # 256-color
                         color_code = next(it)
-                        self.screen.current_style += Style(color=f"ansi_{color_code}")
+                        new_color = Color.from_ansi(color_code)
                     elif color_type == 2:  # Truecolor (RGB)
                         r = next(it)
                         g = next(it)
                         b = next(it)
-                        self.screen.current_style += Style(color=f"#{r:02x}{g:02x}{b:02x}")
+                        new_color = Color.from_rgb(r, g, b)
                 except StopIteration:
                     # Malformed sequence, ignore
                     pass
+                if new_color is not None:
+                    self.screen.current_style += Style(color=new_color)
             elif param == 39:
                 # Default foreground color
-                self.screen.current_style = self.screen.current_style.copy_with(color=None)
+                self.screen.current_style += Style(color=None)
             elif 40 <= param <= 47:
                 # Standard 16-color background
-                self.screen.current_style += Style(bgcolor=f"ansi_{param - 40}")
+                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 40))
             elif param == 48:
                 # Extended background color
+                new_bgcolor = None
                 try:
                     color_type = next(it)
                     if color_type == 5:  # 256-color
                         color_code = next(it)
-                        self.screen.current_style += Style(bgcolor=f"ansi_{color_code}")
+                        new_bgcolor = Color.from_ansi(color_code)
                     elif color_type == 2:  # Truecolor (RGB)
                         r = next(it)
                         g = next(it)
                         b = next(it)
-                        self.screen.current_style += Style(bgcolor=f"#{r:02x}{g:02x}{b:02x}")
+                        new_bgcolor = Color.from_rgb(r, g, b)
                 except StopIteration:
                     # Malformed sequence, ignore
                     pass
+                if new_bgcolor is not None:
+                    self.screen.current_style += Style(bgcolor=new_bgcolor)
             elif param == 49:
                 # Default background color
-                self.screen.current_style = self.screen.current_style.copy_with(bgcolor=None)
+                self.screen.current_style += Style(bgcolor=None)
             elif 90 <= param <= 97:
                 # Bright 16-color foreground
-                self.screen.current_style += Style(color=f"ansi_{param - 90 + 8}")
+                self.screen.current_style += Style(color=Color.from_ansi(param - 90 + 8))
             elif 100 <= param <= 107:
                 # Bright 16-color background
-                self.screen.current_style += Style(bgcolor=f"ansi_{param - 100 + 8}")
+                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
