@@ -199,7 +199,7 @@ class Terminal(Widget):
             # Process has exited
             if self.process:
                 exit_code = self.process.poll() or 0
-                await self.post_message(self.ProcessExited(exit_code))
+                self.post_message(self.ProcessExited(exit_code))
 
     def _read_master_fd(self) -> bytes:
         """Read from master FD (blocking operation for executor)."""
@@ -269,7 +269,7 @@ class Terminal(Widget):
             char = event.key
 
             # Handle Ctrl combinations
-            if event.ctrl:
+            if hasattr(event, "ctrl") and event.ctrl:
                 if "a" <= char <= "z":
                     return bytes([ord(char) - ord("a") + 1])
                 elif "A" <= char <= "Z":

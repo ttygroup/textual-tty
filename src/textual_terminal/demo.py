@@ -7,7 +7,6 @@ This demo allows spawning multiple terminal instances with custom commands.
 from __future__ import annotations
 
 import os
-import threading
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -58,6 +57,8 @@ class TerminalWindow(App):
         width: 100%;
         background: black;
         color: white;
+        padding: 0;
+        margin: 0;
     }
     """
 
@@ -72,6 +73,10 @@ class TerminalWindow(App):
     def compose(self) -> ComposeResult:
         """Compose the terminal window."""
         yield Terminal(command=self.command)
+
+    def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
+        """Handle terminal process exit by closing the window."""
+        self.exit(event.exit_code)
 
 
 class DemoApp(App):
@@ -115,6 +120,26 @@ class DemoApp(App):
         padding: 1;
         border: solid $accent;
         color: $text;
+    }
+
+    Window {
+        padding: 0;
+        margin: 0;
+    }
+
+    Window > * {
+        padding: 0;
+        margin: 0;
+    }
+
+    .window-content {
+        padding: 0;
+        margin: 0;
+    }
+
+    .window-body {
+        padding: 0;
+        margin: 0;
     }
     """
 
@@ -162,25 +187,21 @@ class DemoApp(App):
             cmd_name = command.split()[0]
             cmd_name = os.path.basename(cmd_name)
 
-        window_title = f"{cmd_name} [{self.window_count}]"
+        window_title = f"{cmd_name}_{self.window_count}"
 
-        # Create the terminal app
-        terminal_app = TerminalWindow(command=command)
+        # Create the terminal widget
+        terminal = Terminal(command=command)
 
         # Create and show the window
         window = Window(
-            terminal_app,
-            title=window_title,
-            width=800,
-            height=600,
+            terminal,
+            id=window_title,
+            name=f"{cmd_name} [{self.window_count}]",
+            start_open=True,
         )
 
-        # Start the window in a separate thread
-        def run_window():
-            window.run()
-
-        thread = threading.Thread(target=run_window, daemon=True)
-        thread.start()
+        # Add the window to the current app
+        self.mount(window)
 
         # Update status
         self.update_status()
@@ -218,6 +239,14 @@ class DemoApp(App):
         # Clear the input for next command
         input_widget.value = self.default_shell
         input_widget.focus()
+
+    def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
+        """Handle terminal process exit by removing the window."""
+        # Find the window containing this terminal
+        terminal_widget = event.sender
+        window = terminal_widget.parent
+        if window and hasattr(window, "remove"):
+            window.remove()
 
 
 def main():
