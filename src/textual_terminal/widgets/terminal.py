@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import pty
 import signal
 import subprocess
 from typing import Any, Optional
@@ -24,6 +23,7 @@ from rich.text import Text
 
 from ..screen import Screen
 from ..parser import Parser
+from ..pty_handler import create_pty, spawn_process, set_terminal_size, read_pty, write_pty
 
 
 class Terminal(Widget):
@@ -113,20 +113,16 @@ class Terminal(Widget):
     async def _start_process(self) -> None:
         """Start the child process with PTY."""
         try:
-            # Create PTY
-            self.master_fd, self.slave_fd = pty.openpty()
+            # Create PTY using platform-specific handler
+            self.master_fd, self.slave_fd = create_pty()
 
             # Configure terminal size
             self._set_terminal_size()
 
-            # Start process
-            self.process = subprocess.Popen(
+            # Start process using platform-specific handler
+            self.process = spawn_process(
                 self.command,
-                shell=True,
-                stdin=self.slave_fd,
-                stdout=self.slave_fd,
-                stderr=self.slave_fd,
-                start_new_session=True,
+                self.slave_fd,
                 env=dict(os.environ, TERM="xterm-256color"),
             )
 
@@ -181,16 +177,7 @@ class Terminal(Widget):
     def _set_terminal_size(self) -> None:
         """Set the terminal window size."""
         if self.slave_fd is not None:
-            try:
-                import termios
-                import struct
-                import fcntl
-
-                # Set terminal size (rows, cols, xpixel, ypixel)
-                winsize = struct.pack("HHHH", self.height_chars, self.width_chars, 0, 0)
-                fcntl.ioctl(self.slave_fd, termios.TIOCSWINSZ, winsize)
-            except (ImportError, OSError):
-                pass  # Fallback gracefully
+            set_terminal_size(self.slave_fd, self.height_chars, self.width_chars)
 
     async def _read_from_master(self) -> None:
         """Read data from the master PTY and process it."""
@@ -222,16 +209,7 @@ class Terminal(Widget):
         if self.master_fd is None:
             return b""
 
-        try:
-            # Set non-blocking mode
-            import fcntl
-
-            flags = fcntl.fcntl(self.master_fd, fcntl.F_GETFL)
-            fcntl.fcntl(self.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-            return os.read(self.master_fd, 4096)
-        except (OSError, BlockingIOError):
-            return b""
+        return read_pty(self.master_fd, 4096)
 
     async def _update_display(self) -> None:
         """Update the RichLog display with current screen content."""
@@ -254,10 +232,9 @@ class Terminal(Widget):
         if isinstance(data, str):
             data = data.encode("utf-8")
 
-        try:
-            os.write(self.master_fd, data)
-        except OSError as e:
-            self.log.error(f"Failed to write to terminal: {e}")
+        bytes_written = write_pty(self.master_fd, data)
+        if bytes_written == 0:
+            self.log.error("Failed to write to terminal")
 
     async def on_key(self, event) -> None:
         """Handle key events and send to terminal."""

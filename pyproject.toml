@@ -18,7 +18,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "textual"
+    "textual",
+    # Unix/Linux/Mac PTY support is built into Python's stdlib
 ]
 
 [project.urls]
@@ -41,13 +42,16 @@ dev = [
 window = [
     "textual-window"
 ]
-# Platform-specific example:
-# window-mac = [
-#     "textual-window ; sys_platform == 'darwin'"
-# ]
-# window-linux = [
-#     "textual-window ; sys_platform == 'linux'"
-# ]
+# Windows PTY support
+windows = [
+    "pywinpty ; sys_platform == 'win32'",
+    # or "winpty ; sys_platform == 'win32'"
+]
+# Full installation with all platform support
+all = [
+    "textual-window",
+    "pywinpty ; sys_platform == 'win32'",
+]
 
 [build-system]
 requires = ["flit_core >=3.2,<4"]
