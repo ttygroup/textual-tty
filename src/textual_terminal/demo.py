@@ -5,7 +5,6 @@ Demo: Launch programs in a window in Textual
 
 from __future__ import annotations
 
-import os
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -13,38 +12,6 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 
 from textual_terminal.widgets import ProgramWindow, DebugLog
-from textual_terminal.log import setup_logger
-
-
-def get_user_shell() -> str:
-    """Get the user's default shell from the environment."""
-    # Try SHELL environment variable first
-    shell = os.environ.get("SHELL")
-    if shell and os.path.exists(shell):
-        return shell
-
-    # Try to get from passwd database (Unix/Linux only)
-    try:
-        import pwd
-
-        shell = pwd.getpwuid(os.getuid()).pw_shell
-        if shell and os.path.exists(shell):
-            return shell
-    except (ImportError, AttributeError):
-        # pwd module not available (Windows) or getpwuid not available
-        pass
-
-    # Platform-specific defaults
-    if os.name == "nt":  # Windows
-        return os.environ.get("COMSPEC", "cmd.exe")
-
-    # Unix/Linux fallbacks
-    for shell in ["/bin/bash", "/bin/sh", "/usr/bin/bash", "/usr/bin/sh"]:
-        if os.path.exists(shell):
-            return shell
-
-    # Last resort
-    return "sh"
 
 
 class DemoApp(App):
@@ -105,11 +72,7 @@ class DemoApp(App):
 
     def __init__(self):
         super().__init__()
-        self.default_shell = get_user_shell()
         self.window_count = 0
-
-        # Set up logging
-        setup_logger()
 
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
@@ -119,9 +82,9 @@ class DemoApp(App):
         with Horizontal(id="command-bar"):
             yield Label("Command: ")
             yield Input(
-                placeholder=f"Enter command (default: {self.default_shell})",
+                placeholder="Enter command (default: bash)",
                 id="command-input",
-                value=self.default_shell,
+                value="bash",
             )
             yield Button("New Terminal", id="add-button", variant="primary")
 
@@ -130,15 +93,14 @@ class DemoApp(App):
             # Status area
             yield Static(
                 "Enter a command and press Enter or click 'New Terminal' to create a terminal.\n"
-                f"Default shell: {self.default_shell}\n"
                 f"Terminals created: {self.window_count}",
                 id="status",
             )
 
+        yield Footer()
+
         # Debug log
         yield DebugLog()
-
-        yield Footer()
 
     def create_terminal(self, command: str) -> None:
         """Create a new terminal window."""
@@ -167,13 +129,15 @@ class DemoApp(App):
         status_widget = self.query_one("#status", Static)
         status_widget.update(
             "Enter a command and press Enter or click 'New Terminal' to create a terminal.\n"
-            f"Default shell: {self.default_shell}\n"
             f"Terminals created: {self.window_count}"
         )
 
     def on_mount(self) -> None:
         """Focus the command input when app starts."""
-        self.query_one("#command-input", Input).focus()
+        input_widget = self.query_one("#command-input", Input)
+        input_widget.focus()
+        input_widget.cursor_position = 0
+        input_widget.selection_end = len(input_widget.value)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
@@ -188,13 +152,9 @@ class DemoApp(App):
     def action_new_terminal(self) -> None:
         """Create a new terminal with the command from the input."""
         input_widget = self.query_one("#command-input", Input)
-        command = input_widget.value.strip() or self.default_shell
+        command = input_widget.value.strip() or "bash"
 
         self.create_terminal(command)
-
-        # Clear the input for next command
-        input_widget.value = self.default_shell
-        input_widget.focus()
 
 
 def main():

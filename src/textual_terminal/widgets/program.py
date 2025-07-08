@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from textual.message import Message
 from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Header, Footer
@@ -92,6 +93,13 @@ class Program(Widget):
             # Listen for terminal process events
             self.terminal.add_class("program-terminal")
 
+    class ProgramExited(Message):
+        """Message sent when the program's process exits."""
+
+        def __init__(self, exit_code: int) -> None:
+            self.exit_code = exit_code
+            super().__init__()
+
     def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
         """Handle terminal process exit.
 
@@ -99,21 +107,7 @@ class Program(Widget):
         behavior when the process exits.
         """
         info(f"Program: Terminal process exited with code: {event.exit_code}")
-
-        # Schedule window close on next tick so exit code can be retrieved
-        self.call_later(self._close_containing_window)
-
-    def _close_containing_window(self) -> None:
-        """Close the window containing this program."""
-        # Walk up the widget tree to find the containing window
-        parent = self.parent
-        while parent:
-            if hasattr(parent, "close") and "Window" in str(type(parent)):
-                info(f"Program: Closing containing window {getattr(parent, 'id', 'unknown')}")
-                parent.close()
-                return
-            parent = parent.parent
-        info("Program: Could not find containing window to close")
+        self.post_message(self.ProgramExited(event.exit_code))
 
     def set_command(self, command: str) -> None:
         """Set a new command for the terminal."""

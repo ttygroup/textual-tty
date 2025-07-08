@@ -29,6 +29,17 @@ class ProgramWindow(Window):
     ProgramWindow {
         padding: 0;
         margin: 0;
+        width: 83;
+        height: 28;
+    }
+
+    ProgramWindow #content_pane {
+        padding: 0;
+        margin: 0;
+    }
+
+    ProgramWindow Terminal RichLog {
+        scrollbar-size: 0 0;
     }
 
     ProgramWindow Program {
@@ -51,15 +62,14 @@ class ProgramWindow(Window):
         disabled: bool = False,
         **window_kwargs,
     ):
-        """Initialize the program window.
+        # Create styles_dict for the Window constructor
+        styles_dict = {"width": 83, "height": 28}
+        # Merge with any existing styles_dict from window_kwargs
+        if "styles_dict" in window_kwargs:
+            styles_dict.update(window_kwargs["styles_dict"])
+            del window_kwargs["styles_dict"]
 
-        Args:
-            command: Command to run in the terminal (defaults to shell)
-            show_header: Whether to show the header bar in the program
-            show_footer: Whether to show the footer bar in the program
-            **window_kwargs: Additional arguments passed to Window
-        """
-        super().__init__(name=name, id=id, classes=classes, disabled=disabled, **window_kwargs)
+        super().__init__(name=name, id=id, classes=classes, disabled=disabled, styles_dict=styles_dict, **window_kwargs)
         self.command = command
         self.show_header = show_header
         self.show_footer = show_footer
@@ -70,11 +80,11 @@ class ProgramWindow(Window):
         self.program = Program(command=self.command, show_header=self.show_header, show_footer=self.show_footer)
         yield self.program
 
-    def on_terminal_process_exited(self, event) -> None:
-        """Handle when the terminal process exits."""
-        info(f"ProgramWindow: Process exited with code {event.exit_code}")
-        # Close the window when the process exits
-        self.call_later(self.close)
+    def on_program_program_exited(self, event: Program.ProgramExited) -> None:
+        """Handle when the program process exits."""
+        info(f"ProgramWindow: Program exited with code {event.exit_code}")
+        # Close the window when the program exits
+        self.call_later(self.remove)
 
     def get_exit_code(self) -> Optional[int]:
         """Get the exit code of the process if it has exited."""

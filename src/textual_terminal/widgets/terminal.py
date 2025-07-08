@@ -7,6 +7,7 @@ to provide terminal emulation capabilities.
 
 from __future__ import annotations
 
+import os
 import asyncio
 import subprocess
 from typing import Any, Optional
@@ -33,7 +34,6 @@ class Terminal(Widget):
     Terminal {
         background: black;
         color: white;
-        scrollbar-gutter: stable;
     }
 
     Terminal > RichLog {
@@ -107,26 +107,7 @@ class Terminal(Widget):
 
     async def on_unmount(self) -> None:
         """Handle widget unmounting."""
-        # Give process a chance to terminate gracefully
-        if self.process and self.process.poll() is None:
-            try:
-                self.process.terminate()
-                # Give it 100ms to exit gracefully
-                await asyncio.sleep(0.1)
-                if self.process.poll() is None:
-                    # Still running, kill it
-                    self.process.kill()
-            except ProcessLookupError:
-                pass
-
-        # Close PTY
-        if self.pty is not None:
-            self.pty.close()
-            self.pty = None
-
-        # Cancel read task without waiting
-        if self._read_task and not self._read_task.done():
-            self._read_task.cancel()
+        self._stop_process()
 
     async def _start_process(self) -> None:
         """Start the child process with PTY."""
@@ -142,30 +123,39 @@ class Terminal(Widget):
             info(f"Spawned process: pid={self.process.pid}")
 
             # Start reading from PTY
-            self._read_task = asyncio.create_task(self._read_from_pty())
+            loop = asyncio.get_event_loop()
+            loop.add_reader(self.pty.master_fd, self._read_from_pty)
 
         except Exception as e:
             error(f"Failed to start terminal process: {e}")
-            await self._stop_process()
+            self._stop_process()
 
-    async def _stop_process(self) -> None:
+    def _stop_process(self) -> None:
         """Stop the child process and clean up."""
-        # Kill process first to close PTY from the other end
-        if self.process and self.process.poll() is None:
+        # Prevent multiple calls
+        if self.pty is None and self.process is None:
+            return
+
+        # Remove PTY reader
+        if self.pty and self.pty.master_fd:
             try:
-                self.process.kill()
-            except ProcessLookupError:
-                pass
+                loop = asyncio.get_event_loop()
+                loop.remove_reader(self.pty.master_fd)
+            except (ValueError, OSError):
+                pass  # Reader may already be removed
 
         # Close PTY to break the read loop
         if self.pty is not None:
             self.pty.close()
             self.pty = None
 
-        # Cancel read task aggressively - don't wait for it
-        if self._read_task and not self._read_task.done():
-            self._read_task.cancel()
-            # Don't await - let it die on its own
+        # Post exit message if process was running
+        if self.process:
+            exit_code = self.process.poll()
+            info(f"Process exited with code: {exit_code}")
+            if exit_code is None:
+                exit_code = 0
+            self.post_message(self.ProcessExited(exit_code))
 
         self.process = None
 
@@ -178,50 +168,31 @@ class Terminal(Widget):
         else:
             warning("No PTY available, cannot resize")
 
-    async def _read_from_pty(self) -> None:
+    def _read_from_pty(self) -> None:
         """Read data from the PTY and process it."""
+        if self.pty is None or self.pty.closed:
+            return
+
         try:
-            while self.pty is not None and not self.pty.closed:
-                # Use asyncio to read without blocking with short timeout
-                loop = asyncio.get_event_loop()
-                try:
-                    data = await asyncio.wait_for(loop.run_in_executor(None, self._read_pty_data), timeout=0.1)
-                except asyncio.TimeoutError:
-                    # No data available, continue loop
-                    await asyncio.sleep(0.01)
-                    continue
+            data = os.read(self.pty.master_fd, 4096)
+            if not data:
+                warning("Read returned empty data, process may have exited")
+                self._stop_process()
+                return
 
-                if not data:
-                    warning("Read returned empty data, process may have exited")
-                    break
+            # Process the data through the parser
+            self.parser.feed(data)
 
-                # Process the data through the parser
-                self.parser.feed(data)
+            # Update the display
+            asyncio.create_task(self._update_display())
 
-                # Update the display
-                await self._update_display()
-
+        except OSError as e:
+            # PTY is closed, process has exited
+            info(f"PTY read error: {e}")
+            self._stop_process()
         except Exception as e:
             error(f"Error reading from terminal: {e}")
-        finally:
-            # Process has exited
-            if self.process:
-                exit_code = self.process.poll()
-                info(f"Process exited with code: {exit_code}")
-                if exit_code is None:
-                    exit_code = 0
-                self.post_message(self.ProcessExited(exit_code))
-
-    def _read_pty_data(self) -> bytes:
-        """Read from PTY (blocking operation for executor)."""
-        if self.pty is None or self.pty.closed:
-            return b""
-
-        try:
-            return self.pty.read(4096)
-        except OSError:
-            # PTY is closed, process has exited
-            return b""
+            self._stop_process()
 
     async def _update_display(self) -> None:
         """Update the RichLog display with current screen content."""
