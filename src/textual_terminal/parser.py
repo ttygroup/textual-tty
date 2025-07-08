@@ -69,20 +69,20 @@ class Parser:
         # State for G0/G1 character sets.
         self.current_charset: Dict[str, str] = {}
 
-    def feed(self, data: bytes) -> None:
+    def feed(self, data: str) -> None:
         """
-        Feeds a chunk of bytes into the parser. Replaces `input_parse_buffer()`.
+        Feeds a chunk of text into the parser. Replaces `input_parse_buffer()`.
 
         This is the main entry point. It iterates over the data and passes each
-        byte to the state machine engine.
+        character to the state machine engine.
 
         Args:
-            data: A chunk of bytes read from the application's pty.
+            data: A chunk of text read from the application's pty.
         """
-        for byte in data:
-            self._parse_byte(byte)
+        for char in data:
+            self._parse_char(char)
 
-    def _parse_byte(self, byte: int) -> None:
+    def _parse_char(self, char: str) -> None:
         """
         The core state machine engine. Replaces the main loop in `input_parse()`.
 
@@ -92,85 +92,104 @@ class Parser:
         """
         # Simplified parser - handle basic cases
         if self.current_state == "GROUND":
-            if byte == 0x1B:  # ESC
+            if char == "\x1b":  # ESC
                 self.current_state = "ESCAPE"
                 self._clear()
-            elif byte == 0x07:  # BEL
+            elif char == "\x07":  # BEL
                 pass  # Bell - could emit sound/flash
-            elif byte == 0x08:  # BS
+            elif char == "\x08":  # BS
                 self.screen.backspace()
-            elif byte == 0x09:  # HT (Tab)
+            elif char == "\x09":  # HT (Tab)
                 # Simple tab handling - move to next tab stop
                 self.screen.cursor_x = ((self.screen.cursor_x // 8) + 1) * 8
                 if self.screen.cursor_x >= self.screen.width:
                     self.screen.cursor_x = self.screen.width - 1
-            elif byte == 0x0A:  # LF
+            elif char == "\x0a":  # LF
                 self.screen.line_feed()
-            elif byte == 0x0D:  # CR
+            elif char == "\x0d":  # CR
                 self.screen.carriage_return()
-            elif byte >= 0x20:  # Printable characters
-                char = chr(byte)
+            elif ord(char) >= 0x20:  # Printable characters
                 self.screen.write_cell(char, self.screen.current_style)
         elif self.current_state == "ESCAPE":
-            if byte == ord("["):  # CSI
+            if char == "[":  # CSI
                 self.current_state = "CSI_ENTRY"
-            elif byte == ord("c"):  # RIS (Reset)
-                self._esc_dispatch(chr(byte))
+            elif char == "]":  # OSC (Operating System Command)
+                self._clear()
+                self.current_state = "OSC_STRING"
+            elif char == "c":  # RIS (Reset)
+                self._esc_dispatch(char)
                 self.current_state = "GROUND"
-            elif byte == ord("D"):  # IND (Index)
-                self._esc_dispatch(chr(byte))
+            elif char == "D":  # IND (Index)
+                self._esc_dispatch(char)
                 self.current_state = "GROUND"
-            elif byte == ord("M"):  # RI (Reverse Index)
-                self._esc_dispatch(chr(byte))
+            elif char == "M":  # RI (Reverse Index)
+                self._esc_dispatch(char)
                 self.current_state = "GROUND"
-            elif byte == ord("7"):  # DECSC (Save Cursor)
-                self._esc_dispatch(chr(byte))
+            elif char == "7":  # DECSC (Save Cursor)
+                self._esc_dispatch(char)
                 self.current_state = "GROUND"
-            elif byte == ord("8"):  # DECRC (Restore Cursor)
-                self._esc_dispatch(chr(byte))
+            elif char == "8":  # DECRC (Restore Cursor)
+                self._esc_dispatch(char)
                 self.current_state = "GROUND"
             else:
                 # Unknown escape sequence, go back to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_ENTRY":
-            if 0x3C <= byte <= 0x3F:  # Private mode intermediate characters (<, =, >, ?)
-                self._collect_intermediate(chr(byte))
+            if "\x3c" <= char <= "\x3f":  # Private mode intermediate characters (<, =, >, ?)
+                self._collect_intermediate(char)
                 self.current_state = "CSI_PARAM"
-            elif 0x30 <= byte <= 0x3B:  # Parameter bytes (0-9, :, ;)
-                self._collect_parameter(chr(byte))
+            elif "\x30" <= char <= "\x3b":  # Parameter bytes (0-9, :, ;)
+                self._collect_parameter(char)
                 self.current_state = "CSI_PARAM"
-            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes (general)
-                self.intermediate_chars.append(chr(byte))
+            elif "\x20" <= char <= "\x2f":  # Intermediate bytes (general)
+                self.intermediate_chars.append(char)
                 self.current_state = "CSI_INTERMEDIATE"
-            elif 0x40 <= byte <= 0x7E:  # Final byte
-                self._csi_dispatch(chr(byte))
+            elif "\x40" <= char <= "\x7e":  # Final byte
+                self._csi_dispatch(char)
                 self.current_state = "GROUND"
             else:
                 # Invalid, return to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_PARAM":
-            if 0x30 <= byte <= 0x3B:  # Parameter bytes
-                self._collect_parameter(chr(byte))
-            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
-                self._collect_intermediate(chr(byte))
+            if "\x30" <= char <= "\x3b":  # Parameter bytes
+                self._collect_parameter(char)
+            elif "\x20" <= char <= "\x2f":  # Intermediate bytes
+                self._collect_intermediate(char)
                 self.current_state = "CSI_INTERMEDIATE"
-            elif 0x40 <= byte <= 0x7E:  # Final byte
-                self._csi_dispatch(chr(byte))
+            elif "\x40" <= char <= "\x7e":  # Final byte
+                self._csi_dispatch(char)
                 self.current_state = "GROUND"
             else:
                 # Invalid, return to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_INTERMEDIATE":
-            if 0x30 <= byte <= 0x3B:  # Parameter bytes
-                self._collect_parameter(chr(byte))
-            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
-                self._collect_intermediate(chr(byte))
-            elif 0x40 <= byte <= 0x7E:  # Final byte
-                self._csi_dispatch(chr(byte))
+            if "\x30" <= char <= "\x3b":  # Parameter bytes
+                self._collect_parameter(char)
+            elif "\x20" <= char <= "\x2f":  # Intermediate bytes
+                self._collect_intermediate(char)
+            elif "\x40" <= char <= "\x7e":  # Final byte
+                self._csi_dispatch(char)
                 self.current_state = "GROUND"
             else:
                 # Invalid, return to ground
                 self.current_state = "GROUND"
+        elif self.current_state == "OSC_STRING":
+            if char == "\x07":  # BEL - terminates OSC
+                self._handle_osc_dispatch()
+                self.current_state = "GROUND"
+            elif char == "\x1b":  # ESC - might be start of ST (String Terminator)
+                self.current_state = "OSC_ESC"
+            else:
+                # Collect characters for OSC string
+                self.string_buffer += char
+        elif self.current_state == "OSC_ESC":
+            if char == "\\":  # ST (String Terminator) - ESC \
+                self._handle_osc_dispatch()
+                self.current_state = "GROUND"
+            else:
+                # Not ST, treat as regular character
+                self.string_buffer += "\x1b" + char
+                self.current_state = "OSC_STRING"
 
     def reset(self) -> None:
         """
@@ -628,7 +647,27 @@ class Parser:
         - `104`: Reset color palette entry.
         - `110, 111, 112`: Reset fg/bg/cursor color to default.
         """
-        pass
+        if not self.string_buffer:
+            return
+
+        # Parse OSC command: number;data
+        parts = self.string_buffer.split(";", 1)
+        if len(parts) < 1:
+            return
+
+        try:
+            cmd = int(parts[0])
+        except ValueError:
+            return
+
+        # Handle title setting commands (0 and 2)
+        if cmd == 0 or cmd == 2:
+            # Set window/icon title - we ignore this but consume it
+            # so it doesn't leak through to the screen
+            pass
+
+        # For now, we just consume OSC sequences without implementing them
+        # This prevents them from leaking through to the terminal output
 
     def _handle_dcs_dispatch(self) -> None:
         """
