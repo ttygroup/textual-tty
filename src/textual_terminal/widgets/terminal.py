@@ -243,7 +243,22 @@ class Terminal(Widget):
 
     def _convert_key_event(self, event) -> Optional[bytes]:
         """Convert Textual key event to terminal input bytes."""
-        # Basic key mapping - expand this as needed
+
+        # Use event.character if available (for printable characters)
+        if hasattr(event, "character") and event.character:
+            char = event.character
+
+            # Handle Ctrl combinations
+            if hasattr(event, "ctrl") and event.ctrl:
+                if "a" <= char <= "z":
+                    return bytes([ord(char) - ord("a") + 1])
+                elif "A" <= char <= "Z":
+                    return bytes([ord(char) - ord("A") + 1])
+
+            # Regular character
+            return char.encode("utf-8")
+
+        # Fall back to key mapping for special keys
         key_map = {
             "enter": b"\r",
             "backspace": b"\x7f",
@@ -261,25 +276,7 @@ class Terminal(Widget):
             "insert": b"\x1b[2~",
         }
 
-        # Handle special keys
-        if event.key in key_map:
-            return key_map[event.key]
-
-        # Handle printable characters
-        if len(event.key) == 1:
-            char = event.key
-
-            # Handle Ctrl combinations
-            if hasattr(event, "ctrl") and event.ctrl:
-                if "a" <= char <= "z":
-                    return bytes([ord(char) - ord("a") + 1])
-                elif "A" <= char <= "Z":
-                    return bytes([ord(char) - ord("A") + 1])
-
-            # Regular character
-            return char.encode("utf-8")
-
-        return None
+        return key_map.get(event.key)
 
     def on_resize(self, event) -> None:
         """Handle terminal resize."""

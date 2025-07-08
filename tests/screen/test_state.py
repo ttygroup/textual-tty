@@ -1,3 +1,5 @@
+from rich.text import Text
+
 from textual_terminal.screen import TerminalScreen
 
 
@@ -54,6 +56,15 @@ def test_alignment_test():
         line = screen.lines[y]
         assert len(line.plain) == screen.width
         assert all(char == expected_char for char in line.plain)
+
+
+def test_alternate_screen_on_off_restores_lines():
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("Hello")
+    screen.alternate_screen_on()
+    assert screen.lines[0].plain == ""
+    screen.alternate_screen_off()
+    assert screen.lines[0].plain == "Hello"
 
 
 def test_set_and_clear_modes():
