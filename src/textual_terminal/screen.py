@@ -254,16 +254,14 @@ class TerminalScreen:
         for _ in range(count):
             self.lines.insert(self.cursor_y, Text())
             # Remove lines from bottom to maintain screen height
-            if len(self.lines) > self.height:
-                self.lines.pop()
+            self.lines.pop()
 
     def delete_lines(self, count: int) -> None:
         """Delete lines at cursor position."""
         for _ in range(count):
-            if self.cursor_y < len(self.lines):
-                self.lines.pop(self.cursor_y)
-                # Add blank line at bottom
-                self.lines.append(Text())
+            self.lines.pop(self.cursor_y)
+            # Add blank line at bottom
+            self.lines.append(Text())
 
     def insert_characters(self, count: int) -> None:
         """Insert blank characters at cursor position."""
@@ -310,10 +308,9 @@ class TerminalScreen:
         """Scroll content up within scroll region."""
         # Remove lines from top of scroll region
         for _ in range(count):
-            if self.scroll_top < len(self.lines):
-                self.lines.pop(self.scroll_top)
-                # Add blank line at bottom of scroll region
-                self.lines.insert(self.scroll_bottom, Text())
+            self.lines.pop(self.scroll_top)
+            # Add blank line at bottom of scroll region
+            self.lines.insert(self.scroll_bottom, Text())
 
     def scroll_down(self, count: int) -> None:
         """Scroll content down within scroll region."""
@@ -321,8 +318,7 @@ class TerminalScreen:
         for _ in range(count):
             self.lines.insert(self.scroll_top, Text())
             # Remove lines from bottom of scroll region
-            if self.scroll_bottom + 1 < len(self.lines):
-                self.lines.pop(self.scroll_bottom + 1)
+            self.lines.pop(self.scroll_bottom + 1)
 
     def set_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Set cursor position."""

@@ -99,7 +99,7 @@ class Program(Widget):
         info(f"Program: Terminal process exited with code: {event.exit_code}")
 
         # Schedule window close on next tick so exit code can be retrieved
-        # self.call_later(self._close_containing_window)
+        self.call_later(self._close_containing_window)
 
     def _close_containing_window(self) -> None:
         """Close the window containing this program."""

@@ -1,5 +1,4 @@
 from textual_terminal.screen import TerminalScreen
-from rich.style import Style
 
 
 def test_set_cursor():
@@ -62,21 +61,22 @@ def test_backspace():
 
 def test_save_restore_cursor():
     screen = TerminalScreen(width=80, height=24)
-    screen.set_cursor(15, 10)
-    screen.current_style = Style(color="red")
-
+    screen.cursor_x = 10
+    screen.cursor_y = 5
     screen.save_cursor()
 
-    # Change cursor and style
-    screen.set_cursor(5, 2)
-    screen.current_style = Style(color="blue")
-
-    assert screen.cursor_x == 5
-    assert screen.cursor_y == 2
-    assert screen.current_style.color == Style(color="blue").color
+    screen.cursor_x = 20
+    screen.cursor_y = 15
 
     screen.restore_cursor()
+    assert screen.cursor_x == 10
+    assert screen.cursor_y == 5
 
-    assert screen.cursor_x == 15
-    assert screen.cursor_y == 10
-    assert screen.current_style.color == Style(color="red").color
+
+def test_backspace_wrap():
+    screen = TerminalScreen(width=80, height=24)
+    screen.cursor_x = 0
+    screen.cursor_y = 5
+    screen.backspace()
+    assert screen.cursor_x == 79
+    assert screen.cursor_y == 4

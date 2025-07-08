@@ -205,9 +205,9 @@ def test_insert_characters():
 
 
 def test_delete_characters():
-    screen = TerminalScreen(width=10, height=1)
-    screen.lines[0] = Text("ABCDEFGHIJ")
-    screen.set_cursor(2, 0)  # Delete from C
-
-    screen.delete_characters(3)
-    assert screen.lines[0].plain == "ABFGHIJ"
+    screen = TerminalScreen(width=10, height=5)
+    screen.lines[0] = Text("12345")
+    screen.cursor_x = 2
+    screen.cursor_y = 0
+    screen.delete_characters(2)
+    assert screen.lines[0].plain == "125"

@@ -92,12 +92,12 @@ class UnixPTY:
         """Close the PTY file descriptors."""
         if not self._closed:
             try:
-                if hasattr(self, "master_fd"):
+                if self.master_fd and isinstance(self.master_fd, int):
                     os.close(self.master_fd)
             except OSError:
                 pass
             try:
-                if hasattr(self, "slave_fd"):
+                if self.slave_fd and isinstance(self.slave_fd, int):
                     os.close(self.slave_fd)
             except OSError:
                 pass
@@ -122,6 +122,12 @@ class UnixPTY:
                 "COLUMNS": str(self.cols),
             }
         )
+
+        # Ensure UTF-8 locale if not already set
+        if "LANG" not in process_env or "UTF-8" not in process_env.get("LANG", ""):
+            process_env["LANG"] = "en_US.UTF-8"
+        if "LC_ALL" not in process_env:
+            process_env["LC_ALL"] = process_env.get("LANG", "en_US.UTF-8")
 
         process = subprocess.Popen(
             command,
@@ -210,6 +216,12 @@ class WindowsPTY:
                 "COLUMNS": str(self.cols),
             }
         )
+
+        # Ensure UTF-8 locale if not already set
+        if "LANG" not in process_env or "UTF-8" not in process_env.get("LANG", ""):
+            process_env["LANG"] = "en_US.UTF-8"
+        if "LC_ALL" not in process_env:
+            process_env["LC_ALL"] = process_env.get("LANG", "en_US.UTF-8")
 
         # Windows subprocess handling is different
         return subprocess.Popen(
