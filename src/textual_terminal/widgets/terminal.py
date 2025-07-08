@@ -157,20 +157,10 @@ class Terminal(Widget):
         """Set the terminal window size."""
         if self.pty is not None:
             info(f"Setting PTY size to {self.height_chars}x{self.width_chars}")
+            # PTY resize should automatically send SIGWINCH to the process
             self.pty.resize(self.height_chars, self.width_chars)
-            # Send SIGWINCH to notify the process of the size change
-            if self.process and self.process.poll() is None:
-                try:
-                    import signal
-                    import os
-
-                    # Send SIGWINCH to the process group
-                    info(f"Sending SIGWINCH to process group {self.process.pid}")
-                    os.killpg(self.process.pid, signal.SIGWINCH)
-                except (OSError, ProcessLookupError) as e:
-                    error(f"Failed to send SIGWINCH: {e}")
-            else:
-                warning("No process running, cannot send SIGWINCH")
+        else:
+            warning("No PTY available, cannot resize")
 
     async def _read_from_pty(self) -> None:
         """Read data from the PTY and process it."""

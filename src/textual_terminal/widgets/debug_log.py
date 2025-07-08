@@ -65,23 +65,23 @@ class DebugLog(Widget):
 
     def on_mount(self) -> None:
         """Set up the debug log handler when mounted."""
-        from ..log import get_debug_logger
+        from ..log import get_logger
 
         # Set up handler to capture logs
         self.handler = DebugLogHandler(self)
         formatter = logging.Formatter("%(levelname)s: %(message)s")
         self.handler.setFormatter(formatter)
 
-        # Add handler to the debug logger
-        logger = get_debug_logger()
+        # Add handler to the logger
+        logger = get_logger()
         logger.addHandler(self.handler)
 
     def on_unmount(self) -> None:
         """Clean up the debug log handler when unmounted."""
         if self.handler:
-            from ..log import get_debug_logger
+            from ..log import get_logger
 
-            logger = get_debug_logger()
+            logger = get_logger()
             logger.removeHandler(self.handler)
 
     def add_log(self, message: str) -> None:

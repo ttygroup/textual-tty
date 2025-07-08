@@ -60,6 +60,14 @@ class TerminalScreen:
         self.application_keypad = False
         self.mouse_tracking = False
 
+        self._mode_map = {
+            1: "application_keypad",
+            4: "insert_mode",
+            7: "auto_wrap",
+            25: "cursor_visible",
+        }
+        self.saved_lines: list[Text] | None = None
+
         # Scroll region (top, bottom) - 0-indexed
         self.scroll_top = 0
         self.scroll_bottom = height - 1
@@ -377,10 +385,14 @@ class TerminalScreen:
             self.in_alt_screen = False
             self.current_console = self.main_console
 
-    def set_mode(self, mode: int) -> None:
+    def set_mode(self, mode: int, private: bool) -> None:
         """Set terminal mode."""
-        # Simplified mode handling - expand as needed
-        pass
+        if private:
+            if mode in self._mode_map:
+                setattr(self, self._mode_map[mode], True)
+        else:
+            if mode in self._mode_map:
+                setattr(self, self._mode_map[mode], True)
 
     def clear_mode(self, mode: int) -> None:
         """Clear terminal mode."""

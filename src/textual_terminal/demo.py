@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Demo: Launch programs in a window in Textual
 """
@@ -12,8 +13,8 @@ from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 from textual_window import Window
 
-from .widgets import Terminal, Program, DebugLog
-from .log import setup_debug_logger
+from textual_terminal.widgets import Terminal, Program, DebugLog
+from textual_terminal.log import setup_logger
 
 
 def get_user_shell() -> str:
@@ -47,35 +48,7 @@ def get_user_shell() -> str:
     return "sh"
 
 
-class TerminalWindow(App):
-    """A single terminal window."""
-
-    CSS = """
-    Terminal {
-        height: 100%;
-        width: 100%;
-        background: black;
-        color: white;
-        padding: 0;
-        margin: 0;
-    }
-    """
-
-    BINDINGS = [
-        Binding("ctrl+q", "quit", "Quit", show=True),
-    ]
-
-    def __init__(self, command: str = "/bin/bash", **kwargs):
-        super().__init__(**kwargs)
-        self.command = command
-
-    def compose(self) -> ComposeResult:
-        """Compose the terminal window."""
-        yield Terminal(command=self.command)
-
-    def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
-        """Handle terminal process exit by closing the window."""
-        self.exit(event.exit_code)
+# Removed TerminalWindow class - we now use Program widgets in Window widgets
 
 
 class DemoApp(App):
@@ -147,8 +120,8 @@ class DemoApp(App):
         self.default_shell = get_user_shell()
         self.window_count = 0
 
-        # Set up debug logging
-        setup_debug_logger()
+        # Set up logging
+        setup_logger()
 
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
@@ -242,17 +215,35 @@ class DemoApp(App):
 
     def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
         """Handle terminal process exit by removing the window."""
+        from ..log import info
+
+        info(f"DemoApp: Terminal process exited with code: {event.exit_code}")
+        info(f"DemoApp: Event sender: {event.sender}")
+        info(f"DemoApp: Event sender type: {type(event.sender)}")
+
+        # Stop the event from bubbling up further
+        event.stop()
+
         # Find the window containing the terminal that exited
-        terminal = event._sender
+        terminal = event.sender
         if terminal:
+            info("DemoApp: Looking for window containing terminal...")
             # Find the window that contains this terminal (through Program widget)
-            for window in self.query(Window):
+            windows = list(self.query(Window))
+            info(f"DemoApp: Found {len(windows)} windows")
+            for window in windows:
+                info(f"DemoApp: Checking window {window.id}")
                 # Check if this window contains a program with the terminal that exited
-                programs = window.query(Program)
+                programs = list(window.query(Program))
+                info(f"DemoApp: Window {window.id} has {len(programs)} programs")
                 for program in programs:
+                    info(f"DemoApp: Program terminal: {program.terminal}, looking for: {terminal}")
                     if program.terminal is terminal:
-                        window.remove()
+                        info(f"DemoApp: Found matching terminal, closing window {window.id}")
+                        window.close()
                         return
+
+        info("DemoApp: Could not find window to close")
 
 
 def main():
