@@ -54,6 +54,7 @@ class Parser:
         self.param_buffer: str = ""
         self.parsed_params: List[int | str] = []
         self.string_buffer: str = ""  # For OSC, DCS, APC strings
+        self._string_exit_handler: Optional[Callable] = None
 
         # --- Saved Cursor and Attribute State (for DECSC/DECRC) ---
         self.saved_cx: int = 0
@@ -133,10 +134,10 @@ class Parser:
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_ENTRY":
             if 0x3C <= byte <= 0x3F:  # Private mode intermediate characters (<, =, >, ?)
-                self.intermediate_chars.append(chr(byte))
+                self._collect_intermediate(chr(byte))
                 self.current_state = "CSI_PARAM"
             elif 0x30 <= byte <= 0x3B:  # Parameter bytes (0-9, :, ;)
-                self.param_buffer += chr(byte)
+                self._collect_parameter(chr(byte))
                 self.current_state = "CSI_PARAM"
             elif 0x20 <= byte <= 0x2F:  # Intermediate bytes (general)
                 self.intermediate_chars.append(chr(byte))
@@ -149,9 +150,9 @@ class Parser:
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_PARAM":
             if 0x30 <= byte <= 0x3B:  # Parameter bytes
-                self.param_buffer += chr(byte)
+                self._collect_parameter(chr(byte))
             elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
-                self.intermediate_chars.append(chr(byte))
+                self._collect_intermediate(chr(byte))
                 self.current_state = "CSI_INTERMEDIATE"
             elif 0x40 <= byte <= 0x7E:  # Final byte
                 self._csi_dispatch(chr(byte))
@@ -161,9 +162,9 @@ class Parser:
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_INTERMEDIATE":
             if 0x30 <= byte <= 0x3B:  # Parameter bytes
-                self.param_buffer += chr(byte)
+                self._collect_parameter(chr(byte))
             elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
-                self.intermediate_chars.append(chr(byte))
+                self._collect_intermediate(chr(byte))
             elif 0x40 <= byte <= 0x7E:  # Final byte
                 self._csi_dispatch(chr(byte))
                 self.current_state = "GROUND"
@@ -208,7 +209,7 @@ class Parser:
         In a sequence like `CSI ? 25 h`, the '?' is an intermediate character.
         This method appends it to an internal buffer.
         """
-        pass
+        self.intermediate_chars.append(char)
 
     def _collect_parameter(self, char: str) -> None:
         """
@@ -217,7 +218,7 @@ class Parser:
         This collects characters like '3', '8', ';', '5' from a parameter
         string like "38;5;21". The `_split_params` method will later parse this.
         """
-        pass
+        self.param_buffer += char
 
     def _split_params(self, param_string: str) -> None:
         """
@@ -600,11 +601,16 @@ class Parser:
 
     def _enter_string_mode(self, next_state: str, exit_handler: Callable) -> None:
         """Generic handler for entering a string-based escape mode."""
-        pass
+        self.current_state = next_state
+        self._string_exit_handler = exit_handler
+        self.string_buffer = ""
 
     def _exit_string_mode(self) -> None:
         """Generic handler for exiting a string-based escape mode."""
-        pass
+        if self._string_exit_handler:
+            self._string_exit_handler()
+        self._clear()
+        self.current_state = "GROUND"
 
     def _handle_osc_dispatch(self) -> None:
         """

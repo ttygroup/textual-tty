@@ -8,7 +8,6 @@ to provide terminal emulation capabilities.
 from __future__ import annotations
 
 import asyncio
-import os
 import subprocess
 from typing import Any, Optional
 
@@ -20,7 +19,8 @@ from textual.message import Message
 
 from ..screen import TerminalScreen
 from ..parser import Parser
-from ..pty_handler import create_pty, spawn_process, set_terminal_size, read_pty, write_pty
+from ..pty import create_pty
+from ..log import info, warning, error
 
 
 class Terminal(Widget):
@@ -80,8 +80,7 @@ class Terminal(Widget):
 
         # PTY management
         self.process: Optional[subprocess.Popen] = None
-        self.master_fd: Optional[int] = None
-        self.slave_fd: Optional[int] = None
+        self.pty: Optional[Any] = None
 
         # RichLog widget for display
         self.rich_log: Optional[RichLog] = None
@@ -110,32 +109,21 @@ class Terminal(Widget):
     async def _start_process(self) -> None:
         """Start the child process with PTY."""
         try:
-            self.log.info(f"Starting terminal process: {self.command}")
+            info(f"Starting terminal process: {self.command}")
 
-            # Create PTY using platform-specific handler
-            self.master_fd, self.slave_fd = create_pty()
-            self.log.info(f"Created PTY: master_fd={self.master_fd}, slave_fd={self.slave_fd}")
+            # Create PTY socket
+            self.pty = create_pty(self.height_chars, self.width_chars)
+            info(f"Created PTY: {self.width_chars}x{self.height_chars}")
 
-            # Configure terminal size
-            self._set_terminal_size()
+            # Spawn process attached to PTY
+            self.process = self.pty.spawn_process(self.command)
+            info(f"Spawned process: pid={self.process.pid}")
 
-            # Start process using platform-specific handler
-            self.process = spawn_process(
-                self.command,
-                self.slave_fd,
-                env=dict(os.environ, TERM="xterm-256color"),
-            )
-            self.log.info(f"Spawned process: pid={self.process.pid}")
-
-            # Close slave fd in parent (child has its own copy)
-            os.close(self.slave_fd)
-            self.slave_fd = None
-
-            # Start reading from master
-            self._read_task = asyncio.create_task(self._read_from_master())
+            # Start reading from PTY
+            self._read_task = asyncio.create_task(self._read_from_pty())
 
         except Exception as e:
-            self.log.error(f"Failed to start terminal process: {e}")
+            error(f"Failed to start terminal process: {e}")
             await self._stop_process()
 
     async def _stop_process(self) -> None:
@@ -158,40 +146,42 @@ class Terminal(Widget):
             except ProcessLookupError:
                 pass
 
-        # Close file descriptors
-        if self.master_fd is not None:
-            try:
-                os.close(self.master_fd)
-            except OSError:
-                pass
-            self.master_fd = None
-
-        if self.slave_fd is not None:
-            try:
-                os.close(self.slave_fd)
-            except OSError:
-                pass
-            self.slave_fd = None
+        # Close PTY
+        if self.pty is not None:
+            self.pty.close()
+            self.pty = None
 
         self.process = None
 
     def _set_terminal_size(self) -> None:
         """Set the terminal window size."""
-        if self.master_fd is not None:
-            set_terminal_size(self.master_fd, self.height_chars, self.width_chars)
-        elif self.slave_fd is not None:
-            set_terminal_size(self.slave_fd, self.height_chars, self.width_chars)
+        if self.pty is not None:
+            info(f"Setting PTY size to {self.height_chars}x{self.width_chars}")
+            self.pty.resize(self.height_chars, self.width_chars)
+            # Send SIGWINCH to notify the process of the size change
+            if self.process and self.process.poll() is None:
+                try:
+                    import signal
+                    import os
 
-    async def _read_from_master(self) -> None:
-        """Read data from the master PTY and process it."""
+                    # Send SIGWINCH to the process group
+                    info(f"Sending SIGWINCH to process group {self.process.pid}")
+                    os.killpg(self.process.pid, signal.SIGWINCH)
+                except (OSError, ProcessLookupError) as e:
+                    error(f"Failed to send SIGWINCH: {e}")
+            else:
+                warning("No process running, cannot send SIGWINCH")
+
+    async def _read_from_pty(self) -> None:
+        """Read data from the PTY and process it."""
         try:
-            while self.master_fd is not None:
+            while self.pty is not None and not self.pty.closed:
                 # Use asyncio to read without blocking
                 loop = asyncio.get_event_loop()
-                data = await loop.run_in_executor(None, self._read_master_fd)
+                data = await loop.run_in_executor(None, self._read_pty_data)
 
                 if not data:
-                    self.log.warning("Read returned empty data, process may have exited")
+                    warning("Read returned empty data, process may have exited")
                     break
 
                 # Process the data through the parser
@@ -201,23 +191,23 @@ class Terminal(Widget):
                 await self._update_display()
 
         except Exception as e:
-            self.log.error(f"Error reading from terminal: {e}")
+            error(f"Error reading from terminal: {e}")
         finally:
             # Process has exited
             if self.process:
                 exit_code = self.process.poll()
-                self.log.info(f"Process exited with code: {exit_code}")
+                info(f"Process exited with code: {exit_code}")
                 if exit_code is None:
                     exit_code = 0
                 self.post_message(self.ProcessExited(exit_code))
 
-    def _read_master_fd(self) -> bytes:
-        """Read from master FD (blocking operation for executor)."""
-        if self.master_fd is None:
+    def _read_pty_data(self) -> bytes:
+        """Read from PTY (blocking operation for executor)."""
+        if self.pty is None:
             return b""
 
         try:
-            return read_pty(self.master_fd, 4096)
+            return self.pty.read(4096)
         except OSError:
             # PTY is closed, process has exited
             return b""
@@ -237,15 +227,15 @@ class Terminal(Widget):
 
     def write(self, data: str | bytes) -> None:
         """Write data to the terminal input."""
-        if self.master_fd is None:
+        if self.pty is None:
             return
 
         if isinstance(data, str):
             data = data.encode("utf-8")
 
-        bytes_written = write_pty(self.master_fd, data)
+        bytes_written = self.pty.write(data)
         if bytes_written == 0:
-            self.log.error("Failed to write to terminal")
+            error("Failed to write to terminal")
 
     async def on_key(self, event) -> None:
         """Handle key events and send to terminal."""
@@ -296,18 +286,21 @@ class Terminal(Widget):
 
     def on_resize(self, event) -> None:
         """Handle terminal resize."""
+        info(f"Terminal resize event: {event.size.width}x{event.size.height}")
+
         # Calculate new character dimensions based on available space
         # This is a simplified calculation - you might want to use font metrics
         new_width = max(20, min(200, event.size.width // 8))  # Rough char width
         new_height = max(5, min(100, event.size.height // 16))  # Rough char height
 
+        info(f"Calculated terminal size: {new_width}x{new_height} chars")
+
         if new_width != self.width_chars or new_height != self.height_chars:
-            self.log.info(f"Terminal resize: {self.width_chars}x{self.height_chars} -> {new_width}x{new_height}")
+            info(f"Terminal resize: {self.width_chars}x{self.height_chars} -> {new_width}x{new_height}")
             self.width_chars = new_width
             self.height_chars = new_height
             self.terminal_screen.resize(new_width, new_height)
             self._set_terminal_size()
-            self._send_sigwinch()
 
     def terminate(self) -> None:
         """Terminate the running process."""

@@ -12,7 +12,8 @@ from textual.containers import Horizontal
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 from textual_window import Window
 
-from .widgets import Terminal, Program
+from .widgets import Terminal, Program, DebugLog
+from .log import setup_debug_logger
 
 
 def get_user_shell() -> str:
@@ -146,6 +147,9 @@ class DemoApp(App):
         self.default_shell = get_user_shell()
         self.window_count = 0
 
+        # Set up debug logging
+        setup_debug_logger()
+
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
         yield Header()
@@ -167,6 +171,9 @@ class DemoApp(App):
             f"Windows opened: {self.window_count}",
             id="status",
         )
+
+        # Debug log
+        yield DebugLog()
 
         yield Footer()
 

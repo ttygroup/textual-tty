@@ -1,0 +1,101 @@
+"""
+Debug log widget for displaying debug messages.
+"""
+
+import logging
+from typing import List
+from textual.widgets import RichLog
+from textual.widget import Widget
+
+
+class DebugLogHandler(logging.Handler):
+    """Custom logging handler that sends logs to a debug widget."""
+
+    def __init__(self, widget: "DebugLog"):
+        super().__init__()
+        self.widget = widget
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record to the widget."""
+        try:
+            msg = self.format(record)
+            self.widget.add_log(msg)
+        except Exception:
+            # Don't let logging errors crash the app
+            pass
+
+
+class DebugLog(Widget):
+    """Widget that displays debug log messages."""
+
+    DEFAULT_CSS = """
+    DebugLog {
+        background: black;
+        color: white;
+        border: solid white;
+        height: 10;
+        min-height: 5;
+    }
+
+    DebugLog > RichLog {
+        background: black;
+        color: white;
+        border: none;
+        padding: 0;
+        margin: 0;
+    }
+    """
+
+    def __init__(self, max_lines: int = 100, **kwargs):
+        super().__init__(**kwargs)
+        self.max_lines = max_lines
+        self.log_lines: List[str] = []
+        self.rich_log = None
+        self.handler = None
+
+    def compose(self):
+        """Compose the debug log widget."""
+        self.rich_log = RichLog(
+            highlight=False,
+            markup=False,
+            wrap=True,
+            auto_scroll=True,
+        )
+        yield self.rich_log
+
+    def on_mount(self) -> None:
+        """Set up the debug log handler when mounted."""
+        from ..log import get_debug_logger
+
+        # Set up handler to capture logs
+        self.handler = DebugLogHandler(self)
+        formatter = logging.Formatter("%(levelname)s: %(message)s")
+        self.handler.setFormatter(formatter)
+
+        # Add handler to the debug logger
+        logger = get_debug_logger()
+        logger.addHandler(self.handler)
+
+    def on_unmount(self) -> None:
+        """Clean up the debug log handler when unmounted."""
+        if self.handler:
+            from ..log import get_debug_logger
+
+            logger = get_debug_logger()
+            logger.removeHandler(self.handler)
+
+    def add_log(self, message: str) -> None:
+        """Add a log message to the widget."""
+        if self.rich_log is None:
+            return
+
+        self.log_lines.append(message)
+
+        # Keep only the last max_lines
+        if len(self.log_lines) > self.max_lines:
+            self.log_lines = self.log_lines[-self.max_lines :]
+
+        # Update display
+        self.rich_log.clear()
+        for line in self.log_lines:
+            self.rich_log.write(line)

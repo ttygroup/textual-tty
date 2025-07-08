@@ -118,3 +118,9 @@ class Program(Widget):
         """Terminate the running process."""
         if self.terminal:
             self.terminal.terminate()
+
+    def on_resize(self, event) -> None:
+        """Handle program resize by forwarding to terminal."""
+        if self.terminal:
+            # Forward resize event to the terminal
+            self.terminal.on_resize(event)

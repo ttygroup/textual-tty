@@ -144,18 +144,20 @@ class TerminalScreen:
 
         # Insert or overwrite character
         if self.insert_mode:
-            # Insert character, shifting existing content right
-            plain_text = list(line.plain)
-            plain_text.insert(self.cursor_x, character)
-
-            # Rebuild the line with styling
-            new_line = Text()
-            for i, char in enumerate(plain_text):
-                if i == self.cursor_x:
-                    new_line.append(char, style)
-                else:
-                    # Preserve existing style (simplified - real implementation would be more complex)
-                    new_line.append(char)
+            # Insert character at cursor position
+            if self.cursor_x < len(line.plain):
+                # Insert in middle of existing line
+                new_line = Text()
+                new_line.append(line.plain[: self.cursor_x])
+                new_line.append(character, style)
+                new_line.append(line.plain[self.cursor_x :])
+            else:
+                # Append to end of line
+                new_line = Text(line.plain)
+                # Pad with spaces if needed
+                while len(new_line.plain) < self.cursor_x:
+                    new_line.append(" ")
+                new_line.append(character, style)
 
             # Truncate if line becomes too long
             if len(new_line.plain) > self.width:
@@ -164,23 +166,23 @@ class TerminalScreen:
             self.lines[self.cursor_y] = new_line
         else:
             # Overwrite character
-            # Create a new Text object with the character replaced
-            plain_text = list(line.plain)
-            if self.cursor_x < len(plain_text):
-                plain_text[self.cursor_x] = character
+            if self.cursor_x < len(line.plain):
+                # Replace character in existing line
+                new_line = Text()
+                if self.cursor_x > 0:
+                    new_line.append(line.plain[: self.cursor_x])
+                new_line.append(character, style)
+                if self.cursor_x + 1 < len(line.plain):
+                    new_line.append(line.plain[self.cursor_x + 1 :])
+                self.lines[self.cursor_y] = new_line
             else:
-                plain_text.append(character)
-
-            # Rebuild the line with styling
-            new_line = Text()
-            for i, char in enumerate(plain_text):
-                if i == self.cursor_x:
-                    new_line.append(char, style)
-                else:
-                    # Preserve existing style (simplified - real implementation would be more complex)
-                    new_line.append(char)
-
-            self.lines[self.cursor_y] = new_line
+                # Append to end of line
+                new_line = Text(line.plain)
+                # Pad with spaces if needed
+                while len(new_line.plain) < self.cursor_x:
+                    new_line.append(" ")
+                new_line.append(character, style)
+                self.lines[self.cursor_y] = new_line
 
         # Move cursor forward
         self.cursor_x += 1
