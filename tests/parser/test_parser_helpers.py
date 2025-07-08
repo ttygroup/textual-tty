@@ -62,7 +62,7 @@ def test_split_params_with_empty_parts(parser_and_screen):
     """Test _split_params with empty parts (e.g., double semicolons)."""
     parser, _ = parser_and_screen
     parser._split_params("1;;3")
-    assert parser.parsed_params == [1, 0, 3]
+    assert parser.parsed_params == [1, None, 3]
 
 
 def test_get_param_valid_index(parser_and_screen):

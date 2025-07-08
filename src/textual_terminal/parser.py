@@ -114,33 +114,30 @@ class Parser:
             if byte == ord("["):  # CSI
                 self.current_state = "CSI_ENTRY"
             elif byte == ord("c"):  # RIS (Reset)
-                self._reset_terminal()
+                self._esc_dispatch(chr(byte))
                 self.current_state = "GROUND"
             elif byte == ord("D"):  # IND (Index)
-                self.screen.line_feed()
+                self._esc_dispatch(chr(byte))
                 self.current_state = "GROUND"
             elif byte == ord("M"):  # RI (Reverse Index)
-                if self.screen.cursor_y <= self.screen.scroll_top:
-                    self.screen.scroll_down(1)
-                else:
-                    self.screen.cursor_y -= 1
+                self._esc_dispatch(chr(byte))
                 self.current_state = "GROUND"
             elif byte == ord("7"):  # DECSC (Save Cursor)
-                self.screen.save_cursor()
+                self._esc_dispatch(chr(byte))
                 self.current_state = "GROUND"
             elif byte == ord("8"):  # DECRC (Restore Cursor)
-                self.screen.restore_cursor()
+                self._esc_dispatch(chr(byte))
                 self.current_state = "GROUND"
             else:
                 # Unknown escape sequence, go back to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_ENTRY":
-            if byte == ord("?"):  # Private parameter
-                self.intermediate_chars.append("?")
-                self.current_state = "CSI_PARAM"
-            elif 0x30 <= byte <= 0x3F:  # Parameter bytes
+            if 0x30 <= byte <= 0x3F:  # Parameter bytes (0-9, :, ;, <, =, >, ?)
                 self.param_buffer += chr(byte)
                 self.current_state = "CSI_PARAM"
+            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes (@, A-Z, [, \, ], ^, _, `, a-z, {, |, }, ~)
+                self.intermediate_chars.append(chr(byte))
+                self.current_state = "CSI_INTERMEDIATE"
             elif 0x40 <= byte <= 0x7E:  # Final byte
                 self._csi_dispatch(chr(byte))
                 self.current_state = "GROUND"
@@ -150,6 +147,20 @@ class Parser:
         elif self.current_state == "CSI_PARAM":
             if 0x30 <= byte <= 0x3F:  # Parameter bytes
                 self.param_buffer += chr(byte)
+            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
+                self.intermediate_chars.append(chr(byte))
+                self.current_state = "CSI_INTERMEDIATE"
+            elif 0x40 <= byte <= 0x7E:  # Final byte
+                self._csi_dispatch(chr(byte))
+                self.current_state = "GROUND"
+            else:
+                # Invalid, return to ground
+                self.current_state = "GROUND"
+        elif self.current_state == "CSI_INTERMEDIATE":
+            if 0x30 <= byte <= 0x3F:  # Parameter bytes
+                self.param_buffer += chr(byte)
+            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes
+                self.intermediate_chars.append(chr(byte))
             elif 0x40 <= byte <= 0x7E:  # Final byte
                 self._csi_dispatch(chr(byte))
                 self.current_state = "GROUND"
@@ -161,8 +172,8 @@ class Parser:
         """
         Resets the parser to its initial ground state. Replaces `input_reset()`.
         """
-        # This would call _clear() and reset the state to GROUND.
-        pass
+        self._clear()
+        self.current_state = "GROUND"
 
     # --- State Buffer and Parameter Handling Methods ---
 
@@ -222,12 +233,12 @@ class Parser:
                 # Sub-parameters - for now, just take the first one
                 sub_parts = part.split(":")
                 try:
-                    self.parsed_params.append(int(sub_parts[0]) if sub_parts[0] else 0)
+                    self.parsed_params.append(int(sub_parts[0]) if sub_parts[0] else None)
                 except ValueError:
                     self.parsed_params.append(0)
             else:
                 try:
-                    self.parsed_params.append(int(part) if part else 0)
+                    self.parsed_params.append(int(part) if part else None)
                 except ValueError:
                     self.parsed_params.append(0)
 
@@ -237,7 +248,8 @@ class Parser:
         This replaces `input_get`.
         """
         if index < len(self.parsed_params):
-            return self.parsed_params[index]
+            param = self.parsed_params[index]
+            return param if param is not None else default
         return default
 
     # --- C0 Control Code Dispatcher ---
@@ -284,7 +296,7 @@ class Parser:
 
     # --- Escape (ESC) Sequence Dispatchers ---
 
-    def _esc_dispatch(self) -> None:
+    def _esc_dispatch(self, final_char: str) -> None:
         """
         Handles an ESC-based escape sequence (ones that do not start with CSI).
 
@@ -305,7 +317,20 @@ class Parser:
         - `SCSG0_OFF`, `SCSG1_OFF`: Designate G0/G1 charsets as ASCII.
         - `DECALN`: Screen alignment test (fills screen with 'E').
         """
-        pass
+        if final_char == "c":  # RIS (Reset in State)
+            self._reset_terminal()
+        elif final_char == "D":  # IND (Index)
+            self.screen.line_feed()
+        elif final_char == "M":  # RI (Reverse Index)
+            if self.screen.cursor_y <= self.screen.scroll_top:
+                self.screen.scroll_down(1)
+            else:
+                self.screen.cursor_y -= 1
+        elif final_char == "7":  # DECSC (Save Cursor)
+            self.screen.save_cursor()
+        elif final_char == "8":  # DECRC (Restore Cursor)
+            self.screen.restore_cursor()
+        # Add more ESC sequences as needed
 
     # --- Control Sequence Introducer (CSI) Dispatchers ---
 
@@ -432,7 +457,15 @@ class Parser:
         - `?1049`: Enable alternate screen buffer.
         - `?2004`: Enable bracketed paste mode.
         """
-        pass
+        for param in self.parsed_params:
+            if param == 1:  # DECCKM - Cursor Keys Application Mode
+                # self.screen.cursor_key_application_mode = set_mode # Not yet implemented
+                pass
+            elif param == 7:  # DECAWM - Auto-wrap Mode
+                self.screen.auto_wrap = set_mode
+            elif param == 25:  # Show/hide cursor
+                self.screen.cursor_visible = set_mode
+            # Add more private modes as needed
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---
 
@@ -592,12 +625,17 @@ class Parser:
                     color_type = next(it)
                     if color_type == 5:  # 256-color
                         color_code = next(it)
-                        new_color = Color.from_ansi(color_code)
+                        # Check if we have enough parameters - if color_code came from empty string
+                        # we should consider this malformed
+                        if color_code is not None:
+                            new_color = Color.from_ansi(color_code)
                     elif color_type == 2:  # Truecolor (RGB)
                         r = next(it)
                         g = next(it)
                         b = next(it)
-                        new_color = Color.from_rgb(r, g, b)
+                        # Check if we have valid RGB values
+                        if r is not None and g is not None and b is not None:
+                            new_color = Color.from_rgb(r, g, b)
                 except StopIteration:
                     # Malformed sequence, ignore
                     pass
@@ -605,7 +643,7 @@ class Parser:
                     self.screen.current_style += Style(color=new_color)
             elif param == 39:
                 # Default foreground color
-                self.screen.current_style += Style(color=None)
+                self.screen.current_style += Style(color=Color.default())
             elif 40 <= param <= 47:
                 # Standard 16-color background
                 self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 40))
@@ -616,12 +654,17 @@ class Parser:
                     color_type = next(it)
                     if color_type == 5:  # 256-color
                         color_code = next(it)
-                        new_bgcolor = Color.from_ansi(color_code)
+                        # Check if we have enough parameters - if color_code came from empty string
+                        # we should consider this malformed
+                        if color_code is not None:
+                            new_bgcolor = Color.from_ansi(color_code)
                     elif color_type == 2:  # Truecolor (RGB)
                         r = next(it)
                         g = next(it)
                         b = next(it)
-                        new_bgcolor = Color.from_rgb(r, g, b)
+                        # Check if we have valid RGB values
+                        if r is not None and g is not None and b is not None:
+                            new_bgcolor = Color.from_rgb(r, g, b)
                 except StopIteration:
                     # Malformed sequence, ignore
                     pass
@@ -629,7 +672,7 @@ class Parser:
                     self.screen.current_style += Style(bgcolor=new_bgcolor)
             elif param == 49:
                 # Default background color
-                self.screen.current_style += Style(bgcolor=None)
+                self.screen.current_style += Style(bgcolor=Color.default())
             elif 90 <= param <= 97:
                 # Bright 16-color foreground
                 self.screen.current_style += Style(color=Color.from_ansi(param - 90 + 8))
@@ -639,6 +682,10 @@ class Parser:
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
+        if "?" in self.intermediate_chars:
+            self._csi_dispatch_sm_rm_private(set_mode)
+            return
+
         # Basic mode handling - expand as needed
         for param in self.parsed_params:
             if param == 7:  # Auto-wrap mode

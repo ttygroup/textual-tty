@@ -228,7 +228,7 @@ def test_sgr_malformed_256_color(screen):
     parser = Parser(screen)
     screen.current_style = Style(color="red")
     parser.feed(b"\x1b[38;5;m")  # Malformed: missing color code
-    assert screen.current_style.color == Color.parse("red")  # Should not change
+    assert str(screen.current_style.color) == str(Color.parse("red"))  # Should not change
 
 
 def test_sgr_malformed_rgb_color(screen):
@@ -236,7 +236,7 @@ def test_sgr_malformed_rgb_color(screen):
     parser = Parser(screen)
     screen.current_style = Style(color="red")
     parser.feed(b"\x1b[38;2;255;0;m")  # Malformed: missing blue component
-    assert screen.current_style.color == Color.parse("red")  # Should not change
+    assert str(screen.current_style.color) == str(Color.parse("red"))  # Should not change
 
 
 def test_sgr_empty_params_resets(screen):
