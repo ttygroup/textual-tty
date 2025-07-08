@@ -19,7 +19,7 @@ from textual.message import Message
 
 from ..screen import TerminalScreen
 from ..parser import Parser
-from ..pty import create_pty
+from ..pty_handler import create_pty
 from ..log import info, warning, error
 
 
