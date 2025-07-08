@@ -132,10 +132,13 @@ class Parser:
                 # Unknown escape sequence, go back to ground
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_ENTRY":
-            if 0x30 <= byte <= 0x3F:  # Parameter bytes (0-9, :, ;, <, =, >, ?)
+            if byte in (ord("?"), ord(">"), ord("<"), ord("=")):  # Private mode intermediate characters
+                self.intermediate_chars.append(chr(byte))
+                self.current_state = "CSI_PARAM"  # Still transition to CSI_PARAM to collect numeric params
+            elif 0x30 <= byte <= 0x3F:  # Parameter bytes (0-9, :, ;)
                 self.param_buffer += chr(byte)
                 self.current_state = "CSI_PARAM"
-            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes (@, A-Z, [, \, ], ^, _, `, a-z, {, |, }, ~)
+            elif 0x20 <= byte <= 0x2F:  # Intermediate bytes (general)
                 self.intermediate_chars.append(chr(byte))
                 self.current_state = "CSI_INTERMEDIATE"
             elif 0x40 <= byte <= 0x7E:  # Final byte
@@ -438,7 +441,120 @@ class Parser:
         - `48`: Begins an extended background color sequence.
         - `58`: Begins an extended underline color sequence.
         """
-        pass
+        if not self.parsed_params:
+            # Default to [0] if no parameters are given
+            self.parsed_params = [0]
+
+        # Ensure current_style is always a Style object
+        if self.screen.current_style is None:
+            self.screen.current_style = Style()
+
+        it = iter(self.parsed_params)
+        while True:
+            try:
+                param = next(it)
+            except StopIteration:
+                break
+
+            if param == 0:
+                # Reset all attributes
+                self.screen.current_style = Style()
+            elif param == 1:
+                self.screen.current_style += Style(bold=True)
+            elif param == 2:
+                self.screen.current_style += Style(dim=True)
+            elif param == 3:
+                self.screen.current_style += Style(italic=True)
+            elif param == 4:
+                self.screen.current_style += Style(underline=True)
+            elif param == 5:
+                self.screen.current_style += Style(blink=True)
+            elif param == 7:
+                self.screen.current_style += Style(reverse=True)
+            elif param == 8:
+                self.screen.current_style += Style(conceal=True)
+            elif param == 9:
+                self.screen.current_style += Style(strike=True)
+            elif param == 21:  # Not bold/double underline
+                self.screen.current_style += Style(bold=False)
+            elif param == 22:  # Neither bold nor faint
+                self.screen.current_style += Style(bold=False, dim=False)
+            elif param == 23:  # Not italic
+                self.screen.current_style += Style(italic=False)
+            elif param == 24:  # Not underlined
+                self.screen.current_style += Style(underline=False)
+            elif param == 25:  # Not blinking
+                self.screen.current_style += Style(blink=False)
+            elif param == 27:  # Not reversed
+                self.screen.current_style += Style(reverse=False)
+            elif param == 28:  # Not hidden
+                self.screen.current_style += Style(conceal=False)
+            elif param == 29:  # Not strikethrough
+                self.screen.current_style += Style(strike=False)
+            elif 30 <= param <= 37:
+                # Standard 16-color foreground
+                self.screen.current_style += Style(color=Color.from_ansi(param - 30))
+            elif param == 38:
+                # Extended foreground color
+                new_color = None
+                try:
+                    color_type = next(it)
+                    if color_type == 5:  # 256-color
+                        color_code = next(it)
+                        # Check if we have enough parameters - if color_code came from empty string
+                        # we should consider this malformed
+                        if color_code is not None:
+                            new_color = Color.from_ansi(color_code)
+                    elif color_type == 2:  # Truecolor (RGB)
+                        r = next(it)
+                        g = next(it)
+                        b = next(it)
+                        # Check if we have valid RGB values
+                        if r is not None and g is not None and b is not None:
+                            new_color = Color.from_rgb(r, g, b)
+                except StopIteration:
+                    # Malformed sequence, ignore
+                    pass
+                if new_color is not None:
+                    self.screen.current_style += Style(color=new_color)
+            elif param == 39:
+                # Default foreground color
+                self.screen.current_style += Style(color=Color.default())
+            elif 40 <= param <= 47:
+                # Standard 16-color background
+                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 40))
+            elif param == 48:
+                # Extended background color
+                new_bgcolor = None
+                try:
+                    color_type = next(it)
+                    if color_type == 5:  # 256-color
+                        color_code = next(it)
+                        # Check if we have enough parameters - if color_code came from empty string
+                        # we should consider this malformed
+                        if color_code is not None:
+                            new_bgcolor = Color.from_ansi(color_code)
+                    elif color_type == 2:  # Truecolor (RGB)
+                        r = next(it)
+                        g = next(it)
+                        b = next(it)
+                        # Check if we have valid RGB values
+                        if r is not None and g is not None and b is not None:
+                            new_bgcolor = Color.from_rgb(r, g, b)
+                except StopIteration:
+                    # Malformed sequence, ignore
+                    pass
+                if new_bgcolor is not None:
+                    self.screen.current_style += Style(bgcolor=new_bgcolor)
+            elif param == 49:
+                # Default background color
+                self.screen.current_style += Style(bgcolor=Color.default())
+            elif 90 <= param <= 97:
+                # Bright 16-color foreground
+                self.screen.current_style += Style(color=Color.from_ansi(param - 90 + 8))
+            elif 100 <= param <= 107:
+                # Bright 16-color background
+                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handles SM (Set Mode) and RM (Reset Mode) sequences."""

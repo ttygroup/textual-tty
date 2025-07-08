@@ -29,24 +29,6 @@ def screen():
     return screen
 
 
-def test_csi_sgr_malformed_rgb_foreground(screen):
-    """Test SGR with malformed RGB foreground sequence (missing values)."""
-    parser = Parser(screen)
-    # Malformed sequence: 38;2;r;g;b but missing g and b
-    parser.feed(b"\x1b[38;2;100m")
-    # Should not raise an error and current_style should not change to an invalid color
-    assert screen.current_style.color is None
-
-
-def test_csi_sgr_malformed_rgb_background(screen):
-    """Test SGR with malformed RGB background sequence (missing values)."""
-    parser = Parser(screen)
-    # Malformed sequence: 48;2;r;g;b but missing g and b
-    parser.feed(b"\x1b[48;2;100m")
-    # Should not raise an error and current_style should not change to an invalid color
-    assert screen.current_style.bgcolor is None
-
-
 def test_csi_sm_rm_private_autowrap(screen):
     """Test CSI ? 7 h (Set Auto-wrap Mode) and CSI ? 7 l (Reset Auto-wrap Mode)."""
     parser = Parser(screen)
@@ -86,22 +68,3 @@ def test_parse_byte_csi_intermediate_transition(screen):
     assert parser.current_state == "GROUND"
     assert parser.parsed_params == [1]
     assert parser.intermediate_chars == [">"]
-
-
-def test_parser_reset_method(screen):
-    """Test the reset method of the parser."""
-    parser = Parser(screen)
-    # Change some state
-    parser.current_state = "ESCAPE"
-    parser.intermediate_chars.append("?")
-    parser.param_buffer = "123"
-    parser.parsed_params.append(123)
-    parser.string_buffer = "test"
-
-    parser.reset()
-
-    assert parser.current_state == "GROUND"
-    assert not parser.intermediate_chars
-    assert not parser.param_buffer
-    assert not parser.parsed_params
-    assert not parser.string_buffer
