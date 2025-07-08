@@ -188,8 +188,11 @@ class Terminal(Widget):
                 self._stop_process()
                 return
 
-            # Process the data through the parser
-            self.parser.feed(data)
+            # Decode UTF-8 - Python's C implementation is very fast
+            text = data.decode("utf-8", errors="replace")
+
+            # Process the text through the parser
+            self.parser.feed(text)
 
             # Update the display
             asyncio.create_task(self._update_display())
