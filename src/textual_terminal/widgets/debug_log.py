@@ -4,6 +4,7 @@ Debug log widget for displaying debug messages.
 
 import logging
 from typing import List
+from textual.app import ComposeResult
 from textual.widgets import RichLog
 from textual.widget import Widget
 from ..log import get_logger, setup_logger
@@ -21,8 +22,11 @@ class DebugLogHandler(logging.Handler):
         try:
             msg = self.format(record)
             self.widget.add_log(msg)
-        except Exception:
+        except (AttributeError, ValueError, TypeError):
             # Don't let logging errors crash the app
+            # AttributeError: widget is None or missing methods
+            # ValueError: invalid formatting
+            # TypeError: type mismatch in formatting
             pass
 
 
@@ -48,13 +52,19 @@ class DebugLog(Widget):
     """
 
     def __init__(self, max_lines: int = 100, **kwargs):
+        """Initialize the debug log widget.
+
+        Args:
+            max_lines: Maximum number of log lines to keep in memory
+            **kwargs: Additional widget arguments
+        """
         super().__init__(**kwargs)
         self.max_lines = max_lines
         self.log_lines: List[str] = []
         self.rich_log = None
         self.handler = None
 
-    def compose(self):
+    def compose(self) -> ComposeResult:
         """Compose the debug log widget."""
         self.rich_log = RichLog(
             highlight=False,
@@ -84,17 +94,21 @@ class DebugLog(Widget):
             logger.removeHandler(self.handler)
 
     def add_log(self, message: str) -> None:
-        """Add a log message to the widget."""
+        """Add a log message to the widget.
+
+        Args:
+            message: The log message to add
+        """
         if self.rich_log is None:
             return
 
         self.log_lines.append(message)
 
-        # Keep only the last max_lines
+        # Keep only the last max_lines to prevent memory bloat
         if len(self.log_lines) > self.max_lines:
             self.log_lines = self.log_lines[-self.max_lines :]
 
-        # Update display
+        # Update display by clearing and re-rendering all lines
         self.rich_log.clear()
         for line in self.log_lines:
             self.rich_log.write(line)

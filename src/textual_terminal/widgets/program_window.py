@@ -25,6 +25,9 @@ class ProgramWindow(Window):
     contained process exits.
     """
 
+    # Let focus pass through to the terminal inside
+    can_focus = False
+
     DEFAULT_CSS = """
     ProgramWindow {
         padding: 0;
