@@ -38,6 +38,16 @@ dev = [
     "ruff",
     "mkdocs"
 ]
+window = [
+    "textual-window"
+]
+# Platform-specific example:
+# window-mac = [
+#     "textual-window ; sys_platform == 'darwin'"
+# ]
+# window-linux = [
+#     "textual-window ; sys_platform == 'linux'"
+# ]
 
 [build-system]
 requires = ["flit_core >=3.2,<4"]

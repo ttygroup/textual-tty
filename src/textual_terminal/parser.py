@@ -17,8 +17,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from rich.style import Style
-    from .screen_writer import ScreenWriter
+    from .screen import Screen
+
+from rich.style import Style
 
 
 class Parser:
@@ -30,15 +31,14 @@ class Parser:
     state and/or execute a handler for a recognized escape sequence.
     """
 
-    def __init__(self, screen_writer: ScreenWriter) -> None:
+    def __init__(self, screen: Screen) -> None:
         """
         Initializes the parser state. Replaces `input_init()`.
 
         Args:
-            screen_writer: An object with the screen writing API that the parser
-                will call to manipulate the grid.
+            screen: A Screen object that the parser will manipulate.
         """
-        self.writer = screen_writer
+        self.screen = screen
 
         # The current state of the parser (e.g., 'GROUND', 'ESCAPE').
         self.current_state: str = "GROUND"
@@ -77,8 +77,8 @@ class Parser:
         Args:
             data: A chunk of bytes read from the application's pty.
         """
-        # This method would contain the main loop that calls `_parse_byte`
-        pass
+        for byte in data:
+            self._parse_byte(byte)
 
     def _parse_byte(self, byte: int) -> None:
         """
@@ -88,7 +88,73 @@ class Parser:
         transition for the given byte, executes the handler, and moves to the
         next state.
         """
-        pass
+        # Simplified parser - handle basic cases
+        if self.current_state == "GROUND":
+            if byte == 0x1B:  # ESC
+                self.current_state = "ESCAPE"
+                self._clear()
+            elif byte == 0x07:  # BEL
+                pass  # Bell - could emit sound/flash
+            elif byte == 0x08:  # BS
+                self.screen.backspace()
+            elif byte == 0x09:  # HT (Tab)
+                # Simple tab handling - move to next tab stop
+                self.screen.cursor_x = ((self.screen.cursor_x // 8) + 1) * 8
+                if self.screen.cursor_x >= self.screen.width:
+                    self.screen.cursor_x = self.screen.width - 1
+            elif byte == 0x0A:  # LF
+                self.screen.line_feed()
+            elif byte == 0x0D:  # CR
+                self.screen.carriage_return()
+            elif byte >= 0x20:  # Printable characters
+                char = chr(byte)
+                self.screen.write_cell(char, self.screen.current_style)
+        elif self.current_state == "ESCAPE":
+            if byte == ord("["):  # CSI
+                self.current_state = "CSI_ENTRY"
+            elif byte == ord("c"):  # RIS (Reset)
+                self._reset_terminal()
+                self.current_state = "GROUND"
+            elif byte == ord("D"):  # IND (Index)
+                self.screen.line_feed()
+                self.current_state = "GROUND"
+            elif byte == ord("M"):  # RI (Reverse Index)
+                if self.screen.cursor_y <= self.screen.scroll_top:
+                    self.screen.scroll_down(1)
+                else:
+                    self.screen.cursor_y -= 1
+                self.current_state = "GROUND"
+            elif byte == ord("7"):  # DECSC (Save Cursor)
+                self.screen.save_cursor()
+                self.current_state = "GROUND"
+            elif byte == ord("8"):  # DECRC (Restore Cursor)
+                self.screen.restore_cursor()
+                self.current_state = "GROUND"
+            else:
+                # Unknown escape sequence, go back to ground
+                self.current_state = "GROUND"
+        elif self.current_state == "CSI_ENTRY":
+            if byte == ord("?"):  # Private parameter
+                self.intermediate_chars.append("?")
+                self.current_state = "CSI_PARAM"
+            elif 0x30 <= byte <= 0x3F:  # Parameter bytes
+                self.param_buffer += chr(byte)
+                self.current_state = "CSI_PARAM"
+            elif 0x40 <= byte <= 0x7E:  # Final byte
+                self._csi_dispatch(chr(byte))
+                self.current_state = "GROUND"
+            else:
+                # Invalid, return to ground
+                self.current_state = "GROUND"
+        elif self.current_state == "CSI_PARAM":
+            if 0x30 <= byte <= 0x3F:  # Parameter bytes
+                self.param_buffer += chr(byte)
+            elif 0x40 <= byte <= 0x7E:  # Final byte
+                self._csi_dispatch(chr(byte))
+                self.current_state = "GROUND"
+            else:
+                # Invalid, return to ground
+                self.current_state = "GROUND"
 
     def reset(self) -> None:
         """
@@ -106,7 +172,10 @@ class Parser:
         This is called when entering a new escape sequence (ESC, CSI, OSC, etc.)
         to ensure old parameter or intermediate data is discarded.
         """
-        pass
+        self.intermediate_chars.clear()
+        self.param_buffer = ""
+        self.parsed_params.clear()
+        self.string_buffer = ""
 
     def _ground(self) -> None:
         """
@@ -142,14 +211,33 @@ class Parser:
         It splits the string by ';' and handles sub-parameters separated by ':'.
         This logic replaces `input_split`.
         """
-        pass
+        self.parsed_params.clear()
+        if not param_string:
+            return
+
+        parts = param_string.split(";")
+        for part in parts:
+            if ":" in part:
+                # Sub-parameters - for now, just take the first one
+                sub_parts = part.split(":")
+                try:
+                    self.parsed_params.append(int(sub_parts[0]) if sub_parts[0] else 0)
+                except ValueError:
+                    self.parsed_params.append(0)
+            else:
+                try:
+                    self.parsed_params.append(int(part) if part else 0)
+                except ValueError:
+                    self.parsed_params.append(0)
 
     def _get_param(self, index: int, default: int) -> int:
         """
         Gets a numeric parameter from the parsed list, with a default value.
         This replaces `input_get`.
         """
-        pass
+        if index < len(self.parsed_params):
+            return self.parsed_params[index]
+        return default
 
     # --- C0 Control Code Dispatcher ---
 
@@ -220,7 +308,7 @@ class Parser:
 
     # --- Control Sequence Introducer (CSI) Dispatchers ---
 
-    def _csi_dispatch(self) -> None:
+    def _csi_dispatch(self, final_char: str) -> None:
         """
         Handles a CSI-based escape sequence (starts with `ESC[`).
 
@@ -243,7 +331,66 @@ class Parser:
         - `REP`: Repeat the preceding character N times.
         - `DECSCUSR`: Set cursor style (block, underline, bar).
         """
-        pass
+        # Parse parameters
+        self._split_params(self.param_buffer)
+
+        # Handle common CSI sequences
+        if final_char == "H" or final_char == "f":  # CUP - Cursor Position
+            row = self._get_param(0, 1) - 1  # Convert to 0-based
+            col = self._get_param(1, 1) - 1  # Convert to 0-based
+            self.screen.set_cursor(col, row)
+        elif final_char == "A":  # CUU - Cursor Up
+            count = self._get_param(0, 1)
+            self.screen.cursor_y = max(0, self.screen.cursor_y - count)
+        elif final_char == "B":  # CUD - Cursor Down
+            count = self._get_param(0, 1)
+            self.screen.cursor_y = min(self.screen.height - 1, self.screen.cursor_y + count)
+        elif final_char == "C":  # CUF - Cursor Forward
+            count = self._get_param(0, 1)
+            self.screen.cursor_x = min(self.screen.width - 1, self.screen.cursor_x + count)
+        elif final_char == "D":  # CUB - Cursor Backward
+            count = self._get_param(0, 1)
+            self.screen.cursor_x = max(0, self.screen.cursor_x - count)
+        elif final_char == "G":  # CHA - Cursor Horizontal Absolute
+            col = self._get_param(0, 1) - 1  # Convert to 0-based
+            self.screen.set_cursor(col, None)
+        elif final_char == "d":  # VPA - Vertical Position Absolute
+            row = self._get_param(0, 1) - 1  # Convert to 0-based
+            self.screen.set_cursor(None, row)
+        elif final_char == "J":  # ED - Erase in Display
+            mode = self._get_param(0, 0)
+            self.screen.clear_screen(mode)
+        elif final_char == "K":  # EL - Erase in Line
+            mode = self._get_param(0, 0)
+            self.screen.clear_line(mode)
+        elif final_char == "L":  # IL - Insert Lines
+            count = self._get_param(0, 1)
+            self.screen.insert_lines(count)
+        elif final_char == "M":  # DL - Delete Lines
+            count = self._get_param(0, 1)
+            self.screen.delete_lines(count)
+        elif final_char == "@":  # ICH - Insert Characters
+            count = self._get_param(0, 1)
+            self.screen.insert_characters(count)
+        elif final_char == "P":  # DCH - Delete Characters
+            count = self._get_param(0, 1)
+            self.screen.delete_characters(count)
+        elif final_char == "S":  # SU - Scroll Up
+            count = self._get_param(0, 1)
+            self.screen.scroll_up(count)
+        elif final_char == "T":  # SD - Scroll Down
+            count = self._get_param(0, 1)
+            self.screen.scroll_down(count)
+        elif final_char == "r":  # DECSTBM - Set Scroll Region
+            top = self._get_param(0, 1) - 1  # Convert to 0-based
+            bottom = self._get_param(1, self.screen.height) - 1  # Convert to 0-based
+            self.screen.set_scroll_region(top, bottom)
+        elif final_char == "m":  # SGR - Select Graphic Rendition
+            self._csi_dispatch_sgr()
+        elif final_char == "h":  # SM - Set Mode
+            self._csi_dispatch_sm_rm(True)
+        elif final_char == "l":  # RM - Reset Mode
+            self._csi_dispatch_sm_rm(False)
 
     def _csi_dispatch_sgr(self) -> None:
         """
@@ -357,3 +504,25 @@ class Parser:
         if the sequence doesn't complete in time.
         """
         pass
+
+    def _reset_terminal(self) -> None:
+        """Reset terminal to initial state."""
+        self.screen.clear_screen(2)
+        self.screen.set_cursor(0, 0)
+        self.screen.current_style = Style()
+
+    def _csi_dispatch_sgr(self) -> None:
+        """Handle SGR (Select Graphic Rendition) sequences."""
+        # Basic SGR handling - this would need to be expanded
+        if not self.parsed_params:
+            # Reset all attributes
+            self.screen.current_style = Style()
+
+    def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
+        """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
+        # Basic mode handling - expand as needed
+        for param in self.parsed_params:
+            if param == 7:  # Auto-wrap mode
+                self.screen.auto_wrap = set_mode
+            elif param == 25:  # Cursor visibility
+                self.screen.cursor_visible = set_mode
