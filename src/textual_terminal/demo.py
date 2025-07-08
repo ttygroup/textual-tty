@@ -9,11 +9,10 @@ import os
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Button, Label, Static
-from textual_window import Window
 
-from textual_terminal.widgets import Program, DebugLog
+from textual_terminal.widgets import ProgramWindow, DebugLog
 from textual_terminal.log import setup_logger
 
 
@@ -46,9 +45,6 @@ def get_user_shell() -> str:
 
     # Last resort
     return "sh"
-
-
-# Removed TerminalWindow class - we now use Program widgets in Window widgets
 
 
 class DemoApp(App):
@@ -94,20 +90,12 @@ class DemoApp(App):
         color: $text;
     }
 
-    Window > * {
-        padding: 0;
-        margin: 0;
+    #main-content {
+        height: 1fr;
+        padding: 1;
     }
 
-    .window-content {
-        padding: 0;
-        margin: 0;
-    }
-
-    .window-body {
-        padding: 0;
-        margin: 0;
-    }
+    /* Windows are positioned absolutely by textual-window */
     """
 
     BINDINGS = [
@@ -135,46 +123,41 @@ class DemoApp(App):
                 id="command-input",
                 value=self.default_shell,
             )
-            yield Button("New Window", id="add-button", variant="primary")
+            yield Button("New Terminal", id="add-button", variant="primary")
 
-        # Status area
-        yield Static(
-            "Enter a command and press Enter or click 'New Window' to open a terminal in a new window.\n"
-            f"Default shell: {self.default_shell}\n"
-            f"Windows opened: {self.window_count}",
-            id="status",
-        )
+        # Main content area
+        with Vertical(id="main-content"):
+            # Status area
+            yield Static(
+                "Enter a command and press Enter or click 'New Terminal' to create a terminal.\n"
+                f"Default shell: {self.default_shell}\n"
+                f"Terminals created: {self.window_count}",
+                id="status",
+            )
 
         # Debug log
         yield DebugLog()
 
         yield Footer()
 
-    def create_terminal_window(self, command: str) -> None:
-        """Create a new terminal window using textual-window."""
+    def create_terminal(self, command: str) -> None:
+        """Create a new terminal window."""
         self.window_count += 1
 
-        # Get the command name for the window title
-        cmd_name = "Shell"
-        if command:
-            cmd_name = command.split()[0]
-            cmd_name = os.path.basename(cmd_name)
-
-        window_title = f"{cmd_name}_{self.window_count}"
-
-        # Create the program widget
-        program = Program(command=command)
-
-        # Create and show the window
-        window = Window(
-            program,
-            id=window_title,
-            name=f"{cmd_name} [{self.window_count}]",
+        # Create a ProgramWindow - a draggable window with a terminal program
+        window = ProgramWindow(
+            command=command,
+            id=f"Terminal {self.window_count}",
             start_open=True,
+            starting_horizontal="center",
+            starting_vertical="middle",
         )
 
-        # Add the window to the current app
+        # Mount the window
         self.mount(window)
+
+        # Focus the new window
+        window.focus()
 
         # Update status
         self.update_status()
@@ -183,9 +166,9 @@ class DemoApp(App):
         """Update the status display."""
         status_widget = self.query_one("#status", Static)
         status_widget.update(
-            "Enter a command and press Enter or click 'New Window' to open a terminal in a new window.\n"
+            "Enter a command and press Enter or click 'New Terminal' to create a terminal.\n"
             f"Default shell: {self.default_shell}\n"
-            f"Windows opened: {self.window_count}"
+            f"Terminals created: {self.window_count}"
         )
 
     def on_mount(self) -> None:
@@ -203,11 +186,11 @@ class DemoApp(App):
             self.action_new_terminal()
 
     def action_new_terminal(self) -> None:
-        """Create a new terminal window with the command from the input."""
+        """Create a new terminal with the command from the input."""
         input_widget = self.query_one("#command-input", Input)
         command = input_widget.value.strip() or self.default_shell
 
-        self.create_terminal_window(command)
+        self.create_terminal(command)
 
         # Clear the input for next command
         input_widget.value = self.default_shell

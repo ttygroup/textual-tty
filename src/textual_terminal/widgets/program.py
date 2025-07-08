@@ -33,6 +33,8 @@ class Program(Widget):
         color: white;
         padding: 0;
         margin: 0;
+        width: 80;
+        height: 24;
     }
 
     Program > Vertical {
@@ -41,8 +43,8 @@ class Program(Widget):
     }
 
     Program Terminal {
-        height: 1fr;
-        width: 1fr;
+        height: 100%;
+        width: 100%;
         background: black;
         color: white;
     }
@@ -133,9 +135,3 @@ class Program(Widget):
         """Terminate the running process."""
         if self.terminal:
             self.terminal.terminate()
-
-    def on_resize(self, event) -> None:
-        """Handle program resize by forwarding to terminal."""
-        if self.terminal:
-            # Forward resize event to the terminal
-            self.terminal.on_resize(event)

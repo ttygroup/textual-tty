@@ -107,7 +107,26 @@ class Terminal(Widget):
 
     async def on_unmount(self) -> None:
         """Handle widget unmounting."""
-        await self._stop_process()
+        # Give process a chance to terminate gracefully
+        if self.process and self.process.poll() is None:
+            try:
+                self.process.terminate()
+                # Give it 100ms to exit gracefully
+                await asyncio.sleep(0.1)
+                if self.process.poll() is None:
+                    # Still running, kill it
+                    self.process.kill()
+            except ProcessLookupError:
+                pass
+
+        # Close PTY
+        if self.pty is not None:
+            self.pty.close()
+            self.pty = None
+
+        # Cancel read task without waiting
+        if self._read_task and not self._read_task.done():
+            self._read_task.cancel()
 
     async def _start_process(self) -> None:
         """Start the child process with PTY."""
@@ -131,28 +150,22 @@ class Terminal(Widget):
 
     async def _stop_process(self) -> None:
         """Stop the child process and clean up."""
-        # Cancel read task
-        if self._read_task and not self._read_task.done():
-            self._read_task.cancel()
-            try:
-                await self._read_task
-            except asyncio.CancelledError:
-                pass
-
-        # Terminate process
+        # Kill process first to close PTY from the other end
         if self.process and self.process.poll() is None:
             try:
-                self.process.terminate()
-                await asyncio.sleep(0.1)
-                if self.process.poll() is None:
-                    self.process.kill()
+                self.process.kill()
             except ProcessLookupError:
                 pass
 
-        # Close PTY
+        # Close PTY to break the read loop
         if self.pty is not None:
             self.pty.close()
             self.pty = None
+
+        # Cancel read task aggressively - don't wait for it
+        if self._read_task and not self._read_task.done():
+            self._read_task.cancel()
+            # Don't await - let it die on its own
 
         self.process = None
 
@@ -169,9 +182,14 @@ class Terminal(Widget):
         """Read data from the PTY and process it."""
         try:
             while self.pty is not None and not self.pty.closed:
-                # Use asyncio to read without blocking
+                # Use asyncio to read without blocking with short timeout
                 loop = asyncio.get_event_loop()
-                data = await loop.run_in_executor(None, self._read_pty_data)
+                try:
+                    data = await asyncio.wait_for(loop.run_in_executor(None, self._read_pty_data), timeout=0.1)
+                except asyncio.TimeoutError:
+                    # No data available, continue loop
+                    await asyncio.sleep(0.01)
+                    continue
 
                 if not data:
                     warning("Read returned empty data, process may have exited")
@@ -196,7 +214,7 @@ class Terminal(Widget):
 
     def _read_pty_data(self) -> bytes:
         """Read from PTY (blocking operation for executor)."""
-        if self.pty is None:
+        if self.pty is None or self.pty.closed:
             return b""
 
         try:
@@ -232,27 +250,39 @@ class Terminal(Widget):
 
     async def on_key(self, event) -> None:
         """Handle key events and send to terminal."""
+        # Let Ctrl+Q bubble up to app level immediately
+        if hasattr(event, "ctrl") and event.ctrl and event.key == "q":
+            return
+
         # Convert Textual key events to terminal input
         key_data = self._convert_key_event(event)
         if key_data:
             self.write(key_data)
+            # Prevent further processing of this key
+            event.prevent_default()
+            event.stop()
 
     def _convert_key_event(self, event) -> Optional[bytes]:
         """Convert Textual key event to terminal input bytes."""
 
-        # Use event.character if available (for printable characters)
-        if hasattr(event, "character") and event.character:
-            char = event.character
-
-            # Handle Ctrl combinations
-            if hasattr(event, "ctrl") and event.ctrl:
+        # Handle Ctrl combinations first (including Ctrl+C)
+        if hasattr(event, "ctrl") and event.ctrl:
+            if event.key == "c":
+                return b"\x03"  # Ctrl+C (SIGINT)
+            elif event.key == "d":
+                return b"\x04"  # Ctrl+D (EOF)
+            elif event.key == "z":
+                return b"\x1a"  # Ctrl+Z (SIGTSTP)
+            elif event.key == "q":
+                return None  # Don't capture Ctrl+Q, let app handle it
+            elif len(event.key) == 1:
+                char = event.key.lower()
                 if "a" <= char <= "z":
                     return bytes([ord(char) - ord("a") + 1])
-                elif "A" <= char <= "Z":
-                    return bytes([ord(char) - ord("A") + 1])
 
-            # Regular character
-            return char.encode("utf-8")
+        # Use event.character if available (for printable characters)
+        if hasattr(event, "character") and event.character:
+            return event.character.encode("utf-8")
 
         # Fall back to key mapping for special keys
         key_map = {
@@ -278,18 +308,28 @@ class Terminal(Widget):
         """Handle terminal resize."""
         info(f"Terminal resize event: {event.size.width}x{event.size.height}")
 
-        # Calculate new character dimensions based on available space
-        # This is a simplified calculation - you might want to use font metrics
-        new_width = max(20, min(200, event.size.width // 8))  # Rough char width
-        new_height = max(5, min(100, event.size.height // 16))  # Rough char height
+        # Log RichLog size if available
+        if self.rich_log:
+            info(f"RichLog size: {self.rich_log.size}")
+
+        # Use RichLog size if available (it's already in characters)
+        if self.rich_log:
+            new_width = self.rich_log.size.width
+            new_height = self.rich_log.size.height
+        else:
+            # Fallback to event size
+            new_width = event.size.width
+            new_height = event.size.height
 
         info(f"Calculated terminal size: {new_width}x{new_height} chars")
+        info(f"TerminalScreen current size: {self.terminal_screen.width}x{self.terminal_screen.height}")
 
         if new_width != self.width_chars or new_height != self.height_chars:
             info(f"Terminal resize: {self.width_chars}x{self.height_chars} -> {new_width}x{new_height}")
             self.width_chars = new_width
             self.height_chars = new_height
             self.terminal_screen.resize(new_width, new_height)
+            info(f"TerminalScreen after resize: {self.terminal_screen.width}x{self.terminal_screen.height}")
             self._set_terminal_size()
 
     def terminate(self) -> None:
