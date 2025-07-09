@@ -38,9 +38,11 @@ def test_write_cell_no_auto_wrap():
     screen.auto_wrap = False
     screen.cursor_x = 4
     screen.cursor_y = 0
-    screen.write_text("a", style=Style(color="red"))
+    screen.current_style = Style(color="red")
+    screen.write_text("a")
     assert screen.cursor_x == 4
-    screen.write_text("b", style=Style(color="blue"))
+    screen.current_style = Style(color="blue")
+    screen.write_text("b")
     assert screen.cursor_x == 4
     expected_line = Text("    b", spans=[Span(4, 5, Style(color="blue"))])
     assert screen.current_buffer.lines[0] == expected_line
@@ -51,7 +53,8 @@ def test_write_cell_clip_at_width():
     screen.auto_wrap = False
     screen.cursor_x = 5  # Set cursor beyond width
     screen.cursor_y = 0
-    screen.write_text("X", style=Style(color="red"))
+    screen.current_style = Style(color="red")
+    screen.write_text("X")
     assert screen.cursor_x == 4  # Should be clamped to width - 1
     expected_line = Text("    X", spans=[Span(4, 5, Style(color="red"))])
     assert screen.current_buffer.lines[0] == expected_line
@@ -112,7 +115,8 @@ def test_write_cell_overwrite_at_end_of_line():
     screen.current_buffer.lines[0] = Text("abc", spans=[Span(0, 3, Style(color="blue"))])
     screen.cursor_x = 3
     screen.cursor_y = 0
-    screen.write_text("X", style=Style(color="red"))
+    screen.current_style = Style(color="red")
+    screen.write_text("X")
     expected_line = Text("abcX", spans=[Span(0, 3, Style(color="blue")), Span(3, 4, Style(color="red"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -122,7 +126,8 @@ def test_write_cell_overwrite_empty_line():
     screen.current_buffer.lines[0] = Text("", spans=[Span(0, 0, Style(color="blue"))])
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.write_text("A", style=Style(color="green"))
+    screen.current_style = Style(color="green")
+    screen.write_text("A")
     expected_line = Text("A", spans=[Span(0, 1, Style(color="green"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -179,7 +184,8 @@ def test_write_cell_overwrite_with_style():
     screen.cursor_x = 2
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text(
         "12X45", spans=[Span(0, 2, Style(color="blue")), Span(2, 3, style), Span(3, 5, Style(color="blue"))]
     )
@@ -193,7 +199,8 @@ def test_write_cell_insert_with_style():
     screen.cursor_x = 2
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text(
         "12X345", spans=[Span(0, 2, Style(color="blue")), Span(2, 3, style), Span(3, 6, Style(color="blue"))]
     )
@@ -206,7 +213,8 @@ def test_write_cell_insert_at_end_of_line():
     screen.current_buffer.lines[0] = Text("123", spans=[Span(0, 3, Style(color="blue"))])
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.write_text("X", style=Style(color="red"))
+    screen.current_style = Style(color="red")
+    screen.write_text("X")
     expected_line = Text(
         "123  X", spans=[Span(0, 3, Style(color="blue")), Span(3, 5, Style()), Span(5, 6, Style(color="red"))]
     )
@@ -218,7 +226,8 @@ def test_write_cell_overwrite_at_start_of_line():
     screen.current_buffer.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.write_text("X", style=Style(color="red"))
+    screen.current_style = Style(color="red")
+    screen.write_text("X")
     expected_line = Text("X2345", spans=[Span(0, 1, Style(color="red")), Span(1, 5, Style(color="blue"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -229,7 +238,8 @@ def test_write_cell_insert_and_truncate():
     screen.current_buffer.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="blue"))])
     screen.cursor_x = 2
     screen.cursor_y = 0
-    screen.write_text("X", style=Style(color="red"))
+    screen.current_style = Style(color="red")
+    screen.write_text("X")
     expected_line = Text(
         "12X34",
         spans=[Span(0, 2, Style(color="blue")), Span(2, 3, Style(color="red")), Span(3, 5, Style(color="blue"))],
@@ -272,7 +282,8 @@ def test_write_cell_overwrite_at_start_of_line_with_style():
     screen.cursor_x = 0
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("X2345", spans=[Span(0, 1, style), Span(1, 5, Style(color="blue"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -283,7 +294,8 @@ def test_write_cell_overwrite_middle_of_line_with_style():
     screen.cursor_x = 5
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text(
         "01234X6789", spans=[Span(0, 5, Style(color="blue")), Span(5, 6, style), Span(6, 10, Style(color="blue"))]
     )
@@ -297,7 +309,8 @@ def test_write_cell_insert_middle_of_line_with_style():
     screen.cursor_x = 5
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text(
         "01234X56789", spans=[Span(0, 5, Style(color="blue")), Span(5, 6, style), Span(6, 11, Style(color="blue"))]
     )
@@ -311,7 +324,8 @@ def test_write_cell_insert_at_start_of_line_with_style():
     screen.cursor_x = 0
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("X0123456789", spans=[Span(0, 1, style), Span(1, 11, Style(color="blue"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -323,7 +337,8 @@ def test_write_cell_insert_at_end_of_line_with_style():
     screen.cursor_x = 9
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("012345678X", spans=[Span(0, 9, Style(color="blue")), Span(9, 10, style)])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -334,7 +349,8 @@ def test_write_cell_insert_into_empty_line_with_style():
     screen.cursor_x = 0
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("X", spans=[Span(0, 1, style)])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -344,7 +360,8 @@ def test_write_cell_overwrite_into_empty_line_with_style():
     screen.cursor_x = 0
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("X", spans=[Span(0, 1, style)])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -355,7 +372,8 @@ def test_write_cell_overwrite_beyond_end_of_line_with_style():
     screen.cursor_x = 5
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("abc  X", spans=[Span(0, 3, Style(color="blue")), Span(3, 5, Style()), Span(5, 6, style)])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -367,7 +385,8 @@ def test_write_cell_insert_beyond_end_of_line_with_style():
     screen.cursor_x = 5
     screen.cursor_y = 0
     style = Style(color="red")
-    screen.write_text("X", style)
+    screen.current_style = style
+    screen.write_text("X")
     expected_line = Text("abc  X", spans=[Span(0, 3, Style(color="blue")), Span(3, 5, Style()), Span(5, 6, style)])
     assert screen.current_buffer.lines[0] == expected_line
 

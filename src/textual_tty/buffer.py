@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from rich.style import Style
-from rich.text import Text
+from rich.text import Text, Span
 
 
 class Buffer:
@@ -105,7 +105,11 @@ class Buffer:
                 continue
 
             # Build new line with cleared region
-            new_line = line[:clear_start] + Text(" " * (clear_end - clear_start), style) + line[clear_end:]
+            cleared_text = Text(" " * (clear_end - clear_start), style)
+            # Ensure the cleared region has an explicit span even for default style
+            if not cleared_text.spans and len(cleared_text.plain) > 0:
+                cleared_text.spans.append(Span(0, len(cleared_text.plain), style))
+            new_line = line[:clear_start] + cleared_text + line[clear_end:]
             self.lines[y] = new_line
 
     def clear_line(self, y: int, mode: int = 0, cursor_x: int = 0) -> None:
@@ -114,7 +118,7 @@ class Buffer:
             return
 
         line = self.lines[y]
-        
+
         if mode == 0:  # Clear from cursor to end of line
             if cursor_x < len(line.plain):
                 self.lines[y] = line[:cursor_x]

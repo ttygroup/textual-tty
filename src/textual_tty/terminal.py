@@ -19,6 +19,7 @@ from .pty_handler import create_pty
 from .log import info, warning, error
 
 from rich.text import Text
+from rich.style import Style
 
 
 class Terminal:
@@ -163,6 +164,10 @@ class Terminal:
     def clear_line(self, mode: int = 0) -> None:
         """Clear line."""
         self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x)
+
+    def clear_rect(self, x1: int, y1: int, x2: int, y2: int, style: Optional[Style] = None) -> None:
+        """Clear a rectangular region."""
+        self.current_buffer.clear_region(x1, y1, x2, y2, style)
 
     def set_mode(self, mode: str, value: bool) -> None:
         """Set terminal mode."""
