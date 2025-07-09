@@ -16,8 +16,7 @@ from textual.widget import Widget
 from textual.widgets import Header, Footer
 from textual.containers import Vertical
 
-from .terminal import Terminal
-from ..textual_terminal import TextualTerminal
+from .textual_terminal import TextualTerminal
 from ..log import info
 
 
@@ -74,7 +73,7 @@ class Program(Widget):
         self.command = command or "/bin/bash"
         self.show_header = show_header
         self.show_footer = show_footer
-        self.terminal: Optional[Terminal] = None
+        self.terminal: Optional[TextualTerminal] = None
 
     def compose(self) -> ComposeResult:
         """Compose the program layout."""
@@ -82,7 +81,7 @@ class Program(Widget):
             if self.show_header:
                 yield Header()
 
-            self.terminal = Terminal(command=self.command)
+            self.terminal = TextualTerminal(command=self.command)
             yield self.terminal
 
             if self.show_footer:

@@ -43,7 +43,7 @@ class ProgramWindow(Window):
         background: black;
     }
 
-    ProgramWindow Terminal RichLog {
+    ProgramWindow TextualTerminal RichLog {
         scrollbar-size: 0 0;
     }
 

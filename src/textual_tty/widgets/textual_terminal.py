@@ -16,8 +16,8 @@ from textual.widget import Widget
 from textual.reactive import reactive
 from textual.message import Message
 
-from .terminal import Terminal
-from .log import debug
+from ..terminal import Terminal
+from ..log import debug
 
 
 class TextualTerminal(Terminal, Widget):
@@ -43,6 +43,7 @@ class TextualTerminal(Terminal, Widget):
         border: none;
         padding: 0;
         margin: 0;
+        scrollbar-size: 0 0;
     }
     """
 

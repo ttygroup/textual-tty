@@ -23,5 +23,5 @@ There's 3 widgets:
 - [ ] fix tests
 - [ ] get a cursor
 - [ ] scrollback buffer support
-- [ ] add some chafa and other stuff as test cases
+- [ ] load the scripts in the demo dir
 

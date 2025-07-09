@@ -1,8 +1,8 @@
 """Terminal widgets for Textual applications."""
 
-from .terminal import Terminal
+from .textual_terminal import TextualTerminal
 from .program import Program
-from .program_window import ProgramWindow
+from .terminal_app import ProgramWindow
 from .debug_log import DebugLog
 
-__all__ = ["Terminal", "Program", "ProgramWindow", "DebugLog"]
+__all__ = ["TextualTerminal", "Program", "ProgramWindow", "DebugLog"]
