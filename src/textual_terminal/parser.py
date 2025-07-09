@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 from rich.style import Style
 from rich.color import Color
+from .log import debug
 
 
 class Parser:
@@ -132,7 +133,8 @@ class Parser:
                 self._esc_dispatch(char)
                 self.current_state = "GROUND"
             else:
-                # Unknown escape sequence, go back to ground
+                # Unknown escape sequence, log and go back to ground
+                debug(f"Unknown escape sequence: ESC {char!r}")
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_ENTRY":
             if "\x3c" <= char <= "\x3f":  # Private mode intermediate characters (<, =, >, ?)
@@ -148,7 +150,8 @@ class Parser:
                 self._csi_dispatch(char)
                 self.current_state = "GROUND"
             else:
-                # Invalid, return to ground
+                # Invalid CSI sequence, log and return to ground
+                debug(f"Invalid CSI character: {char!r}")
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_PARAM":
             if "\x30" <= char <= "\x3b":  # Parameter bytes
@@ -160,7 +163,8 @@ class Parser:
                 self._csi_dispatch(char)
                 self.current_state = "GROUND"
             else:
-                # Invalid, return to ground
+                # Invalid CSI sequence, log and return to ground
+                debug(f"Invalid CSI character: {char!r}")
                 self.current_state = "GROUND"
         elif self.current_state == "CSI_INTERMEDIATE":
             if "\x30" <= char <= "\x3b":  # Parameter bytes
@@ -171,7 +175,8 @@ class Parser:
                 self._csi_dispatch(char)
                 self.current_state = "GROUND"
             else:
-                # Invalid, return to ground
+                # Invalid CSI sequence, log and return to ground
+                debug(f"Invalid CSI character: {char!r}")
                 self.current_state = "GROUND"
         elif self.current_state == "OSC_STRING":
             if char == "\x07":  # BEL - terminates OSC
@@ -453,6 +458,10 @@ class Parser:
             self._csi_dispatch_sm_rm(True)
         elif final_char == "l":  # RM - Reset Mode
             self._csi_dispatch_sm_rm(False)
+        else:
+            # Unknown CSI sequence, log it
+            params_str = self.param_buffer if self.param_buffer else "<no params>"
+            debug(f"Unknown CSI sequence: ESC[{params_str}{final_char!r}")
 
     def _csi_dispatch_sgr(self) -> None:
         """
