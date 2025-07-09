@@ -98,7 +98,9 @@ class Parser:
                 self._clear()
             elif char == "\x07":  # BEL
                 pass  # Bell - could emit sound/flash
-            elif char == "\x08":  # BS
+            elif char == "\x08":  # BS (Backspace)
+                self.terminal.backspace()
+            elif char == "\x7f":  # DEL (Delete/Backspace)
                 self.terminal.backspace()
             elif char == "\x09":  # HT (Tab)
                 # Simple tab handling - move to next tab stop
@@ -118,6 +120,18 @@ class Parser:
             elif char == "]":  # OSC (Operating System Command)
                 self._clear()
                 self.current_state = "OSC_STRING"
+            elif char == "=":  # DECKPAM - Application Keypad Mode
+                self.terminal.set_mode("application_keypad", True)
+                self.current_state = "GROUND"
+            elif char == ">":  # DECKPNM - Normal Keypad Mode  
+                self.terminal.set_mode("application_keypad", False)
+                self.current_state = "GROUND"
+            elif char == "P":  # DCS - Device Control String
+                self._clear()
+                self.current_state = "DCS_STRING"
+            elif char == "\\":  # ST - String Terminator
+                # End of string sequence
+                self.current_state = "GROUND"
             elif char == "c":  # RIS (Reset)
                 self._esc_dispatch(char)
                 self.current_state = "GROUND"
@@ -205,6 +219,23 @@ class Parser:
                 # Not ST, treat as regular character
                 self.string_buffer += "\x1b" + char
                 self.current_state = "OSC_STRING"
+        elif self.current_state == "DCS_STRING":
+            if char == "\x07":  # BEL - terminates DCS
+                self._handle_dcs_dispatch()
+                self.current_state = "GROUND"
+            elif char == "\x1b":  # ESC - might be start of ST (String Terminator)
+                self.current_state = "DCS_ESC"
+            else:
+                # Collect characters for DCS string
+                self.string_buffer += char
+        elif self.current_state == "DCS_ESC":
+            if char == "\\":  # ST (String Terminator) - ESC \
+                self._handle_dcs_dispatch()
+                self.current_state = "GROUND"
+            else:
+                # Not ST, treat as regular character
+                self.string_buffer += "\x1b" + char
+                self.current_state = "DCS_STRING"
         elif self.current_state == "CHARSET_G0":
             # Character set designation for G0 - just consume and go back to ground
             self.current_state = "GROUND"
@@ -499,6 +530,13 @@ class Parser:
                 self.terminal.current_buffer.set(self.terminal.cursor_x, self.terminal.cursor_y, " ")
                 if self.terminal.cursor_x < self.terminal.width - 1:
                     self.terminal.cursor_x += 1
+        elif final_char == "n":  # Device Status Report / Cursor Position Report
+            # This is often used by programs to query cursor position
+            # We don't need to respond as this is just for compatibility
+            pass
+        elif final_char == "c":  # Device Attributes
+            # Programs query terminal capabilities - we just ignore
+            pass
         else:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"

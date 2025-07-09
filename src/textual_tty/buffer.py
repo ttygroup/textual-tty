@@ -108,17 +108,23 @@ class Buffer:
             new_line = line[:clear_start] + Text(" " * (clear_end - clear_start), style) + line[clear_end:]
             self.lines[y] = new_line
 
-    def clear_line(self, y: int, mode: int = 0) -> None:
+    def clear_line(self, y: int, mode: int = 0, cursor_x: int = 0) -> None:
         """Clear line content."""
         if not (0 <= y < self.height):
             return
 
+        line = self.lines[y]
+        
         if mode == 0:  # Clear from cursor to end of line
-            # This should be called with cursor position
-            self.lines[y] = Text()
+            if cursor_x < len(line.plain):
+                self.lines[y] = line[:cursor_x]
+            # If cursor is at or beyond end, no need to clear
         elif mode == 1:  # Clear from beginning to cursor
-            # This should be called with cursor position
-            self.lines[y] = Text()
+            if cursor_x < len(line.plain):
+                self.lines[y] = Text(" " * cursor_x) + line[cursor_x:]
+            else:
+                # Clear entire line if cursor is beyond content
+                self.lines[y] = Text()
         elif mode == 2:  # Clear entire line
             self.lines[y] = Text()
 

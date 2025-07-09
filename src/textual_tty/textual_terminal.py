@@ -186,12 +186,16 @@ class TextualTerminal(Terminal, Widget):
         debug(f"width_chars changed from {old_width} to {new_width}")
         # Update the base Terminal size
         super().resize(new_width, self.height_chars)
+        # Notify the PTY process about the size change
+        self._set_terminal_size()
 
     def watch_height_chars(self, old_height: int, new_height: int) -> None:
         """Called when height changes."""
         debug(f"height_chars changed from {old_height} to {new_height}")
         # Update the base Terminal size
         super().resize(self.width_chars, new_height)
+        # Notify the PTY process about the size change
+        self._set_terminal_size()
 
     def _set_terminal_size(self) -> None:
         """Set the terminal window size."""
@@ -202,6 +206,12 @@ class TextualTerminal(Terminal, Widget):
     async def on_key(self, event) -> None:
         """Handle key events."""
         if self.pty is None:
+            return
+
+        # Don't intercept certain app-level keys
+        app_keys = {'ctrl+q', 'ctrl+n'}  # Add other app bindings as needed
+        if event.key in app_keys:
+            # Let the app handle these keys
             return
 
         # Convert key to terminal escape sequence

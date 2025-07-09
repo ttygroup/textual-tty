@@ -162,7 +162,7 @@ class Terminal:
 
     def clear_line(self, mode: int = 0) -> None:
         """Clear line."""
-        self.current_buffer.clear_line(self.cursor_y, mode)
+        self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x)
 
     def set_mode(self, mode: str, value: bool) -> None:
         """Set terminal mode."""
