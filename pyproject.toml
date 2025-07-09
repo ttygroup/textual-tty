@@ -1,5 +1,5 @@
 [project]
-name = "textual_terminal"
+name = "textual_tty"
 description = "A tty for Textual UIs"
 version = "0.0.2"
 authors = [
@@ -19,13 +19,17 @@ classifiers = [
 
 dependencies = [
     "textual",
-    # Unix/Linux/Mac PTY support is built into Python's stdlib
+    "pywinpty ; sys_platform == 'win32'",
+    "textual-window"
 ]
 
+[project.scripts]
+textual-tty = "textual_tty.demo:main"
+
 [project.urls]
-Homepage = "https://bitplane.net/dev/python/textual-terminal"
-"Bug Tracker" = "https://github.com/bitplane/textual-terminal/issues"
-"Source Code" = "https://github.com/bitplane/textual-terminal"
+Homepage = "https://bitplane.net/dev/python/textual-tty"
+"Bug Tracker" = "https://github.com/bitplane/textual-tty/issues"
+"Source Code" = "https://github.com/bitplane/textual-tty"
 
 [project.optional-dependencies]
 dev = [
@@ -39,19 +43,6 @@ dev = [
     "ruff",
     "mkdocs",
     "textual-window"
-]
-window = [
-    "textual-window"
-]
-# Windows PTY support
-windows = [
-    "pywinpty ; sys_platform == 'win32'",
-    # or "winpty ; sys_platform == 'win32'"
-]
-# Full installation with all platform support
-all = [
-    "textual-window",
-    "pywinpty ; sys_platform == 'win32'",
 ]
 
 [build-system]

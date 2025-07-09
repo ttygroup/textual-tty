@@ -3,7 +3,7 @@
 		pre-commit update-pre-commit
 
 
-PROJECT_NAME := textual_terminal
+PROJECT_NAME := textual_tty
 
 
 all: dev coverage  ## builds everything

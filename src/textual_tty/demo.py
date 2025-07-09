@@ -11,7 +11,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 
-from textual_terminal.widgets import ProgramWindow, DebugLog
+from textual_tty.widgets import ProgramWindow, DebugLog
 
 
 class DemoApp(App):

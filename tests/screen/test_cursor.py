@@ -1,4 +1,4 @@
-from textual_terminal.screen import TerminalScreen
+from textual_tty.screen import TerminalScreen
 
 
 def test_set_cursor():

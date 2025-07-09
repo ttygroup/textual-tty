@@ -9,7 +9,7 @@ from typing import Optional
 logger: Optional[logging.Logger] = None
 
 
-def setup_logger(name: str = "textual_terminal") -> logging.Logger:
+def setup_logger(name: str = "textual_tty") -> logging.Logger:
     """Set up a global logger."""
     global logger
 

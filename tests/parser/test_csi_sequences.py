@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
-from textual_terminal.parser import Parser
-from textual_terminal.screen import TerminalScreen
+from textual_tty.parser import Parser
+from textual_tty.screen import TerminalScreen
 
 
 @pytest.fixture

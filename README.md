@@ -5,8 +5,7 @@ A terminal emulator for Textual apps.
 ## Demo
 
 ```bash
-uv pip install textual-tty
-python3 -m 'textual_tty.demo'
+uvx textual-tty
 ```
 
 ## Usage
