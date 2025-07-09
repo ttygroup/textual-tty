@@ -7,7 +7,7 @@ def test_scroll_up():
     screen = Terminal(width=10, height=5)
     # Fill screen with content
     for i in range(screen.height):
-        screen.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
 
     # Set scroll region to cover entire screen initially
     screen.set_scroll_region(0, screen.height - 1)
@@ -26,7 +26,7 @@ def test_scroll_up():
     # Scroll up by 2
     screen = Terminal(width=10, height=5)
     for i in range(screen.height):
-        screen.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
     screen.set_scroll_region(0, screen.height - 1)
     screen.scroll_up(2)
     expected_lines = [
@@ -43,7 +43,7 @@ def test_scroll_down():
     screen = Terminal(width=10, height=5)
     # Fill screen with content
     for i in range(screen.height):
-        screen.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
 
     # Set scroll region to cover entire screen initially
     screen.set_scroll_region(0, screen.height - 1)
@@ -62,7 +62,7 @@ def test_scroll_down():
     # Scroll down by 2
     screen = Terminal(width=10, height=5)
     for i in range(screen.height):
-        screen.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
     screen.set_scroll_region(0, screen.height - 1)
     screen.scroll_down(2)
     expected_lines = [
@@ -95,7 +95,7 @@ def test_line_feed_with_scrolling():
     screen = Terminal(width=10, height=5)
     # Fill screen up to the last line
     for i in range(screen.height - 1):
-        screen.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
     screen.cursor_y = screen.height - 1  # Cursor on the last line
 
     # Set scroll region to cover entire screen

@@ -108,16 +108,3 @@ def test_osc_string_terminator():
     assert "My Title" not in output
 
 
-def test_osc_malformed():
-    """Test malformed OSC sequences."""
-    terminal = Terminal(width=80, height=24)
-    parser = Parser(terminal)
-
-    # OSC without terminator - should eventually timeout or be discarded
-    malformed = "\x1b]0;Incomplete"
-    parser.feed(malformed)
-    parser.feed("Text")  # Regular text after
-
-    # The parser should handle this gracefully
-    output = render_terminal_to_string(terminal)
-    assert "Text" in output

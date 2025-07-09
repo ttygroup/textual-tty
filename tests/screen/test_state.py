@@ -52,18 +52,18 @@ def test_alignment_test():
 
     expected_char = "E"
     for y in range(screen.height):
-        line = screen.lines[y]
+        line = screen.current_buffer.lines[y]
         assert len(line.plain) == screen.width
         assert all(char == expected_char for char in line.plain)
 
 
 def test_alternate_screen_on_off_restores_lines():
     screen = Terminal(width=10, height=5)
-    screen.lines[0] = Text("Hello")
+    screen.current_buffer.lines[0] = Text("Hello")
     screen.alternate_screen_on()
-    assert screen.lines[0].plain == ""
+    assert screen.current_buffer.lines[0].plain == ""
     screen.alternate_screen_off()
-    assert screen.lines[0].plain == "Hello"
+    assert screen.current_buffer.lines[0].plain == "Hello"
 
 
 def test_set_and_clear_modes():

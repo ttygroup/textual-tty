@@ -18,19 +18,19 @@ def test_printable_characters(screen):
     parser.feed("Hello, World!")
 
     calls = [
-        call("H", screen.current_style),
-        call("e", screen.current_style),
-        call("l", screen.current_style),
-        call("l", screen.current_style),
-        call("o", screen.current_style),
-        call(",", screen.current_style),
-        call(" ", screen.current_style),
-        call("W", screen.current_style),
-        call("o", screen.current_style),
-        call("r", screen.current_style),
-        call("l", screen.current_style),
-        call("d", screen.current_style),
-        call("!", screen.current_style),
+        call("H"),
+        call("e"),
+        call("l"),
+        call("l"),
+        call("o"),
+        call(","),
+        call(" "),
+        call("W"),
+        call("o"),
+        call("r"),
+        call("l"),
+        call("d"),
+        call("!"),
     ]
     screen.write_text.assert_has_calls(calls)
 

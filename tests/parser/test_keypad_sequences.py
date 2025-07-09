@@ -39,11 +39,13 @@ def test_keypad_sequences_with_text():
     parser.feed("\x1b[p\x1b>Hello")
 
     # Only the text should appear
-    assert screen.lines[0][0].char == "H"
-    assert screen.lines[0][1].char == "e"
-    assert screen.lines[0][2].char == "l"
-    assert screen.lines[0][3].char == "l"
-    assert screen.lines[0][4].char == "o"
+    line_text = screen.get_content()[0].plain
+    assert line_text.startswith("Hello")
+    assert line_text[0] == "H"
+    assert line_text[1] == "e"
+    assert line_text[2] == "l"
+    assert line_text[3] == "l"
+    assert line_text[4] == "o"
     assert screen.cursor_x == 5
     assert screen.cursor_y == 0
 
