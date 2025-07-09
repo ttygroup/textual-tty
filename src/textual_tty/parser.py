@@ -802,6 +802,9 @@ class Parser:
             elif 100 <= param <= 107:
                 # Bright 16-color background
                 self.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
+        
+        # Update the terminal's current_style
+        self.terminal.current_style = self.current_style
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
