@@ -17,6 +17,7 @@ from textual.widgets import Header, Footer
 from textual.containers import Vertical
 
 from .terminal import Terminal
+from ..textual_terminal import TextualTerminal
 from ..log import info
 
 
@@ -100,7 +101,7 @@ class Program(Widget):
             self.exit_code = exit_code
             super().__init__()
 
-    def on_terminal_process_exited(self, event: Terminal.ProcessExited) -> None:
+    def on_terminal_process_exited(self, event: TextualTerminal.ProcessExited) -> None:
         """Handle terminal process exit.
 
         This method can be overridden in subclasses to customize

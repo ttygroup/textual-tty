@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Optional, Tuple
 from textual.color import Color
-from rich.color import Color as RichColor
 
 
 # X11 color names mapped to hex codes (tmux compatibility)
@@ -592,17 +591,6 @@ X11_NAMES = {
 
 def parse_color(name: str) -> Color:
     """Parse color string to Textual Color. Tries Color.parse() first, then X11 names."""
-    # Handle color(n) format for 8-bit colors
-    if name.startswith("color(") and name.endswith(")"):
-        try:
-            index = int(name[6:-1])
-            if 0 <= index <= 255:
-                # Convert to truecolor to ensure it has RGB triplet
-                rich_color = RichColor.from_ansi(index)
-                triplet = rich_color.get_truecolor()
-                return Color.from_rich_color(RichColor.from_rgb(triplet.red, triplet.green, triplet.blue))
-        except ValueError:
-            pass
 
     # Try standard parsing first
     try:

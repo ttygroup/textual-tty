@@ -159,13 +159,17 @@ class TextualTerminal(Terminal, Widget):
 
     def stop_process(self) -> None:
         """Override to post message when process exits."""
+        # Get exit code before calling parent (which sets self.process to None)
+        exit_code = 0
+        if self.process:
+            exit_code = self.process.poll() or 0
+
         # Call parent method
         super().stop_process()
 
         # Post exit message
-        if self.process:
-            exit_code = self.process.poll() or 0
-            self.post_message(self.ProcessExited(exit_code))
+        debug(f"Posting ProcessExited message with exit_code={exit_code}")
+        self.post_message(self.ProcessExited(exit_code))
 
     def bell(self) -> None:
         """Override to post bell message."""
@@ -209,7 +213,7 @@ class TextualTerminal(Terminal, Widget):
             return
 
         # Don't intercept certain app-level keys
-        app_keys = {'ctrl+q', 'ctrl+n'}  # Add other app bindings as needed
+        app_keys = {"ctrl+q", "ctrl+n"}  # Add other app bindings as needed
         if event.key in app_keys:
             # Let the app handle these keys
             return
@@ -295,35 +299,35 @@ class TextualTerminal(Terminal, Widget):
     async def on_mouse_down(self, event) -> None:
         """Handle mouse down events."""
         button = 0
-        if hasattr(event, 'button'):
+        if hasattr(event, "button"):
             if event.button == 1:  # Left button
                 button = 0
             elif event.button == 2:  # Middle button
                 button = 1
             elif event.button == 3:  # Right button
                 button = 2
-        
+
         modifiers = 0
-        if hasattr(event, 'shift') and event.shift:
+        if hasattr(event, "shift") and event.shift:
             modifiers |= 4
-        if hasattr(event, 'ctrl') and event.ctrl:
+        if hasattr(event, "ctrl") and event.ctrl:
             modifiers |= 16
-        if hasattr(event, 'alt') and event.alt:
+        if hasattr(event, "alt") and event.alt:
             modifiers |= 8
-        
+
         self.send_mouse_event(event.x, event.y, button, "down", modifiers)
         event.stop()
 
     async def on_mouse_up(self, event) -> None:
         """Handle mouse up events."""
         modifiers = 0
-        if hasattr(event, 'shift') and event.shift:
+        if hasattr(event, "shift") and event.shift:
             modifiers |= 4
-        if hasattr(event, 'ctrl') and event.ctrl:
+        if hasattr(event, "ctrl") and event.ctrl:
             modifiers |= 16
-        if hasattr(event, 'alt') and event.alt:
+        if hasattr(event, "alt") and event.alt:
             modifiers |= 8
-        
+
         self.send_mouse_event(event.x, event.y, 3, "up", modifiers)  # 3 = button release
         event.stop()
 
@@ -331,41 +335,41 @@ class TextualTerminal(Terminal, Widget):
         """Handle mouse move events."""
         if not self.mouse_tracking:
             return
-        
+
         # Mouse move events typically use button 32 (no button pressed)
         modifiers = 0
-        if hasattr(event, 'shift') and event.shift:
+        if hasattr(event, "shift") and event.shift:
             modifiers |= 4
-        if hasattr(event, 'ctrl') and event.ctrl:
+        if hasattr(event, "ctrl") and event.ctrl:
             modifiers |= 16
-        if hasattr(event, 'alt') and event.alt:
+        if hasattr(event, "alt") and event.alt:
             modifiers |= 8
-        
+
         self.send_mouse_event(event.x, event.y, 32, "move", modifiers)
         event.stop()
 
     async def on_mouse_scroll_down(self, event) -> None:
         """Handle mouse scroll down events."""
         modifiers = 0
-        if hasattr(event, 'shift') and event.shift:
+        if hasattr(event, "shift") and event.shift:
             modifiers |= 4
-        if hasattr(event, 'ctrl') and event.ctrl:
+        if hasattr(event, "ctrl") and event.ctrl:
             modifiers |= 16
-        if hasattr(event, 'alt') and event.alt:
+        if hasattr(event, "alt") and event.alt:
             modifiers |= 8
-        
+
         self.send_mouse_event(event.x, event.y, 65, "down", modifiers)  # 65 = scroll down
         event.stop()
 
     async def on_mouse_scroll_up(self, event) -> None:
         """Handle mouse scroll up events."""
         modifiers = 0
-        if hasattr(event, 'shift') and event.shift:
+        if hasattr(event, "shift") and event.shift:
             modifiers |= 4
-        if hasattr(event, 'ctrl') and event.ctrl:
+        if hasattr(event, "ctrl") and event.ctrl:
             modifiers |= 16
-        if hasattr(event, 'alt') and event.alt:
+        if hasattr(event, "alt") and event.alt:
             modifiers |= 8
-        
+
         self.send_mouse_event(event.x, event.y, 64, "down", modifiers)  # 64 = scroll up
         event.stop()
