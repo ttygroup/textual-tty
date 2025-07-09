@@ -481,6 +481,15 @@ class Parser:
             # Various window operations (resize, position queries, etc.)
             # We consume but don't implement window operations
             pass
+        elif final_char == "^":  # PM (Privacy Message)
+            # Privacy message - we consume but don't implement
+            pass
+        elif final_char == "s":  # DECSC - Save Cursor (alternative)
+            # Save cursor position and attributes
+            self.screen.save_cursor()
+        elif final_char == "u":  # DECRC - Restore Cursor (alternative)
+            # Restore cursor position and attributes
+            self.screen.restore_cursor()
         else:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"

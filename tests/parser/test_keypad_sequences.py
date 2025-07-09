@@ -46,3 +46,36 @@ def test_keypad_sequences_with_text():
     assert screen.lines[0][4].char == "o"
     assert screen.cursor_x == 5
     assert screen.cursor_y == 0
+
+
+def test_csi_cursor_save_restore():
+    """Test CSI s/u cursor save/restore sequences."""
+    screen = TerminalScreen(width=80, height=24)
+    parser = Parser(screen)
+
+    # Move cursor and save position
+    parser.feed("\x1b[10;20H")  # Move to row 10, col 20
+    parser.feed("\x1b[s")  # Save cursor
+
+    # Move cursor elsewhere
+    parser.feed("\x1b[5;5H")  # Move to row 5, col 5
+    assert screen.cursor_x == 4  # 0-based
+    assert screen.cursor_y == 4  # 0-based
+
+    # Restore cursor
+    parser.feed("\x1b[u")  # Restore cursor
+    assert screen.cursor_x == 19  # 0-based (was col 20)
+    assert screen.cursor_y == 9  # 0-based (was row 10)
+
+
+def test_csi_privacy_message():
+    """Test CSI ^ sequence (Privacy Message)."""
+    screen = TerminalScreen(width=80, height=24)
+    parser = Parser(screen)
+
+    # CSI ^ with parameter should be consumed
+    parser.feed("\x1b[38^")
+
+    # Should not appear in screen content and should not crash
+    assert screen.cursor_x == 0
+    assert screen.cursor_y == 0
