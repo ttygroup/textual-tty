@@ -19,13 +19,16 @@ classifiers = [
 
 dependencies = [
     "textual",
-    # Unix/Linux/Mac PTY support is built into Python's stdlib
+    "pywinpty ; sys_platform == 'win32'",
 ]
 
+[project.scripts]
+textual-tty = "textual_tty.demo:main"
+
 [project.urls]
-Homepage = "https://bitplane.net/dev/python/textual-terminal"
-"Bug Tracker" = "https://github.com/bitplane/textual-terminal/issues"
-"Source Code" = "https://github.com/bitplane/textual-terminal"
+Homepage = "https://bitplane.net/dev/python/textual-tty"
+"Bug Tracker" = "https://github.com/bitplane/textual-tty/issues"
+"Source Code" = "https://github.com/bitplane/textual-tty"
 
 [project.optional-dependencies]
 dev = [
@@ -51,7 +54,6 @@ windows = [
 # Full installation with all platform support
 all = [
     "textual-window",
-    "pywinpty ; sys_platform == 'win32'",
 ]
 
 [build-system]
