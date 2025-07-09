@@ -116,9 +116,9 @@ class Buffer:
 
             # Build new line with cleared region
             cleared_text = Text(" " * (clear_end - clear_start), style)
-            # Ensure the cleared region has an explicit span even for default style
-            if not cleared_text.spans and len(cleared_text.plain) > 0:
-                cleared_text.spans.append(Span(0, len(cleared_text.plain), style))
+            # Ensure the cleared region has an explicit span only for default/empty style
+            if not cleared_text.spans and len(cleared_text.plain) > 0 and (style is None or style == Style()):
+                cleared_text.spans.append(Span(0, len(cleared_text.plain), style or Style()))
             new_line = line[:clear_start] + cleared_text + line[clear_end:]
             self.lines[y] = new_line
 
@@ -135,7 +135,11 @@ class Buffer:
             # If cursor is at or beyond end, no need to clear
         elif mode == 1:  # Clear from beginning to cursor
             if cursor_x < len(line.plain):
-                self.lines[y] = Text(" " * cursor_x) + line[cursor_x:]
+                cleared_part = Text(" " * cursor_x, Style())
+                # Ensure cleared part has explicit span
+                if not cleared_part.spans and cursor_x > 0:
+                    cleared_part.spans.append(Span(0, cursor_x, Style()))
+                self.lines[y] = cleared_part + line[cursor_x:]
             else:
                 # Clear entire line if cursor is beyond content
                 self.lines[y] = Text()

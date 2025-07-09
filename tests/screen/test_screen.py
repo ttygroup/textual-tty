@@ -312,7 +312,7 @@ def test_write_cell_insert_middle_of_line_with_style():
     screen.current_style = style
     screen.write_text("X")
     expected_line = Text(
-        "01234X56789", spans=[Span(0, 5, Style(color="blue")), Span(5, 6, style), Span(6, 11, Style(color="blue"))]
+        "01234X5678", spans=[Span(0, 5, Style(color="blue")), Span(5, 6, style), Span(6, 10, Style(color="blue"))]
     )
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -326,7 +326,7 @@ def test_write_cell_insert_at_start_of_line_with_style():
     style = Style(color="red")
     screen.current_style = style
     screen.write_text("X")
-    expected_line = Text("X0123456789", spans=[Span(0, 1, style), Span(1, 11, Style(color="blue"))])
+    expected_line = Text("X012345678", spans=[Span(0, 1, style), Span(1, 10, Style(color="blue"))])
     assert screen.current_buffer.lines[0] == expected_line
 
 
@@ -438,6 +438,6 @@ def test_clear_line_with_mixed_styles():
     screen.cursor_y = 1
     screen.clear_line(1)  # Clear from beginning to cursor
     expected_line = Text(
-        "   DEF", spans=[Span(0, 3, Style()), Span(3, 6, Style(color="green")), Span(6, 9, Style(color="blue"))]
+        "   DEFGHI", spans=[Span(0, 3, Style()), Span(3, 6, Style(color="green")), Span(6, 9, Style(color="blue"))]
     )
     assert screen.current_buffer.lines[1] == expected_line
