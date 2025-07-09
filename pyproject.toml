@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
     "textual",
     "pywinpty ; sys_platform == 'win32'",
+    "textual-window"
 ]
 
 [project.scripts]
@@ -42,18 +43,6 @@ dev = [
     "ruff",
     "mkdocs",
     "textual-window"
-]
-window = [
-    "textual-window"
-]
-# Windows PTY support
-windows = [
-    "pywinpty ; sys_platform == 'win32'",
-    # or "winpty ; sys_platform == 'win32'"
-]
-# Full installation with all platform support
-all = [
-    "textual-window",
 ]
 
 [build-system]
