@@ -134,7 +134,7 @@ class Terminal:
         """Perform line feed."""
         if self.cursor_y >= self.scroll_bottom:
             # Scroll up within scroll region
-            self.current_buffer.scroll_up(1)
+            self.scroll_up(1)
         else:
             # Move cursor down
             self.cursor_y += 1
@@ -318,12 +318,26 @@ class Terminal:
     def scroll_up(self, count: int) -> None:
         """Scroll content up within scroll region."""
         for _ in range(count):
-            self.current_buffer.scroll_up(1)
+            # Remove line at top of scroll region
+            if self.scroll_top < len(self.current_buffer.lines):
+                self.current_buffer.lines.pop(self.scroll_top)
+            # Insert blank line at bottom of scroll region
+            self.current_buffer.lines.insert(self.scroll_bottom, Text())
+            # Ensure we don't exceed buffer size
+            while len(self.current_buffer.lines) > self.height:
+                self.current_buffer.lines.pop()
 
     def scroll_down(self, count: int) -> None:
         """Scroll content down within scroll region."""
         for _ in range(count):
-            self.current_buffer.scroll_down(1)
+            # Remove line at bottom of scroll region
+            if self.scroll_bottom < len(self.current_buffer.lines):
+                self.current_buffer.lines.pop(self.scroll_bottom)
+            # Insert blank line at top of scroll region
+            self.current_buffer.lines.insert(self.scroll_top, Text())
+            # Ensure we don't exceed buffer size
+            while len(self.current_buffer.lines) > self.height:
+                self.current_buffer.lines.pop()
 
     def set_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Set cursor position (alias for move_cursor)."""
