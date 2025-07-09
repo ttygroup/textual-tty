@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from .screen import TerminalScreen
+    from .terminal import Terminal
 
 from rich.style import Style
 from rich.color import Color
@@ -33,14 +33,14 @@ class Parser:
     state and/or execute a handler for a recognized escape sequence.
     """
 
-    def __init__(self, screen: TerminalScreen) -> None:
+    def __init__(self, terminal: Terminal) -> None:
         """
         Initializes the parser state. Replaces `input_init()`.
 
         Args:
-            screen: A TerminalScreen object that the parser will manipulate.
+            terminal: A Terminal object that the parser will manipulate.
         """
-        self.screen = screen
+        self.terminal = terminal
 
         # The current state of the parser (e.g., 'GROUND', 'ESCAPE').
         self.current_state: str = "GROUND"
@@ -99,18 +99,19 @@ class Parser:
             elif char == "\x07":  # BEL
                 pass  # Bell - could emit sound/flash
             elif char == "\x08":  # BS
-                self.screen.backspace()
+                self.terminal.backspace()
             elif char == "\x09":  # HT (Tab)
                 # Simple tab handling - move to next tab stop
-                self.screen.cursor_x = ((self.screen.cursor_x // 8) + 1) * 8
-                if self.screen.cursor_x >= self.screen.width:
-                    self.screen.cursor_x = self.screen.width - 1
+                self.terminal.cursor_x = ((self.terminal.cursor_x // 8) + 1) * 8
+                if self.terminal.cursor_x >= self.terminal.width:
+                    self.terminal.cursor_x = self.terminal.width - 1
             elif char == "\x0a":  # LF
-                self.screen.line_feed()
+                self.terminal.line_feed()
             elif char == "\x0d":  # CR
-                self.screen.carriage_return()
+                self.terminal.carriage_return()
             elif ord(char) >= 0x20:  # Printable characters
-                self.screen.write_cell(char, self.screen.current_style)
+                self.terminal.current_style = self.current_style
+                self.terminal.write_text(char)
         elif self.current_state == "ESCAPE":
             if char == "[":  # CSI
                 self.current_state = "CSI_ENTRY"
@@ -376,16 +377,16 @@ class Parser:
         if final_char == "c":  # RIS (Reset in State)
             self._reset_terminal()
         elif final_char == "D":  # IND (Index)
-            self.screen.line_feed()
+            self.terminal.line_feed()
         elif final_char == "M":  # RI (Reverse Index)
-            if self.screen.cursor_y <= self.screen.scroll_top:
-                self.screen.scroll_down(1)
+            if self.terminal.cursor_y <= self.terminal.scroll_top:
+                self.terminal.scroll_down(1)
             else:
-                self.screen.cursor_y -= 1
+                self.terminal.cursor_y -= 1
         elif final_char == "7":  # DECSC (Save Cursor)
-            self.screen.save_cursor()
+            self.terminal.save_cursor()
         elif final_char == "8":  # DECRC (Restore Cursor)
-            self.screen.restore_cursor()
+            self.terminal.restore_cursor()
         # Add more ESC sequences as needed
 
     # --- Control Sequence Introducer (CSI) Dispatchers ---
@@ -420,53 +421,53 @@ class Parser:
         if final_char == "H" or final_char == "f":  # CUP - Cursor Position
             row = self._get_param(0, 1) - 1  # Convert to 0-based
             col = self._get_param(1, 1) - 1  # Convert to 0-based
-            self.screen.set_cursor(col, row)
+            self.terminal.set_cursor(col, row)
         elif final_char == "A":  # CUU - Cursor Up
             count = self._get_param(0, 1)
-            self.screen.cursor_y = max(0, self.screen.cursor_y - count)
+            self.terminal.cursor_y = max(0, self.terminal.cursor_y - count)
         elif final_char == "B":  # CUD - Cursor Down
             count = self._get_param(0, 1)
-            self.screen.cursor_y = min(self.screen.height - 1, self.screen.cursor_y + count)
+            self.terminal.cursor_y = min(self.terminal.height - 1, self.terminal.cursor_y + count)
         elif final_char == "C":  # CUF - Cursor Forward
             count = self._get_param(0, 1)
-            self.screen.cursor_x = min(self.screen.width - 1, self.screen.cursor_x + count)
+            self.terminal.cursor_x = min(self.terminal.width - 1, self.terminal.cursor_x + count)
         elif final_char == "D":  # CUB - Cursor Backward
             count = self._get_param(0, 1)
-            self.screen.cursor_x = max(0, self.screen.cursor_x - count)
+            self.terminal.cursor_x = max(0, self.terminal.cursor_x - count)
         elif final_char == "G":  # CHA - Cursor Horizontal Absolute
             col = self._get_param(0, 1) - 1  # Convert to 0-based
-            self.screen.set_cursor(col, None)
+            self.terminal.set_cursor(col, None)
         elif final_char == "d":  # VPA - Vertical Position Absolute
             row = self._get_param(0, 1) - 1  # Convert to 0-based
-            self.screen.set_cursor(None, row)
+            self.terminal.set_cursor(None, row)
         elif final_char == "J":  # ED - Erase in Display
             mode = self._get_param(0, 0)
-            self.screen.clear_screen(mode)
+            self.terminal.clear_screen(mode)
         elif final_char == "K":  # EL - Erase in Line
             mode = self._get_param(0, 0)
-            self.screen.clear_line(mode)
+            self.terminal.clear_line(mode)
         elif final_char == "L":  # IL - Insert Lines
             count = self._get_param(0, 1)
-            self.screen.insert_lines(count)
+            self.terminal.insert_lines(count)
         elif final_char == "M":  # DL - Delete Lines
             count = self._get_param(0, 1)
-            self.screen.delete_lines(count)
+            self.terminal.delete_lines(count)
         elif final_char == "@":  # ICH - Insert Characters
             count = self._get_param(0, 1)
-            self.screen.insert_characters(count)
+            self.terminal.insert_characters(count)
         elif final_char == "P":  # DCH - Delete Characters
             count = self._get_param(0, 1)
-            self.screen.delete_characters(count)
+            self.terminal.delete_characters(count)
         elif final_char == "S":  # SU - Scroll Up
             count = self._get_param(0, 1)
-            self.screen.scroll_up(count)
+            self.terminal.scroll_up(count)
         elif final_char == "T":  # SD - Scroll Down
             count = self._get_param(0, 1)
-            self.screen.scroll_down(count)
+            self.terminal.scroll_down(count)
         elif final_char == "r":  # DECSTBM - Set Scroll Region
             top = self._get_param(0, 1) - 1  # Convert to 0-based
-            bottom = self._get_param(1, self.screen.height) - 1  # Convert to 0-based
-            self.screen.set_scroll_region(top, bottom)
+            bottom = self._get_param(1, self.terminal.height) - 1  # Convert to 0-based
+            self.terminal.set_scroll_region(top, bottom)
         elif final_char == "m":  # SGR - Select Graphic Rendition
             self._csi_dispatch_sgr()
         elif final_char == "h":  # SM - Set Mode
@@ -486,10 +487,10 @@ class Parser:
             pass
         elif final_char == "s":  # DECSC - Save Cursor (alternative)
             # Save cursor position and attributes
-            self.screen.save_cursor()
+            self.terminal.save_cursor()
         elif final_char == "u":  # DECRC - Restore Cursor (alternative)
             # Restore cursor position and attributes
-            self.screen.restore_cursor()
+            self.terminal.restore_cursor()
         else:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"
@@ -520,8 +521,8 @@ class Parser:
             self.parsed_params = [0]
 
         # Ensure current_style is always a Style object
-        if self.screen.current_style is None:
-            self.screen.current_style = Style()
+        if self.terminal.current_style is None:
+            self.terminal.current_style = Style()
 
         it = iter(self.parsed_params)
         while True:
@@ -532,42 +533,42 @@ class Parser:
 
             if param == 0:
                 # Reset all attributes
-                self.screen.current_style = Style()
+                self.terminal.current_style = Style()
             elif param == 1:
-                self.screen.current_style += Style(bold=True)
+                self.terminal.current_style += Style(bold=True)
             elif param == 2:
-                self.screen.current_style += Style(dim=True)
+                self.terminal.current_style += Style(dim=True)
             elif param == 3:
-                self.screen.current_style += Style(italic=True)
+                self.terminal.current_style += Style(italic=True)
             elif param == 4:
-                self.screen.current_style += Style(underline=True)
+                self.terminal.current_style += Style(underline=True)
             elif param == 5:
-                self.screen.current_style += Style(blink=True)
+                self.terminal.current_style += Style(blink=True)
             elif param == 7:
-                self.screen.current_style += Style(reverse=True)
+                self.terminal.current_style += Style(reverse=True)
             elif param == 8:
-                self.screen.current_style += Style(conceal=True)
+                self.terminal.current_style += Style(conceal=True)
             elif param == 9:
-                self.screen.current_style += Style(strike=True)
+                self.terminal.current_style += Style(strike=True)
             elif param == 21:  # Not bold/double underline
-                self.screen.current_style += Style(bold=False)
+                self.terminal.current_style += Style(bold=False)
             elif param == 22:  # Neither bold nor faint
-                self.screen.current_style += Style(bold=False, dim=False)
+                self.terminal.current_style += Style(bold=False, dim=False)
             elif param == 23:  # Not italic
-                self.screen.current_style += Style(italic=False)
+                self.terminal.current_style += Style(italic=False)
             elif param == 24:  # Not underlined
-                self.screen.current_style += Style(underline=False)
+                self.terminal.current_style += Style(underline=False)
             elif param == 25:  # Not blinking
-                self.screen.current_style += Style(blink=False)
+                self.terminal.current_style += Style(blink=False)
             elif param == 27:  # Not reversed
-                self.screen.current_style += Style(reverse=False)
+                self.terminal.current_style += Style(reverse=False)
             elif param == 28:  # Not hidden
-                self.screen.current_style += Style(conceal=False)
+                self.terminal.current_style += Style(conceal=False)
             elif param == 29:  # Not strikethrough
-                self.screen.current_style += Style(strike=False)
+                self.terminal.current_style += Style(strike=False)
             elif 30 <= param <= 37:
                 # Standard 16-color foreground
-                self.screen.current_style += Style(color=Color.from_ansi(param - 30))
+                self.terminal.current_style += Style(color=Color.from_ansi(param - 30))
             elif param == 38:
                 # Extended foreground color
                 new_color = None
@@ -590,13 +591,13 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_color is not None:
-                    self.screen.current_style += Style(color=new_color)
+                    self.terminal.current_style += Style(color=new_color)
             elif param == 39:
                 # Default foreground color
-                self.screen.current_style += Style(color=Color.default())
+                self.terminal.current_style += Style(color=Color.default())
             elif 40 <= param <= 47:
                 # Standard 16-color background
-                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 40))
+                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 40))
             elif param == 48:
                 # Extended background color
                 new_bgcolor = None
@@ -619,16 +620,16 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_bgcolor is not None:
-                    self.screen.current_style += Style(bgcolor=new_bgcolor)
+                    self.terminal.current_style += Style(bgcolor=new_bgcolor)
             elif param == 49:
                 # Default background color
-                self.screen.current_style += Style(bgcolor=Color.default())
+                self.terminal.current_style += Style(bgcolor=Color.default())
             elif 90 <= param <= 97:
                 # Bright 16-color foreground
-                self.screen.current_style += Style(color=Color.from_ansi(param - 90 + 8))
+                self.terminal.current_style += Style(color=Color.from_ansi(param - 90 + 8))
             elif 100 <= param <= 107:
                 # Bright 16-color background
-                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
+                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handles SM (Set Mode) and RM (Reset Mode) sequences."""
@@ -649,12 +650,12 @@ class Parser:
         """
         for param in self.parsed_params:
             if param == 1:  # DECCKM - Cursor Keys Application Mode
-                # self.screen.cursor_key_application_mode = set_mode # Not yet implemented
+                # self.terminal.cursor_key_application_mode = set_mode # Not yet implemented
                 pass
             elif param == 7:  # DECAWM - Auto-wrap Mode
-                self.screen.auto_wrap = set_mode
+                self.terminal.auto_wrap = set_mode
             elif param == 25:  # Show/hide cursor
-                self.screen.cursor_visible = set_mode
+                self.terminal.cursor_visible = set_mode
             # Add more private modes as needed
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---
@@ -756,9 +757,9 @@ class Parser:
 
     def _reset_terminal(self) -> None:
         """Reset terminal to initial state."""
-        self.screen.clear_screen(2)
-        self.screen.set_cursor(0, 0)
-        self.screen.current_style = Style()
+        self.terminal.clear_screen(2)
+        self.terminal.set_cursor(0, 0)
+        self.terminal.current_style = Style()
 
     def _csi_dispatch_sgr(self) -> None:
         """
@@ -785,8 +786,8 @@ class Parser:
             self.parsed_params = [0]
 
         # Ensure current_style is always a Style object
-        if self.screen.current_style is None:
-            self.screen.current_style = Style()
+        if self.terminal.current_style is None:
+            self.terminal.current_style = Style()
 
         it = iter(self.parsed_params)
         while True:
@@ -797,42 +798,42 @@ class Parser:
 
             if param == 0:
                 # Reset all attributes
-                self.screen.current_style = Style()
+                self.terminal.current_style = Style()
             elif param == 1:
-                self.screen.current_style += Style(bold=True)
+                self.terminal.current_style += Style(bold=True)
             elif param == 2:
-                self.screen.current_style += Style(dim=True)
+                self.terminal.current_style += Style(dim=True)
             elif param == 3:
-                self.screen.current_style += Style(italic=True)
+                self.terminal.current_style += Style(italic=True)
             elif param == 4:
-                self.screen.current_style += Style(underline=True)
+                self.terminal.current_style += Style(underline=True)
             elif param == 5:
-                self.screen.current_style += Style(blink=True)
+                self.terminal.current_style += Style(blink=True)
             elif param == 7:
-                self.screen.current_style += Style(reverse=True)
+                self.terminal.current_style += Style(reverse=True)
             elif param == 8:
-                self.screen.current_style += Style(conceal=True)
+                self.terminal.current_style += Style(conceal=True)
             elif param == 9:
-                self.screen.current_style += Style(strike=True)
+                self.terminal.current_style += Style(strike=True)
             elif param == 21:  # Not bold/double underline
-                self.screen.current_style += Style(bold=False)
+                self.terminal.current_style += Style(bold=False)
             elif param == 22:  # Neither bold nor faint
-                self.screen.current_style += Style(bold=False, dim=False)
+                self.terminal.current_style += Style(bold=False, dim=False)
             elif param == 23:  # Not italic
-                self.screen.current_style += Style(italic=False)
+                self.terminal.current_style += Style(italic=False)
             elif param == 24:  # Not underlined
-                self.screen.current_style += Style(underline=False)
+                self.terminal.current_style += Style(underline=False)
             elif param == 25:  # Not blinking
-                self.screen.current_style += Style(blink=False)
+                self.terminal.current_style += Style(blink=False)
             elif param == 27:  # Not reversed
-                self.screen.current_style += Style(reverse=False)
+                self.terminal.current_style += Style(reverse=False)
             elif param == 28:  # Not hidden
-                self.screen.current_style += Style(conceal=False)
+                self.terminal.current_style += Style(conceal=False)
             elif param == 29:  # Not strikethrough
-                self.screen.current_style += Style(strike=False)
+                self.terminal.current_style += Style(strike=False)
             elif 30 <= param <= 37:
                 # Standard 16-color foreground
-                self.screen.current_style += Style(color=Color.from_ansi(param - 30))
+                self.terminal.current_style += Style(color=Color.from_ansi(param - 30))
             elif param == 38:
                 # Extended foreground color
                 new_color = None
@@ -855,13 +856,13 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_color is not None:
-                    self.screen.current_style += Style(color=new_color)
+                    self.terminal.current_style += Style(color=new_color)
             elif param == 39:
                 # Default foreground color
-                self.screen.current_style += Style(color=Color.default())
+                self.terminal.current_style += Style(color=Color.default())
             elif 40 <= param <= 47:
                 # Standard 16-color background
-                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 40))
+                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 40))
             elif param == 48:
                 # Extended background color
                 new_bgcolor = None
@@ -884,16 +885,16 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_bgcolor is not None:
-                    self.screen.current_style += Style(bgcolor=new_bgcolor)
+                    self.terminal.current_style += Style(bgcolor=new_bgcolor)
             elif param == 49:
                 # Default background color
-                self.screen.current_style += Style(bgcolor=Color.default())
+                self.terminal.current_style += Style(bgcolor=Color.default())
             elif 90 <= param <= 97:
                 # Bright 16-color foreground
-                self.screen.current_style += Style(color=Color.from_ansi(param - 90 + 8))
+                self.terminal.current_style += Style(color=Color.from_ansi(param - 90 + 8))
             elif 100 <= param <= 107:
                 # Bright 16-color background
-                self.screen.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
+                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
@@ -904,6 +905,6 @@ class Parser:
         # Basic mode handling - expand as needed
         for param in self.parsed_params:
             if param == 7:  # Auto-wrap mode
-                self.screen.auto_wrap = set_mode
+                self.terminal.auto_wrap = set_mode
             elif param == 25:  # Cursor visibility
-                self.screen.cursor_visible = set_mode
+                self.terminal.cursor_visible = set_mode
