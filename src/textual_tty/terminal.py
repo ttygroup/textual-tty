@@ -169,18 +169,59 @@ class Terminal:
         """Clear a rectangular region."""
         self.current_buffer.clear_region(x1, y1, x2, y2, style)
 
-    def set_mode(self, mode: str, value: bool) -> None:
+    @property
+    def current_console(self):
+        """Get current buffer (alias for compatibility)."""
+        return self.current_buffer
+
+    @property
+    def main_console(self):
+        """Get primary buffer (alias for compatibility)."""
+        return self.primary_buffer
+
+    @property
+    def alt_console(self):
+        """Get alternate buffer (alias for compatibility)."""
+        return self.alt_buffer
+
+    def alternate_screen_on(self) -> None:
+        """Switch to alternate screen."""
+        self.switch_screen(True)
+
+    def alternate_screen_off(self) -> None:
+        """Switch to primary screen."""
+        self.switch_screen(False)
+
+    def set_mode(self, mode, value: bool = True, private: bool = False) -> None:
         """Set terminal mode."""
-        if mode == "auto_wrap":
-            self.auto_wrap = value
-        elif mode == "insert_mode":
-            self.insert_mode = value
-        elif mode == "cursor_visible":
-            self.cursor_visible = value
-        elif mode == "application_keypad":
-            self.application_keypad = value
-        elif mode == "mouse_tracking":
-            self.mouse_tracking = value
+        # Handle both string and numeric modes
+        if isinstance(mode, int):
+            if private:
+                # DECSET private modes
+                if mode == 7:  # Auto wrap
+                    self.auto_wrap = value
+                # Add other private modes as needed
+            else:
+                # ANSI modes
+                if mode == 4:  # Insert mode
+                    self.insert_mode = value
+                # Add other ANSI modes as needed
+        else:
+            # String-based mode names (legacy)
+            if mode == "auto_wrap":
+                self.auto_wrap = value
+            elif mode == "insert_mode":
+                self.insert_mode = value
+            elif mode == "cursor_visible":
+                self.cursor_visible = value
+            elif mode == "application_keypad":
+                self.application_keypad = value
+            elif mode == "mouse_tracking":
+                self.mouse_tracking = value
+
+    def clear_mode(self, mode, private: bool = False) -> None:
+        """Clear terminal mode."""
+        self.set_mode(mode, False, private)
 
     def switch_screen(self, alt: bool) -> None:
         """Switch between primary and alternate screen."""

@@ -43,8 +43,13 @@ class Buffer:
             # Append to end of line
             new_line = line.copy()
             # Pad with spaces if needed
-            while len(new_line.plain) < x:
-                new_line.append(" ")
+            if len(new_line.plain) < x:
+                padding_length = x - len(new_line.plain)
+                padding = Text(" " * padding_length, Style())
+                # Ensure padding has explicit span
+                if not padding.spans and padding_length > 0:
+                    padding.spans.append(Span(0, padding_length, Style()))
+                new_line = new_line + padding
             new_line.append(text, style)
             self.lines[y] = new_line
 
@@ -62,8 +67,13 @@ class Buffer:
             # Append to end of line
             new_line = line.copy()
             # Pad with spaces if needed
-            while len(new_line.plain) < x:
-                new_line.append(" ")
+            if len(new_line.plain) < x:
+                padding_length = x - len(new_line.plain)
+                padding = Text(" " * padding_length, Style())
+                # Ensure padding has explicit span
+                if not padding.spans and padding_length > 0:
+                    padding.spans.append(Span(0, padding_length, Style()))
+                new_line = new_line + padding
             new_line.append(text, style)
 
         # Truncate if line becomes too long
