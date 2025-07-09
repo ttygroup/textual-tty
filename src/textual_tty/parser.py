@@ -123,7 +123,7 @@ class Parser:
             elif char == "=":  # DECKPAM - Application Keypad Mode
                 self.terminal.set_mode("application_keypad", True)
                 self.current_state = "GROUND"
-            elif char == ">":  # DECKPNM - Normal Keypad Mode  
+            elif char == ">":  # DECKPNM - Normal Keypad Mode
                 self.terminal.set_mode("application_keypad", False)
                 self.current_state = "GROUND"
             elif char == "P":  # DCS - Device Control String
@@ -541,7 +541,7 @@ class Parser:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"
             debug(f"Unknown CSI sequence: ESC[{params_str}{final_char!r}")
-    
+
     def _csi_dispatch_sm_rm_private(self, set_mode: bool) -> None:
         """
         Handles private SM/RM sequences (prefixed with `?`).
@@ -802,7 +802,7 @@ class Parser:
             elif 100 <= param <= 107:
                 # Bright 16-color background
                 self.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
-        
+
         # Update the terminal's current_style
         self.terminal.current_style = self.current_style
 

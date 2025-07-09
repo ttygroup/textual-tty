@@ -106,5 +106,3 @@ def test_osc_string_terminator():
     # Title should not appear in screen content
     output = render_terminal_to_string(terminal)
     assert "My Title" not in output
-
-

@@ -209,7 +209,7 @@ class TextualTerminal(Terminal, Widget):
             return
 
         # Don't intercept certain app-level keys
-        app_keys = {'ctrl+q', 'ctrl+n'}  # Add other app bindings as needed
+        app_keys = {"ctrl+q", "ctrl+n"}  # Add other app bindings as needed
         if event.key in app_keys:
             # Let the app handle these keys
             return
