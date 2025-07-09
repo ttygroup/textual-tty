@@ -46,8 +46,8 @@ class Buffer:
             if len(new_line.plain) < x:
                 padding_length = x - len(new_line.plain)
                 padding = Text(" " * padding_length, Style())
-                # Ensure padding has explicit span
-                if not padding.spans and padding_length > 0:
+                # Add explicit span for padding only when extending existing content
+                if not padding.spans and padding_length > 0 and len(line.plain) > 0:
                     padding.spans.append(Span(0, padding_length, Style()))
                 new_line = new_line + padding
             new_line.append(text, style)
@@ -62,7 +62,11 @@ class Buffer:
 
         if x < len(line.plain):
             # Insert in middle of existing line
-            new_line = line[:x] + Text(text, style) + line[x:]
+            inserted_text = Text(text, style)
+            # Ensure explicit span for inserted text with default style
+            if not inserted_text.spans and len(text) > 0 and (style is None or style == Style()):
+                inserted_text.spans.append(Span(0, len(text), style or Style()))
+            new_line = line[:x] + inserted_text + line[x:]
         else:
             # Append to end of line
             new_line = line.copy()
@@ -70,8 +74,8 @@ class Buffer:
             if len(new_line.plain) < x:
                 padding_length = x - len(new_line.plain)
                 padding = Text(" " * padding_length, Style())
-                # Ensure padding has explicit span
-                if not padding.spans and padding_length > 0:
+                # Add explicit span for padding only when extending existing content
+                if not padding.spans and padding_length > 0 and len(line.plain) > 0:
                     padding.spans.append(Span(0, padding_length, Style()))
                 new_line = new_line + padding
             new_line.append(text, style)

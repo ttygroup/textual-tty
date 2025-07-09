@@ -197,7 +197,7 @@ def test_clear_line():
 
     # Mode 0: Clear from cursor to end of line
     screen.clear_line(0)
-    expected_line_0 = Text("ABCDE     ", spans=[Span(0, 5, Style(color="red")), Span(5, 10, Style())])
+    expected_line_0 = Text("ABCDE", spans=[Span(0, 5, Style(color="red"))])
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line_0)
 
     # Reset
@@ -294,11 +294,11 @@ def test_insert_characters():
 
     screen.insert_characters(3)
     expected_line = Text(
-        "AB   CDEFGHIJ",
+        "AB   CDEFG",
         spans=[
             Span(0, 2, Style(color="red")),
             Span(2, 5, Style()),
-            Span(5, 13, Style(color="red")),
+            Span(5, 10, Style(color="red")),
         ],
     )
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line)

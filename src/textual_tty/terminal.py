@@ -289,7 +289,7 @@ class Terminal:
         if not (0 <= self.cursor_y < self.height):
             return
         spaces = " " * count
-        self.current_buffer.insert(self.cursor_x, self.cursor_y, spaces)
+        self.current_buffer.insert(self.cursor_x, self.cursor_y, spaces, Style())
 
     def delete_characters(self, count: int) -> None:
         """Delete characters at cursor position."""
