@@ -1,4 +1,4 @@
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 from rich.text import Text, Span
 from rich.style import Style
 
@@ -60,7 +60,7 @@ def _compare_text_with_spans(text1: Text, text2: Text):
 
 
 def test_write_cell_overwrite():
-    screen = TerminalScreen(width=10, height=1)
+    screen = Terminal(width=10, height=1)
     screen.write_cell("A", style=Style(color="red"))
     expected_line_1 = Text("A", spans=[Span(0, 1, Style(color="red"))])
     assert screen.lines[0] == expected_line_1
@@ -79,7 +79,7 @@ def test_write_cell_overwrite():
 
 
 def test_write_cell_insert_mode():
-    screen = TerminalScreen(width=10, height=1)
+    screen = Terminal(width=10, height=1)
     screen.write_cell("A", style=Style(color="red"))
     screen.write_cell("B", style=Style(color="green"))
     screen.set_cursor(0, 0)
@@ -98,7 +98,7 @@ def test_write_cell_insert_mode():
 
 
 def test_write_cell_autowrap():
-    screen = TerminalScreen(width=3, height=2)
+    screen = Terminal(width=3, height=2)
     screen.write_cell("A", style=Style(color="red"))
     screen.write_cell("B", style=Style(color="green"))
     screen.write_cell("C", style=Style(color="blue"))
@@ -123,7 +123,7 @@ def test_write_cell_autowrap():
 
 
 def test_clear_rect():
-    screen = TerminalScreen(width=5, height=5)
+    screen = Terminal(width=5, height=5)
     for y in range(5):
         screen.lines[y] = Text("ABCDE", spans=[Span(0, 5, Style(color="red"))])
 
@@ -141,7 +141,7 @@ def test_clear_rect():
 
 
 def test_clear_screen():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for y in range(5):
         screen.lines[y] = Text(f"Line {y}", spans=[Span(0, 6, Style(color="red"))])
     screen.set_cursor(5, 2)  # Cursor at Line 2, char 5
@@ -181,7 +181,7 @@ def test_clear_screen():
 
 
 def test_clear_line():
-    screen = TerminalScreen(width=10, height=1)
+    screen = Terminal(width=10, height=1)
     screen.lines[0] = Text("ABCDEFGHIJ", spans=[Span(0, 10, Style(color="red"))])
     screen.set_cursor(5, 0)
 
@@ -210,7 +210,7 @@ def test_clear_line():
 
 
 def test_insert_lines():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for y in range(5):
         screen.lines[y] = Text(f"Line {y}", spans=[Span(0, 6, Style(color="red"))])
     screen.set_cursor(0, 2)  # Insert at line 2
@@ -227,7 +227,7 @@ def test_insert_lines():
         _compare_text_with_spans(screen.lines[i], expected_lines[i])
 
     # Insert multiple lines
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for y in range(5):
         screen.lines[y] = Text(f"Line {y}", spans=[Span(0, 6, Style(color="red"))])
     screen.set_cursor(0, 1)
@@ -244,7 +244,7 @@ def test_insert_lines():
 
 
 def test_delete_lines():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for y in range(5):
         screen.lines[y] = Text(f"Line {y}", spans=[Span(0, 6, Style(color="red"))])
     screen.set_cursor(0, 1)  # Delete from line 1
@@ -261,7 +261,7 @@ def test_delete_lines():
         _compare_text_with_spans(screen.lines[i], expected_lines[i])
 
     # Delete multiple lines
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for y in range(5):
         screen.lines[y] = Text(f"Line {y}", spans=[Span(0, 6, Style(color="red"))])
     screen.set_cursor(0, 0)
@@ -278,7 +278,7 @@ def test_delete_lines():
 
 
 def test_insert_characters():
-    screen = TerminalScreen(width=10, height=1)
+    screen = Terminal(width=10, height=1)
     screen.lines[0] = Text("ABCDEFGHIJ", spans=[Span(0, 10, Style(color="red"))])
     screen.set_cursor(2, 0)  # Insert at C
 
@@ -295,7 +295,7 @@ def test_insert_characters():
 
 
 def test_delete_characters():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     screen.lines[0] = Text("12345", spans=[Span(0, 5, Style(color="red"))])
     screen.cursor_x = 2
     screen.cursor_y = 0

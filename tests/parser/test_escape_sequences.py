@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 
 
 @pytest.fixture
 def screen():
     """Return a mock Screen object."""
-    screen = Mock(spec=TerminalScreen)
+    screen = Mock(spec=Terminal)
     screen.current_style = Mock()  # Mock the Style object
     screen.width = 80  # Set a default width for tab tests
     screen.height = 24  # Set a default height for scroll tests

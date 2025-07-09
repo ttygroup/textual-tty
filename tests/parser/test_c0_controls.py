@@ -1,19 +1,19 @@
 import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 
 
 @pytest.fixture
 def screen():
     """Return a mock Screen object."""
-    return Mock(spec=TerminalScreen)
+    return Mock(spec=Terminal)
 
 
 def test_backspace(screen):
     """Test that backspace moves the cursor back."""
     parser = Parser(screen)
-    parser.feed(b"\x08")
+    parser.feed("\x08")
     screen.backspace.assert_called_once()
 
 
@@ -22,19 +22,19 @@ def test_horizontal_tab(screen):
     parser = Parser(screen)
     screen.cursor_x = 2
     screen.width = 80
-    parser.feed(b"\x09")
+    parser.feed("\x09")
     assert screen.cursor_x == 8
 
 
 def test_line_feed(screen):
     """Test that a line feed moves the cursor down."""
     parser = Parser(screen)
-    parser.feed(b"\x0a")
+    parser.feed("\x0a")
     screen.line_feed.assert_called_once()
 
 
 def test_carriage_return(screen):
     """Test that a carriage return moves the cursor to the beginning of the line."""
     parser = Parser(screen)
-    parser.feed(b"\x0d")
+    parser.feed("\x0d")
     screen.carriage_return.assert_called_once()

@@ -1,8 +1,8 @@
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 
 
 def test_set_cursor():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.set_cursor(10, 5)
     assert screen.cursor_x == 10
     assert screen.cursor_y == 5
@@ -18,7 +18,7 @@ def test_set_cursor():
 
 
 def test_carriage_return():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.set_cursor(10, 5)
     screen.carriage_return()
     assert screen.cursor_x == 0
@@ -26,7 +26,7 @@ def test_carriage_return():
 
 
 def test_line_feed():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.set_cursor(10, 5)
     screen.line_feed()
     assert screen.cursor_x == 10
@@ -40,7 +40,7 @@ def test_line_feed():
 
 
 def test_backspace():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.set_cursor(10, 5)
     screen.backspace()
     assert screen.cursor_x == 9
@@ -60,7 +60,7 @@ def test_backspace():
 
 
 def test_save_restore_cursor():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.cursor_x = 10
     screen.cursor_y = 5
     screen.save_cursor()
@@ -74,7 +74,7 @@ def test_save_restore_cursor():
 
 
 def test_backspace_wrap():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.cursor_x = 0
     screen.cursor_y = 5
     screen.backspace()

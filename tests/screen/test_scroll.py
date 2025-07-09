@@ -1,10 +1,10 @@
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 from rich.text import Text
 from rich.style import Style
 
 
 def test_scroll_up():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     # Fill screen with content
     for i in range(screen.height):
         screen.lines[i] = Text(f"Line {i}", style=Style())
@@ -24,7 +24,7 @@ def test_scroll_up():
     assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
 
     # Scroll up by 2
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for i in range(screen.height):
         screen.lines[i] = Text(f"Line {i}", style=Style())
     screen.set_scroll_region(0, screen.height - 1)
@@ -40,7 +40,7 @@ def test_scroll_up():
 
 
 def test_scroll_down():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     # Fill screen with content
     for i in range(screen.height):
         screen.lines[i] = Text(f"Line {i}", style=Style())
@@ -60,7 +60,7 @@ def test_scroll_down():
     assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
 
     # Scroll down by 2
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     for i in range(screen.height):
         screen.lines[i] = Text(f"Line {i}", style=Style())
     screen.set_scroll_region(0, screen.height - 1)
@@ -76,7 +76,7 @@ def test_scroll_down():
 
 
 def test_set_scroll_region():
-    screen = TerminalScreen(width=10, height=10)
+    screen = Terminal(width=10, height=10)
     screen.set_scroll_region(2, 7)
     assert screen.scroll_top == 2
     assert screen.scroll_bottom == 7
@@ -92,7 +92,7 @@ def test_set_scroll_region():
 
 
 def test_line_feed_with_scrolling():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     # Fill screen up to the last line
     for i in range(screen.height - 1):
         screen.lines[i] = Text(f"Line {i}", style=Style())

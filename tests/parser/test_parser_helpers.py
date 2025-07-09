@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 from rich.style import Style
 
 
 @pytest.fixture
 def parser_and_screen():
-    screen = Mock(spec=TerminalScreen)
+    screen = Mock(spec=Terminal)
     screen.current_style = Mock(spec=Style)  # Mock the Style object
     parser = Parser(screen)
     return parser, screen

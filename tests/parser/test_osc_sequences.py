@@ -1,21 +1,21 @@
 """Tests for OSC (Operating System Command) sequences."""
 
 from textual_tty.parser import Parser
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 
 
-def render_screen_to_string(screen: TerminalScreen) -> str:
-    """Render the screen content to a plain string for testing."""
+def render_terminal_to_string(terminal: Terminal) -> str:
+    """Render the terminal content to a plain string for testing."""
     lines = []
-    for line in screen.lines:
+    for line in terminal.get_content():
         lines.append(line.plain)
     return "\n".join(lines)
 
 
 def test_osc_window_title():
     """Test OSC sequence for setting window title."""
-    screen = TerminalScreen(width=80, height=24)
-    parser = Parser(screen)
+    terminal = Terminal(width=80, height=24)
+    parser = Parser(terminal)
 
     # OSC 0 sets window title
     # Format: ESC ] 0 ; <title> BEL
@@ -23,22 +23,22 @@ def test_osc_window_title():
     parser.feed(title_sequence)
 
     # Window title should not appear in screen content
-    output = render_screen_to_string(screen)
+    output = render_terminal_to_string(terminal)
     assert "My Terminal Window" not in output
     assert output.strip() == ""  # Screen should be empty
 
 
 def test_osc_window_title_with_text():
     """Test OSC sequence followed by regular text."""
-    screen = TerminalScreen(width=80, height=24)
-    parser = Parser(screen)
+    terminal = Terminal(width=80, height=24)
+    parser = Parser(terminal)
 
     # OSC sequence followed by text
     data = "\x1b]0;Terminal Title\x07Hello World"
     parser.feed(data)
 
     # Only "Hello World" should be visible
-    output = render_screen_to_string(screen)
+    output = render_terminal_to_string(terminal)
     assert "Terminal Title" not in output
     assert "Hello World" in output
 
@@ -52,8 +52,8 @@ def test_ps1_osc_title_sequence():
     # \[\033[00m\] - Reset
     # \[\033[01;34m\] - Blue bold
 
-    screen = TerminalScreen(width=80, height=24)
-    parser = Parser(screen)
+    terminal = Terminal(width=80, height=24)
+    parser = Parser(terminal)
 
     # Simulate a typical PS1 prompt output
     # The \e]0;user@host: /path\a part is an OSC sequence that sets the window title
@@ -62,18 +62,18 @@ def test_ps1_osc_title_sequence():
     parser.feed(ps1_text)
 
     # The OSC sequence should not appear in the visible output
-    output = render_screen_to_string(screen)
+    output = render_terminal_to_string(terminal)
     assert "user@host: /home/user" not in output  # This is the window title, shouldn't be visible
     assert "user@host:/home/user$ " in output  # This is the actual prompt
 
     # Check cursor position is after the prompt
-    assert screen.cursor_x == len("user@host:/home/user$ ")
+    assert terminal.cursor_x == len("user@host:/home/user$ ")
 
 
 def test_ps1_with_colors():
     """Test PS1 with color escape sequences."""
-    screen = TerminalScreen(width=80, height=24)
-    parser = Parser(screen)
+    terminal = Terminal(width=80, height=24)
+    parser = Parser(terminal)
 
     # Simplified PS1 with colors: green username, blue path
     # \033[01;32m = bold green
@@ -84,19 +84,19 @@ def test_ps1_with_colors():
     parser.feed(ps1_text)
 
     # Check the text content
-    output = render_screen_to_string(screen)
+    output = render_terminal_to_string(terminal)
     assert "user@host:~/projects$ " in output
 
     # Check that styles were applied correctly
-    line = screen.lines[0]
+    line = terminal.get_content()[0]
     # The text should have different styled spans
     assert len(line.spans) > 1  # Should have multiple styled sections
 
 
 def test_osc_string_terminator():
     """Test OSC with ST (String Terminator) instead of BEL."""
-    screen = TerminalScreen(width=80, height=24)
-    parser = Parser(screen)
+    terminal = Terminal(width=80, height=24)
+    parser = Parser(terminal)
 
     # OSC can be terminated with ST (ESC \) instead of BEL
     # Format: ESC ] 0 ; <title> ESC \
@@ -104,14 +104,14 @@ def test_osc_string_terminator():
     parser.feed(title_sequence)
 
     # Title should not appear in screen content
-    output = render_screen_to_string(screen)
+    output = render_terminal_to_string(terminal)
     assert "My Title" not in output
 
 
 def test_osc_malformed():
     """Test malformed OSC sequences."""
-    screen = TerminalScreen(width=80, height=24)
-    parser = Parser(screen)
+    terminal = Terminal(width=80, height=24)
+    parser = Parser(terminal)
 
     # OSC without terminator - should eventually timeout or be discarded
     malformed = "\x1b]0;Incomplete"
@@ -119,5 +119,5 @@ def test_osc_malformed():
     parser.feed("Text")  # Regular text after
 
     # The parser should handle this gracefully
-    output = render_screen_to_string(screen)
+    output = render_terminal_to_string(terminal)
     assert "Text" in output

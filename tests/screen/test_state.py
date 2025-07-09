@@ -1,9 +1,9 @@
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 from rich.text import Text
 
 
 def test_resize():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     screen.cursor_x = 70
     screen.cursor_y = 20
 
@@ -23,7 +23,7 @@ def test_resize():
 
 
 def test_alternate_screen_switching():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
     assert not screen.in_alt_screen
     assert screen.current_console == screen.main_console
 
@@ -47,7 +47,7 @@ def test_alternate_screen_switching():
 
 
 def test_alignment_test():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     screen.alignment_test()
 
     expected_char = "E"
@@ -58,7 +58,7 @@ def test_alignment_test():
 
 
 def test_alternate_screen_on_off_restores_lines():
-    screen = TerminalScreen(width=10, height=5)
+    screen = Terminal(width=10, height=5)
     screen.lines[0] = Text("Hello")
     screen.alternate_screen_on()
     assert screen.lines[0].plain == ""
@@ -67,7 +67,7 @@ def test_alternate_screen_on_off_restores_lines():
 
 
 def test_set_and_clear_modes():
-    screen = TerminalScreen(width=80, height=24)
+    screen = Terminal(width=80, height=24)
 
     # Test setting a private mode
     screen.set_mode(7, private=True)

@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import Mock, call
 from textual_tty.parser import Parser
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 
 
 @pytest.fixture
 def screen():
     """Return a mock Screen object."""
-    screen = Mock(spec=TerminalScreen)
+    screen = Mock(spec=Terminal)
     screen.current_style = Mock()
     return screen
 

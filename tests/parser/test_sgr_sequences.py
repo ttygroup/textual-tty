@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
-from textual_tty.screen import TerminalScreen
+from textual_tty.terminal import Terminal
 from rich.style import Style
 from rich.color import Color
 
@@ -9,7 +9,7 @@ from rich.color import Color
 @pytest.fixture
 def screen():
     """Return a mock Screen object with necessary attributes."""
-    screen = Mock(spec=TerminalScreen)
+    screen = Mock(spec=Terminal)
     screen.current_style = Style()  # Initialize with a real Style object
     screen.width = 80
     screen.height = 24
