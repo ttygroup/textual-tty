@@ -1,7 +1,7 @@
 """Tests for keypad and device status sequences."""
 
-from textual_terminal.parser import Parser
-from textual_terminal.screen import TerminalScreen
+from textual_tty.parser import Parser
+from textual_tty.screen import TerminalScreen
 
 
 def test_csi_p_device_status():

@@ -1,7 +1,7 @@
 """Tests for UTF-8 parsing support."""
 
-from textual_terminal.parser import Parser
-from textual_terminal.screen import TerminalScreen
+from textual_tty.parser import Parser
+from textual_tty.screen import TerminalScreen
 
 
 def render_screen_to_string(screen: TerminalScreen) -> str:

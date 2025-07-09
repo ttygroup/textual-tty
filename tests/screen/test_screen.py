@@ -1,7 +1,7 @@
 from rich.style import Style
 from rich.text import Text, Span
 
-from textual_terminal.screen import TerminalScreen
+from textual_tty.screen import TerminalScreen
 
 
 def test_clear_rect():

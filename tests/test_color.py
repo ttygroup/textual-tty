@@ -5,7 +5,7 @@ Test cases for the terminal color handling module.
 import pytest
 from textual.color import Color
 from rich.color import Color as RichColor
-from textual_terminal import color as color_module
+from textual_tty import color as color_module
 
 # --- Tests for parse_color() ---
 

@@ -1,5 +1,5 @@
 [project]
-name = "textual_terminal"
+name = "textual_tty"
 description = "A tty for Textual UIs"
 version = "0.0.2"
 authors = [
