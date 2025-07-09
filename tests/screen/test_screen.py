@@ -407,7 +407,7 @@ def test_clear_line_from_beginning_to_cursor():
     screen.cursor_x = 5
     screen.cursor_y = 0
     screen.clear_line(1)
-    expected_line = Text("     56789", spans=[Span(0, 5, Style()), Span(5, 10, Style(color="red"))])
+    expected_line = Text("     56789", spans=[Span(5, 10, Style(color="red"))])
     assert screen.current_buffer.lines[0] == expected_line
 
 
@@ -437,7 +437,5 @@ def test_clear_line_with_mixed_styles():
     screen.cursor_x = 3
     screen.cursor_y = 1
     screen.clear_line(1)  # Clear from beginning to cursor
-    expected_line = Text(
-        "   DEFGHI", spans=[Span(0, 3, Style()), Span(3, 6, Style(color="green")), Span(6, 9, Style(color="blue"))]
-    )
+    expected_line = Text("   DEFGHI", spans=[Span(3, 6, Style(color="green")), Span(6, 9, Style(color="blue"))])
     assert screen.current_buffer.lines[1] == expected_line

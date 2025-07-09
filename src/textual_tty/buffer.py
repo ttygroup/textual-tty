@@ -41,7 +41,11 @@ class Buffer:
             self.lines[y] = new_line
         else:
             # Append to end of line
-            new_line = line.copy()
+            if len(line.plain) == 0:
+                # Starting fresh on empty line
+                new_line = Text()
+            else:
+                new_line = line.copy()
             # Pad with spaces if needed
             if len(new_line.plain) < x:
                 padding_length = x - len(new_line.plain)
@@ -78,7 +82,14 @@ class Buffer:
                 if not padding.spans and padding_length > 0 and len(line.plain) > 0:
                     padding.spans.append(Span(0, padding_length, Style()))
                 new_line = new_line + padding
-            new_line.append(text, style)
+            # For insert operations, ensure explicit spans for empty styles
+            if style is None or style == Style():
+                text_to_append = Text(text, style or Style())
+                if not text_to_append.spans and len(text) > 0:
+                    text_to_append.spans.append(Span(0, len(text), style or Style()))
+                new_line = new_line + text_to_append
+            else:
+                new_line.append(text, style)
 
         # Truncate if line becomes too long
         if len(new_line.plain) > self.width:
@@ -139,10 +150,7 @@ class Buffer:
             # If cursor is at or beyond end, no need to clear
         elif mode == 1:  # Clear from beginning to cursor
             if cursor_x < len(line.plain):
-                cleared_part = Text(" " * cursor_x, Style())
-                # Ensure cleared part has explicit span
-                if not cleared_part.spans and cursor_x > 0:
-                    cleared_part.spans.append(Span(0, cursor_x, Style()))
+                cleared_part = Text(" " * cursor_x)
                 self.lines[y] = cleared_part + line[cursor_x:]
             else:
                 # Clear entire line if cursor is beyond content

@@ -155,9 +155,27 @@ class Terminal:
     def clear_screen(self, mode: int = 0) -> None:
         """Clear screen."""
         if mode == 0:  # Clear from cursor to end of screen
-            self.current_buffer.clear_region(self.cursor_x, self.cursor_y, self.width, self.height)
+            # Clear current line from cursor to end, padding to full width
+            if 0 <= self.cursor_y < len(self.current_buffer.lines):
+                line = self.current_buffer.lines[self.cursor_y]
+                if self.cursor_x < len(line.plain):
+                    # Keep text before cursor, fill rest with spaces to full width
+                    kept_part = line[: self.cursor_x]
+                    spaces_needed = self.width - self.cursor_x
+                    if spaces_needed > 0:
+                        spaces = Text(" " * spaces_needed)
+                        self.current_buffer.lines[self.cursor_y] = kept_part + spaces
+                    else:
+                        self.current_buffer.lines[self.cursor_y] = kept_part
+            # Clear all lines below cursor
+            for y in range(self.cursor_y + 1, self.height):
+                self.current_buffer.lines[y] = Text()
         elif mode == 1:  # Clear from beginning of screen to cursor
-            self.current_buffer.clear_region(0, 0, self.cursor_x, self.cursor_y)
+            # Clear all lines above cursor
+            for y in range(self.cursor_y):
+                self.current_buffer.lines[y] = Text()
+            # Clear current line from beginning to cursor
+            self.clear_line(1)
         elif mode == 2:  # Clear entire screen
             self.current_buffer = Buffer(self.width, self.height)
 

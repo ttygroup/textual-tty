@@ -206,7 +206,7 @@ def test_clear_line():
 
     # Mode 1: Clear from beginning of line to cursor
     screen.clear_line(1)
-    expected_line_1 = Text("     FGHIJ", spans=[Span(0, 5, Style()), Span(5, 10, Style(color="red"))])
+    expected_line_1 = Text("     FGHIJ", spans=[Span(5, 10, Style(color="red"))])
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line_1)
 
     # Reset
@@ -215,7 +215,7 @@ def test_clear_line():
 
     # Mode 2: Clear entire line
     screen.clear_line(2)
-    expected_line_2 = Text("          ", spans=[Span(0, 10, Style())])
+    expected_line_2 = Text("")
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line_2)
 
 
