@@ -40,13 +40,15 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 
 ## todo
 
-- [ ] fix resizing - apps like htop don't resize
+- [x] fix resizing - apps like htop don't resize
 - [ ] implement cursor (with width)
 - [ ] arrow keys for input in tui apps, not sure what's happening
 - [ ] performance improvements
   - [x] profile it!
   - [ ] reduce draw calls
 - [ ] bugs
-  - [ ] scroll region
+  - [x] scroll region
   - [ ] blank background to end of line
   - [ ]
+- [ ] more coverage
+- [ ] reduce redundancy redundancy of repeated repeated code code
