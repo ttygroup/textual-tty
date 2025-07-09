@@ -19,7 +19,7 @@ def test_osc_window_title():
 
     # OSC 0 sets window title
     # Format: ESC ] 0 ; <title> BEL
-    title_sequence = b"\x1b]0;My Terminal Window\x07"
+    title_sequence = "\x1b]0;My Terminal Window\x07"
     parser.feed(title_sequence)
 
     # Window title should not appear in screen content
@@ -34,7 +34,7 @@ def test_osc_window_title_with_text():
     parser = Parser(screen)
 
     # OSC sequence followed by text
-    data = b"\x1b]0;Terminal Title\x07Hello World"
+    data = "\x1b]0;Terminal Title\x07Hello World"
     parser.feed(data)
 
     # Only "Hello World" should be visible
@@ -57,9 +57,9 @@ def test_ps1_osc_title_sequence():
 
     # Simulate a typical PS1 prompt output
     # The \e]0;user@host: /path\a part is an OSC sequence that sets the window title
-    ps1_bytes = b"\x1b]0;user@host: /home/user\x07user@host:/home/user$ "
+    ps1_text = "\x1b]0;user@host: /home/user\x07user@host:/home/user$ "
 
-    parser.feed(ps1_bytes)
+    parser.feed(ps1_text)
 
     # The OSC sequence should not appear in the visible output
     output = render_screen_to_string(screen)
@@ -79,9 +79,9 @@ def test_ps1_with_colors():
     # \033[01;32m = bold green
     # \033[01;34m = bold blue
     # \033[00m = reset
-    ps1_bytes = b"\x1b[01;32muser@host\x1b[00m:\x1b[01;34m~/projects\x1b[00m$ "
+    ps1_text = "\x1b[01;32muser@host\x1b[00m:\x1b[01;34m~/projects\x1b[00m$ "
 
-    parser.feed(ps1_bytes)
+    parser.feed(ps1_text)
 
     # Check the text content
     output = render_screen_to_string(screen)
@@ -100,7 +100,7 @@ def test_osc_string_terminator():
 
     # OSC can be terminated with ST (ESC \) instead of BEL
     # Format: ESC ] 0 ; <title> ESC \
-    title_sequence = b"\x1b]0;My Title\x1b\\"
+    title_sequence = "\x1b]0;My Title\x1b\\"
     parser.feed(title_sequence)
 
     # Title should not appear in screen content
@@ -114,9 +114,9 @@ def test_osc_malformed():
     parser = Parser(screen)
 
     # OSC without terminator - should eventually timeout or be discarded
-    malformed = b"\x1b]0;Incomplete"
+    malformed = "\x1b]0;Incomplete"
     parser.feed(malformed)
-    parser.feed(b"Text")  # Regular text after
+    parser.feed("Text")  # Regular text after
 
     # The parser should handle this gracefully
     output = render_screen_to_string(screen)

@@ -18,9 +18,9 @@ def test_unicode_emoji():
     parser = Parser(screen)
 
     # Test with house emoji 🏠 (U+1F3E0)
-    emoji_bytes = "🏠 Home".encode("utf-8")
+    emoji_text = "🏠 Home"
 
-    parser.feed(emoji_bytes)
+    parser.feed(emoji_text)
 
     output = render_screen_to_string(screen)
     assert "🏠 Home" in output
@@ -36,9 +36,8 @@ def test_unicode_various():
 
     # Test various Unicode: ASCII, Latin-1, CJK, Emoji
     test_string = "Hello café 你好 🌍"
-    unicode_bytes = test_string.encode("utf-8")
 
-    parser.feed(unicode_bytes)
+    parser.feed(test_string)
 
     output = render_screen_to_string(screen)
     assert test_string in output
@@ -58,9 +57,8 @@ def test_unicode_box_drawing():
 
     # Common box drawing characters used in terminal UIs
     box_chars = "┌─┐│└┘╔═╗║╚╝"
-    box_bytes = box_chars.encode("utf-8")
 
-    parser.feed(box_bytes)
+    parser.feed(box_chars)
 
     output = render_screen_to_string(screen)
     assert box_chars in output
@@ -71,11 +69,11 @@ def test_malformed_utf8():
     screen = TerminalScreen(width=80, height=24)
     parser = Parser(screen)
 
-    # Invalid UTF-8 sequence
-    invalid_bytes = b"Hello \xff\xfe World"
+    # Invalid UTF-8 sequence (already decoded by terminal widget)
+    invalid_text = "Hello \ufffd\ufffd World"  # replacement chars
 
     # This should not crash - parser should handle gracefully
-    parser.feed(invalid_bytes)
+    parser.feed(invalid_text)
 
     output = render_screen_to_string(screen)
     # Should have processed the valid parts
@@ -88,9 +86,8 @@ def test_utf8_split_across_feeds():
     screen = TerminalScreen(width=80, height=24)
     parser = Parser(screen)
 
-    # UTF-8 for "café" split in the middle of 'é' (C3 A9)
-    parser.feed(b"caf\xc3")  # First part ending with first byte of é
-    parser.feed(b"\xa9")  # Second byte of é
+    # UTF-8 already decoded by terminal widget, so no need to test split sequences
+    parser.feed("café")
 
     output = render_screen_to_string(screen)
     assert "café" in output
