@@ -18,9 +18,6 @@ There's 3 widgets:
 
 ## todo - refactor plan
 
-* Refactor so Terminal is the base class and TextualTerminal is the widget subclass
-  * Use reactives to handle updates, cause events etc
-* Move process management into the Terminal base class
-* Rename Screen to Buffer and have the Terminal handle it
-* Have the parser set modes on the Terminal, and write() text to it
-* Move the tests to match new design
+- [ ] get windows terminal working
+- [ ] fix mouse
+- [ ] fix tests

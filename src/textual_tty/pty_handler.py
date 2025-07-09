@@ -158,7 +158,7 @@ class UnixPTY:
 
 
 class WindowsPTY:
-    """Windows PTY implementation using pywinpty."""
+    """Windows PTY implementation using pywinpty with ConPTY support."""
 
     def __init__(self, rows: int = 24, cols: int = 80):
         try:
@@ -168,15 +168,21 @@ class WindowsPTY:
             self.rows = rows
             self.cols = cols
             self._closed = False
+            self._process = None
+            self.master_fd = None
         except ImportError:
-            raise OSError("pywinpty not installed. Install with: pip install textual-terminal[windows]")
+            raise OSError("pywinpty not installed. Install with: pip install pywinpty")
 
     def read(self, size: int = 4096) -> bytes:
         """Read data from the PTY."""
         if self._closed:
             return b""
         try:
-            return self.pty.read(size)
+            data = self.pty.read(size)
+            # Convert unicode string to bytes if necessary
+            if isinstance(data, str):
+                return data.encode("utf-8", errors="replace")
+            return data
         except Exception:
             return b""
 
@@ -185,7 +191,11 @@ class WindowsPTY:
         if self._closed:
             return 0
         try:
-            return self.pty.write(data)
+            # Convert bytes to string if necessary
+            if isinstance(data, bytes):
+                data = data.decode("utf-8", errors="replace")
+            self.pty.write(data)
+            return len(data.encode("utf-8"))
         except Exception:
             return 0
 
@@ -203,6 +213,9 @@ class WindowsPTY:
         """Close the PTY."""
         if not self._closed:
             try:
+                if self._process and self.pty.isalive():
+                    # Try to gracefully terminate the process
+                    self._process.terminate()
                 self.pty.close()
             except Exception:
                 pass
@@ -211,10 +224,13 @@ class WindowsPTY:
     @property
     def closed(self) -> bool:
         """Check if PTY is closed."""
-        return self._closed
+        return self._closed or (self._process and not self.pty.isalive())
 
     def spawn_process(self, command: str, env: Optional[Dict[str, str]] = None) -> subprocess.Popen:
         """Spawn a process attached to this PTY."""
+        if self._closed:
+            raise OSError("PTY is closed")
+
         process_env = dict(os.environ)
         if env:
             process_env.update(env)
@@ -228,20 +244,64 @@ class WindowsPTY:
             }
         )
 
-        # Ensure UTF-8 locale if not already set
-        if "LANG" not in process_env or "UTF-8" not in process_env.get("LANG", ""):
-            process_env["LANG"] = "en_US.UTF-8"
-        if "LC_ALL" not in process_env:
-            process_env["LC_ALL"] = process_env.get("LANG", "en_US.UTF-8")
+        try:
+            # Use winpty to spawn the process with proper PTY attachment
+            self.pty.spawn(command, env=process_env)
 
-        # Windows: Use winpty to spawn the process attached to the PTY
-        # For now, fallback to regular subprocess - winpty integration needs more work
-        # TODO: Properly integrate winpty process spawning
-        return subprocess.Popen(
-            command,
-            shell=True,
-            env=process_env,
-        )
+            # Create a mock subprocess.Popen-like object for compatibility
+            class WinptyProcess:
+                def __init__(self, pty):
+                    self.pty = pty
+                    self.returncode = None
+
+                def poll(self):
+                    """Check if process is still running."""
+                    if not self.pty.isalive():
+                        if self.returncode is None:
+                            self.returncode = self.pty.get_exitstatus()
+                        return self.returncode
+                    return None
+
+                def wait(self, timeout=None):
+                    """Wait for process to complete."""
+                    # Simple polling implementation
+                    import time
+
+                    start_time = time.time()
+                    while self.pty.isalive():
+                        if timeout and (time.time() - start_time) > timeout:
+                            raise subprocess.TimeoutExpired(command, timeout)
+                        time.sleep(0.01)
+                    self.returncode = self.pty.get_exitstatus()
+                    return self.returncode
+
+                def terminate(self):
+                    """Terminate the process."""
+                    # winpty doesn't have a direct terminate method
+                    # We'll rely on the PTY close operation
+                    pass
+
+                def kill(self):
+                    """Kill the process."""
+                    # winpty doesn't have a direct kill method
+                    # We'll rely on the PTY close operation
+                    pass
+
+            self._process = WinptyProcess(self.pty)
+            return self._process
+
+        except Exception:
+            # Fallback to regular subprocess if winpty spawning fails
+            # This provides compatibility but without PTY features
+            return subprocess.Popen(
+                command,
+                shell=True,
+                env=process_env,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=False,
+            )
 
 
 def create_pty(rows: int = 24, cols: int = 80) -> PTYSocket:
