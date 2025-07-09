@@ -17,6 +17,7 @@ from textual.reactive import reactive
 from textual.message import Message
 
 from .terminal import Terminal
+from .log import debug
 
 
 class TextualTerminal(Terminal, Widget):
@@ -24,6 +25,11 @@ class TextualTerminal(Terminal, Widget):
 
     # Make terminal focusable so it can receive key events
     can_focus = True
+
+    # Override tab behavior to prevent focus changes
+    BINDINGS = [
+        ("tab", "pass_to_terminal", ""),
+    ]
 
     DEFAULT_CSS = """
     TextualTerminal {
@@ -40,14 +46,10 @@ class TextualTerminal(Terminal, Widget):
     }
     """
 
-    # Override Terminal attributes as reactive
+    # Terminal attributes as reactive
     title: str = reactive("Terminal", always_update=True)
     cursor_x: int = reactive(0, always_update=True)
     cursor_y: int = reactive(0, always_update=True)
-    width: int = reactive(80, always_update=True)
-    height: int = reactive(24, always_update=True)
-
-    # Terminal widget specific attributes
     command: str = reactive("/bin/bash", always_update=True)
     width_chars: int = reactive(80, always_update=True)
     height_chars: int = reactive(24, always_update=True)
@@ -112,6 +114,28 @@ class TextualTerminal(Terminal, Widget):
         """Handle widget unmounting."""
         self.stop_process()
 
+    async def on_resize(self, event) -> None:
+        """Handle widget resize events from Textual."""
+        debug(f"on_resize called with event: {event}")
+
+        # Convert pixel size to character size (approximate)
+        # Textual widgets have size in terms of console cells
+        if hasattr(event, "size"):
+            new_width = event.size.width
+            new_height = event.size.height
+            debug(f"event size: {new_width}x{new_height}")
+        else:
+            # Fallback to current widget size
+            new_width = self.size.width
+            new_height = self.size.height
+            debug(f"widget size: {new_width}x{new_height}")
+
+        # Update terminal dimensions
+        if new_width > 0 and new_height > 0:
+            debug(f"setting width_chars={new_width}, height_chars={new_height}")
+            self.width_chars = new_width
+            self.height_chars = new_height
+
     def _read_from_pty(self) -> None:
         """Override to add display update."""
         # Call parent method
@@ -159,19 +183,100 @@ class TextualTerminal(Terminal, Widget):
 
     def watch_width_chars(self, old_width: int, new_width: int) -> None:
         """Called when width changes."""
-        self.resize(new_width, self.height_chars)
+        debug(f"width_chars changed from {old_width} to {new_width}")
+        # Update the base Terminal size
+        super().resize(new_width, self.height_chars)
 
     def watch_height_chars(self, old_height: int, new_height: int) -> None:
         """Called when height changes."""
-        self.resize(self.width_chars, new_height)
+        debug(f"height_chars changed from {old_height} to {new_height}")
+        # Update the base Terminal size
+        super().resize(self.width_chars, new_height)
 
     def _set_terminal_size(self) -> None:
         """Set the terminal window size."""
         if self.pty is not None:
             self.pty.resize(self.height_chars, self.width_chars)
 
-    # Input handling (future implementation)
+    # Input handling
     async def on_key(self, event) -> None:
         """Handle key events."""
-        # TODO: Send key events to PTY
-        pass
+        if self.pty is None:
+            return
+
+        # Convert key to terminal escape sequence
+        key_data = self._key_to_terminal_data(event)
+        if key_data:
+            self.pty.write(key_data.encode("utf-8"))
+            # Prevent the key from propagating to Textual (important for tab, etc.)
+            event.stop()
+            return
+
+        # If we couldn't handle the key, let Textual handle it
+        # (but this means focus keys like Tab will still work for navigation)
+
+    def _key_to_terminal_data(self, event) -> str:
+        """Convert Textual key event to terminal input data."""
+        key = event.key
+
+        # Handle printable characters - use the actual character if available
+        if hasattr(event, "character") and event.character and len(event.character) == 1:
+            return event.character
+        elif len(key) == 1 and key.isprintable():
+            return key
+
+        # Handle Ctrl combinations
+        if key.startswith("ctrl+"):
+            ctrl_key = key[5:]  # Remove 'ctrl+'
+            if len(ctrl_key) == 1:
+                # Convert to control character (Ctrl+A = \x01, Ctrl+B = \x02, etc.)
+                char = ctrl_key.upper()
+                if "A" <= char <= "Z":
+                    return chr(ord(char) - ord("A") + 1)
+                elif char == "0":
+                    return "\x00"  # Ctrl+0 = NULL
+                elif char == "\\":
+                    return "\x1c"  # Ctrl+\ = FS
+                elif char == "]":
+                    return "\x1d"  # Ctrl+] = GS
+                elif char == "^":
+                    return "\x1e"  # Ctrl+^ = RS
+                elif char == "_":
+                    return "\x1f"  # Ctrl+_ = US
+
+        # Special keys
+        key_map = {
+            "enter": "\r",
+            "tab": "\t",
+            "escape": "\x1b",
+            "backspace": "\x7f",
+            "delete": "\x1b[3~",
+            "up": "\x1b[A",
+            "down": "\x1b[B",
+            "right": "\x1b[C",
+            "left": "\x1b[D",
+            "home": "\x1b[H",
+            "end": "\x1b[F",
+            "page_up": "\x1b[5~",
+            "page_down": "\x1b[6~",
+            "f1": "\x1bOP",
+            "f2": "\x1bOQ",
+            "f3": "\x1bOR",
+            "f4": "\x1bOS",
+            "f5": "\x1b[15~",
+            "f6": "\x1b[17~",
+            "f7": "\x1b[18~",
+            "f8": "\x1b[19~",
+            "f9": "\x1b[20~",
+            "f10": "\x1b[21~",
+            "f11": "\x1b[23~",
+            "f12": "\x1b[24~",
+            "space": " ",
+        }
+        return key_map.get(key, "")
+
+    def action_pass_to_terminal(self) -> None:
+        """Action handler for keys that should go to terminal."""
+        # This will be called for tab key, send it to terminal
+        if self.pty:
+            self.pty.write(b"\t")

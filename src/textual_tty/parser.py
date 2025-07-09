@@ -491,6 +491,14 @@ class Parser:
         elif final_char == "u":  # DECRC - Restore Cursor (alternative)
             # Restore cursor position and attributes
             self.terminal.restore_cursor()
+        elif final_char == "X":  # ECH - Erase Character (possibly with intermediate)
+            # Erase n characters at cursor position
+            count = self._get_param(0, 1)
+            # For now, treat this as delete characters (could be improved)
+            for _ in range(count):
+                self.terminal.current_buffer.set(self.terminal.cursor_x, self.terminal.cursor_y, " ")
+                if self.terminal.cursor_x < self.terminal.width - 1:
+                    self.terminal.cursor_x += 1
         else:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"
@@ -521,8 +529,8 @@ class Parser:
             self.parsed_params = [0]
 
         # Ensure current_style is always a Style object
-        if self.terminal.current_style is None:
-            self.terminal.current_style = Style()
+        if self.current_style is None:
+            self.current_style = Style()
 
         it = iter(self.parsed_params)
         while True:
@@ -533,42 +541,42 @@ class Parser:
 
             if param == 0:
                 # Reset all attributes
-                self.terminal.current_style = Style()
+                self.current_style = Style()
             elif param == 1:
-                self.terminal.current_style += Style(bold=True)
+                self.current_style += Style(bold=True)
             elif param == 2:
-                self.terminal.current_style += Style(dim=True)
+                self.current_style += Style(dim=True)
             elif param == 3:
-                self.terminal.current_style += Style(italic=True)
+                self.current_style += Style(italic=True)
             elif param == 4:
-                self.terminal.current_style += Style(underline=True)
+                self.current_style += Style(underline=True)
             elif param == 5:
-                self.terminal.current_style += Style(blink=True)
+                self.current_style += Style(blink=True)
             elif param == 7:
-                self.terminal.current_style += Style(reverse=True)
+                self.current_style += Style(reverse=True)
             elif param == 8:
-                self.terminal.current_style += Style(conceal=True)
+                self.current_style += Style(conceal=True)
             elif param == 9:
-                self.terminal.current_style += Style(strike=True)
+                self.current_style += Style(strike=True)
             elif param == 21:  # Not bold/double underline
-                self.terminal.current_style += Style(bold=False)
+                self.current_style += Style(bold=False)
             elif param == 22:  # Neither bold nor faint
-                self.terminal.current_style += Style(bold=False, dim=False)
+                self.current_style += Style(bold=False, dim=False)
             elif param == 23:  # Not italic
-                self.terminal.current_style += Style(italic=False)
+                self.current_style += Style(italic=False)
             elif param == 24:  # Not underlined
-                self.terminal.current_style += Style(underline=False)
+                self.current_style += Style(underline=False)
             elif param == 25:  # Not blinking
-                self.terminal.current_style += Style(blink=False)
+                self.current_style += Style(blink=False)
             elif param == 27:  # Not reversed
-                self.terminal.current_style += Style(reverse=False)
+                self.current_style += Style(reverse=False)
             elif param == 28:  # Not hidden
-                self.terminal.current_style += Style(conceal=False)
+                self.current_style += Style(conceal=False)
             elif param == 29:  # Not strikethrough
-                self.terminal.current_style += Style(strike=False)
+                self.current_style += Style(strike=False)
             elif 30 <= param <= 37:
                 # Standard 16-color foreground
-                self.terminal.current_style += Style(color=Color.from_ansi(param - 30))
+                self.current_style += Style(color=Color.from_ansi(param - 30))
             elif param == 38:
                 # Extended foreground color
                 new_color = None
@@ -591,13 +599,13 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_color is not None:
-                    self.terminal.current_style += Style(color=new_color)
+                    self.current_style += Style(color=new_color)
             elif param == 39:
                 # Default foreground color
-                self.terminal.current_style += Style(color=Color.default())
+                self.current_style += Style(color=Color.default())
             elif 40 <= param <= 47:
                 # Standard 16-color background
-                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 40))
+                self.current_style += Style(bgcolor=Color.from_ansi(param - 40))
             elif param == 48:
                 # Extended background color
                 new_bgcolor = None
@@ -620,16 +628,16 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_bgcolor is not None:
-                    self.terminal.current_style += Style(bgcolor=new_bgcolor)
+                    self.current_style += Style(bgcolor=new_bgcolor)
             elif param == 49:
                 # Default background color
-                self.terminal.current_style += Style(bgcolor=Color.default())
+                self.current_style += Style(bgcolor=Color.default())
             elif 90 <= param <= 97:
                 # Bright 16-color foreground
-                self.terminal.current_style += Style(color=Color.from_ansi(param - 90 + 8))
+                self.current_style += Style(color=Color.from_ansi(param - 90 + 8))
             elif 100 <= param <= 107:
                 # Bright 16-color background
-                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
+                self.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handles SM (Set Mode) and RM (Reset Mode) sequences."""
@@ -759,7 +767,7 @@ class Parser:
         """Reset terminal to initial state."""
         self.terminal.clear_screen(2)
         self.terminal.set_cursor(0, 0)
-        self.terminal.current_style = Style()
+        self.current_style = Style()
 
     def _csi_dispatch_sgr(self) -> None:
         """
@@ -786,8 +794,8 @@ class Parser:
             self.parsed_params = [0]
 
         # Ensure current_style is always a Style object
-        if self.terminal.current_style is None:
-            self.terminal.current_style = Style()
+        if self.current_style is None:
+            self.current_style = Style()
 
         it = iter(self.parsed_params)
         while True:
@@ -798,42 +806,42 @@ class Parser:
 
             if param == 0:
                 # Reset all attributes
-                self.terminal.current_style = Style()
+                self.current_style = Style()
             elif param == 1:
-                self.terminal.current_style += Style(bold=True)
+                self.current_style += Style(bold=True)
             elif param == 2:
-                self.terminal.current_style += Style(dim=True)
+                self.current_style += Style(dim=True)
             elif param == 3:
-                self.terminal.current_style += Style(italic=True)
+                self.current_style += Style(italic=True)
             elif param == 4:
-                self.terminal.current_style += Style(underline=True)
+                self.current_style += Style(underline=True)
             elif param == 5:
-                self.terminal.current_style += Style(blink=True)
+                self.current_style += Style(blink=True)
             elif param == 7:
-                self.terminal.current_style += Style(reverse=True)
+                self.current_style += Style(reverse=True)
             elif param == 8:
-                self.terminal.current_style += Style(conceal=True)
+                self.current_style += Style(conceal=True)
             elif param == 9:
-                self.terminal.current_style += Style(strike=True)
+                self.current_style += Style(strike=True)
             elif param == 21:  # Not bold/double underline
-                self.terminal.current_style += Style(bold=False)
+                self.current_style += Style(bold=False)
             elif param == 22:  # Neither bold nor faint
-                self.terminal.current_style += Style(bold=False, dim=False)
+                self.current_style += Style(bold=False, dim=False)
             elif param == 23:  # Not italic
-                self.terminal.current_style += Style(italic=False)
+                self.current_style += Style(italic=False)
             elif param == 24:  # Not underlined
-                self.terminal.current_style += Style(underline=False)
+                self.current_style += Style(underline=False)
             elif param == 25:  # Not blinking
-                self.terminal.current_style += Style(blink=False)
+                self.current_style += Style(blink=False)
             elif param == 27:  # Not reversed
-                self.terminal.current_style += Style(reverse=False)
+                self.current_style += Style(reverse=False)
             elif param == 28:  # Not hidden
-                self.terminal.current_style += Style(conceal=False)
+                self.current_style += Style(conceal=False)
             elif param == 29:  # Not strikethrough
-                self.terminal.current_style += Style(strike=False)
+                self.current_style += Style(strike=False)
             elif 30 <= param <= 37:
                 # Standard 16-color foreground
-                self.terminal.current_style += Style(color=Color.from_ansi(param - 30))
+                self.current_style += Style(color=Color.from_ansi(param - 30))
             elif param == 38:
                 # Extended foreground color
                 new_color = None
@@ -856,13 +864,13 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_color is not None:
-                    self.terminal.current_style += Style(color=new_color)
+                    self.current_style += Style(color=new_color)
             elif param == 39:
                 # Default foreground color
-                self.terminal.current_style += Style(color=Color.default())
+                self.current_style += Style(color=Color.default())
             elif 40 <= param <= 47:
                 # Standard 16-color background
-                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 40))
+                self.current_style += Style(bgcolor=Color.from_ansi(param - 40))
             elif param == 48:
                 # Extended background color
                 new_bgcolor = None
@@ -885,16 +893,16 @@ class Parser:
                     # Malformed sequence, ignore
                     pass
                 if new_bgcolor is not None:
-                    self.terminal.current_style += Style(bgcolor=new_bgcolor)
+                    self.current_style += Style(bgcolor=new_bgcolor)
             elif param == 49:
                 # Default background color
-                self.terminal.current_style += Style(bgcolor=Color.default())
+                self.current_style += Style(bgcolor=Color.default())
             elif 90 <= param <= 97:
                 # Bright 16-color foreground
-                self.terminal.current_style += Style(color=Color.from_ansi(param - 90 + 8))
+                self.current_style += Style(color=Color.from_ansi(param - 90 + 8))
             elif 100 <= param <= 107:
                 # Bright 16-color background
-                self.terminal.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
+                self.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
