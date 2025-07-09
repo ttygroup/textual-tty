@@ -132,6 +132,15 @@ class Parser:
             elif char == "8":  # DECRC (Restore Cursor)
                 self._esc_dispatch(char)
                 self.current_state = "GROUND"
+            elif char == ">":  # DECKPNM (Keypad Numeric Mode)
+                # Set keypad to numeric mode - just consume it
+                self.current_state = "GROUND"
+            elif char == "(":  # G0 character set designation
+                # ESC ( followed by character set designator - consume next char
+                self.current_state = "CHARSET_G0"
+            elif char == ")":  # G1 character set designation
+                # ESC ) followed by character set designator - consume next char
+                self.current_state = "CHARSET_G1"
             else:
                 # Unknown escape sequence, log and go back to ground
                 debug(f"Unknown escape sequence: ESC {char!r}")
@@ -195,6 +204,12 @@ class Parser:
                 # Not ST, treat as regular character
                 self.string_buffer += "\x1b" + char
                 self.current_state = "OSC_STRING"
+        elif self.current_state == "CHARSET_G0":
+            # Character set designation for G0 - just consume and go back to ground
+            self.current_state = "GROUND"
+        elif self.current_state == "CHARSET_G1":
+            # Character set designation for G1 - just consume and go back to ground
+            self.current_state = "GROUND"
 
     def reset(self) -> None:
         """
@@ -458,6 +473,14 @@ class Parser:
             self._csi_dispatch_sm_rm(True)
         elif final_char == "l":  # RM - Reset Mode
             self._csi_dispatch_sm_rm(False)
+        elif final_char == "p":  # Device status queries or mode setting
+            # Various device status queries - we consume but don't respond
+            # This could be device attributes, mode queries, etc.
+            pass
+        elif final_char == "t":  # Window operations
+            # Various window operations (resize, position queries, etc.)
+            # We consume but don't implement window operations
+            pass
         else:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"
