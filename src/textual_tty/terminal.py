@@ -168,11 +168,11 @@ class Terminal:
                     else:
                         self.current_buffer.lines[self.cursor_y] = kept_part
             # Clear all lines below cursor
-            for y in range(self.cursor_y + 1, self.height):
+            for y in range(self.cursor_y + 1, min(self.height, len(self.current_buffer.lines))):
                 self.current_buffer.lines[y] = Text()
         elif mode == 1:  # Clear from beginning of screen to cursor
             # Clear all lines above cursor
-            for y in range(self.cursor_y):
+            for y in range(min(self.cursor_y, len(self.current_buffer.lines))):
                 self.current_buffer.lines[y] = Text()
             # Clear current line from beginning to cursor
             self.clear_line(1)
