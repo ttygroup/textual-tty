@@ -160,48 +160,8 @@ class Parser:
                 # Unknown escape sequence, log and go back to ground
                 debug(f"Unknown escape sequence: ESC {char!r}")
                 self.current_state = "GROUND"
-        elif self.current_state == "CSI_ENTRY":
-            if "\x3c" <= char <= "\x3f":  # Private mode intermediate characters (<, =, >, ?)
-                self._collect_intermediate(char)
-                self.current_state = "CSI_PARAM"
-            elif "\x30" <= char <= "\x3b":  # Parameter bytes (0-9, :, ;)
-                self._collect_parameter(char)
-                self.current_state = "CSI_PARAM"
-            elif "\x20" <= char <= "\x2f":  # Intermediate bytes (general)
-                self.intermediate_chars.append(char)
-                self.current_state = "CSI_INTERMEDIATE"
-            elif "\x40" <= char <= "\x7e":  # Final byte
-                self._csi_dispatch(char)
-                self.current_state = "GROUND"
-            else:
-                # Invalid CSI sequence, log and return to ground
-                debug(f"Invalid CSI character: {char!r}")
-                self.current_state = "GROUND"
-        elif self.current_state == "CSI_PARAM":
-            if "\x30" <= char <= "\x3b":  # Parameter bytes
-                self._collect_parameter(char)
-            elif "\x20" <= char <= "\x2f":  # Intermediate bytes
-                self._collect_intermediate(char)
-                self.current_state = "CSI_INTERMEDIATE"
-            elif "\x40" <= char <= "\x7e":  # Final byte
-                self._csi_dispatch(char)
-                self.current_state = "GROUND"
-            else:
-                # Invalid CSI sequence, log and return to ground
-                debug(f"Invalid CSI character: {char!r}")
-                self.current_state = "GROUND"
-        elif self.current_state == "CSI_INTERMEDIATE":
-            if "\x30" <= char <= "\x3b":  # Parameter bytes
-                self._collect_parameter(char)
-            elif "\x20" <= char <= "\x2f":  # Intermediate bytes
-                self._collect_intermediate(char)
-            elif "\x40" <= char <= "\x7e":  # Final byte
-                self._csi_dispatch(char)
-                self.current_state = "GROUND"
-            else:
-                # Invalid CSI sequence, log and return to ground
-                debug(f"Invalid CSI character: {char!r}")
-                self.current_state = "GROUND"
+        elif self.current_state in ("CSI_ENTRY", "CSI_PARAM", "CSI_INTERMEDIATE"):
+            self._handle_csi(char)
         elif self.current_state == "OSC_STRING":
             if char == "\x07":  # BEL - terminates OSC
                 self._handle_osc_dispatch()
@@ -242,6 +202,42 @@ class Parser:
         elif self.current_state == "CHARSET_G1":
             # Character set designation for G1 - just consume and go back to ground
             self.current_state = "GROUND"
+
+    def _handle_csi(self, char: str) -> None:
+        """Generic handler for CSI_ENTRY, CSI_PARAM, and CSI_INTERMEDIATE states."""
+        # Final byte is the same for all CSI states
+        if "\x40" <= char <= "\x7e":
+            self._csi_dispatch(char)
+            self.current_state = "GROUND"
+            return
+
+        # Parameter bytes
+        if "\x30" <= char <= "\x3b":
+            self._collect_parameter(char)
+            if self.current_state == "CSI_ENTRY":
+                self.current_state = "CSI_PARAM"
+            return
+
+        # Intermediate bytes
+        if "\x20" <= char <= "\x2f":
+            self._collect_intermediate(char)
+            self.current_state = "CSI_INTERMEDIATE"
+            return
+
+        # Private parameter bytes (only valid in CSI_ENTRY)
+        if "\x3c" <= char <= "\x3f":
+            if self.current_state == "CSI_ENTRY":
+                self._collect_intermediate(char)
+                self.current_state = "CSI_PARAM"
+            else:
+                # Invalid in other CSI states
+                debug(f"Invalid CSI character: {char!r}")
+                self.current_state = "GROUND"
+            return
+
+        # Any other character is invalid
+        debug(f"Invalid CSI character: {char!r}")
+        self.current_state = "GROUND"
 
     def reset(self) -> None:
         """
