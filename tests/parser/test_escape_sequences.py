@@ -19,9 +19,9 @@ def screen():
 def test_bell_character(screen):
     """Test that the BEL character (0x07) is handled (does nothing visible)."""
     parser = Parser(screen)
-    parser.feed(b"\x07")
+    parser.feed("\x07")
     # BEL typically just makes a sound, no screen changes, so no screen methods should be called.
-    screen.write_cell.assert_not_called()
+    screen.write_text.assert_not_called()
     screen.backspace.assert_not_called()
     screen.line_feed.assert_not_called()
     screen.carriage_return.assert_not_called()

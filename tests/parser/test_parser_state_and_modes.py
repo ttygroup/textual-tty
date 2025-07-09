@@ -74,7 +74,7 @@ def test_parse_byte_ht_wraps_cursor(screen):
     """Test that HT character (0x09) wraps cursor_x if it exceeds screen width."""
     parser = Parser(screen)
     screen.cursor_x = screen.width - 5  # 5 characters before end
-    parser.feed(b"\x09")
+    parser.feed("\x09")
     assert screen.cursor_x == screen.width - 1  # Should cap at screen width - 1
 
 
