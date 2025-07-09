@@ -16,7 +16,7 @@ from typing import Any, Optional
 from .buffer import Buffer
 from .parser import Parser
 from .pty_handler import create_pty
-from .log import info, warning, error
+from .log import info, warning, error, exception
 
 from rich.text import Text
 
@@ -257,6 +257,32 @@ class Terminal:
         """Set cursor position (alias for move_cursor)."""
         self.move_cursor(x, y)
 
+    def send_mouse_event(self, x: int, y: int, button: int, action: str, modifiers: int = 0) -> None:
+        """Send mouse event to the PTY process."""
+        if not self.mouse_tracking or self.pty is None:
+            return
+        
+        # Convert to 1-based coordinates (terminal standard)
+        col = x + 1
+        row = y + 1
+        
+        # Clamp to terminal bounds
+        col = max(1, min(col, self.width))
+        row = max(1, min(row, self.height))
+        
+        # Apply modifiers
+        button |= modifiers
+        
+        # Generate SGR mouse sequence (modern format)
+        # ESC [ < button ; col ; row M/m
+        if action == "up":
+            sequence = f"\x1b[<{button};{col};{row}m"
+        else:
+            sequence = f"\x1b[<{button};{col};{row}M"
+        
+        # Send to PTY
+        self.pty.write(sequence.encode("utf-8"))
+
     # Process management
     async def start_process(self) -> None:
         """Start the child process with PTY."""
@@ -326,7 +352,7 @@ class Terminal:
             info(f"PTY read error: {e}")
             self.stop_process()
         except Exception as e:
-            error(f"Error reading from terminal: {e}")
+            exception(f"Error reading from terminal: {e}")
             self.stop_process()
 
     async def _read_from_pty_polling(self) -> None:
@@ -352,6 +378,6 @@ class Terminal:
                 await asyncio.sleep(0.01)
 
             except Exception as e:
-                error(f"Error reading from Windows PTY: {e}")
+                exception(f"Error reading from Windows PTY: {e}")
                 self.stop_process()
                 return

@@ -702,6 +702,18 @@ class Parser:
                 self.terminal.auto_wrap = set_mode
             elif param == 25:  # Show/hide cursor
                 self.terminal.cursor_visible = set_mode
+            elif param == 1000:  # Basic mouse tracking
+                self.terminal.set_mode("mouse_tracking", set_mode)
+            elif param == 1001:  # Highlight mouse tracking
+                self.terminal.set_mode("mouse_tracking", set_mode)
+            elif param == 1002:  # Button event mouse tracking
+                self.terminal.set_mode("mouse_tracking", set_mode)
+            elif param == 1003:  # Any event mouse tracking
+                self.terminal.set_mode("mouse_tracking", set_mode)
+            elif param == 1005:  # UTF-8 mouse tracking
+                self.terminal.set_mode("mouse_tracking", set_mode)
+            elif param == 1006:  # SGR mouse tracking
+                self.terminal.set_mode("mouse_tracking", set_mode)
             # Add more private modes as needed
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---

@@ -21,3 +21,7 @@ There's 3 widgets:
 - [ ] get windows terminal working
 - [ ] fix mouse
 - [ ] fix tests
+- [ ] get a cursor
+- [ ] scrollback buffer support
+- [ ] add some chafa and other stuff as test cases
+
