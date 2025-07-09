@@ -597,7 +597,10 @@ def parse_color(name: str) -> Color:
         try:
             index = int(name[6:-1])
             if 0 <= index <= 255:
-                return Color.from_rich_color(RichColor.from_ansi(index))
+                # Convert to truecolor to ensure it has RGB triplet
+                rich_color = RichColor.from_ansi(index)
+                triplet = rich_color.get_truecolor()
+                return Color.from_rich_color(RichColor.from_rgb(triplet.red, triplet.green, triplet.blue))
         except ValueError:
             pass
 
