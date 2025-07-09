@@ -16,7 +16,7 @@ from typing import Any, Optional
 from .buffer import Buffer
 from .parser import Parser
 from .pty_handler import create_pty
-from .log import info, warning, error
+from .log import info, warning, exception
 
 from rich.text import Text
 from rich.style import Style
@@ -347,8 +347,8 @@ class Terminal:
             loop = asyncio.get_event_loop()
             loop.add_reader(self.pty.master_fd, self._read_from_pty)
 
-        except Exception as e:
-            error(f"Failed to start terminal process: {e}")
+        except Exception:
+            exception("Failed to start terminal process")
             self.stop_process()
 
     def stop_process(self) -> None:
@@ -392,6 +392,6 @@ class Terminal:
         except OSError as e:
             info(f"PTY read error: {e}")
             self.stop_process()
-        except Exception as e:
-            error(f"Error reading from terminal: {e}")
+        except Exception:
+            exception("Error reading from terminal")
             self.stop_process()
