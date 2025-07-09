@@ -272,8 +272,13 @@ class Terminal:
             info(f"Spawned process: pid={self.process.pid}")
 
             # Start reading from PTY
-            loop = asyncio.get_event_loop()
-            loop.add_reader(self.pty.master_fd, self._read_from_pty)
+            if self.pty.master_fd is not None:
+                # Unix-style PTY with file descriptor
+                loop = asyncio.get_event_loop()
+                loop.add_reader(self.pty.master_fd, self._read_from_pty)
+            else:
+                # Windows PTY - use polling task
+                asyncio.create_task(self._read_from_pty_polling())
 
         except Exception as e:
             error(f"Failed to start terminal process: {e}")
@@ -300,7 +305,7 @@ class Terminal:
         self.process = None
 
     def _read_from_pty(self) -> None:
-        """Read data from PTY and process it."""
+        """Read data from PTY and process it (Unix version)."""
         if self.pty is None or self.pty.closed:
             return
 
@@ -323,3 +328,30 @@ class Terminal:
         except Exception as e:
             error(f"Error reading from terminal: {e}")
             self.stop_process()
+
+    async def _read_from_pty_polling(self) -> None:
+        """Read data from PTY using polling (Windows version)."""
+        while self.pty is not None and not self.pty.closed:
+            try:
+                # Check if process is still alive
+                if hasattr(self.pty, "pty") and hasattr(self.pty.pty, "isalive"):
+                    if not self.pty.pty.isalive():
+                        info("Process has exited")
+                        self.stop_process()
+                        return
+
+                # Try to read data
+                data = self.pty.read(4096)
+                if data:
+                    # Decode UTF-8
+                    text = data.decode("utf-8", errors="replace")
+                    # Process through parser
+                    self.parser.feed(text)
+
+                # Small delay to avoid busy waiting
+                await asyncio.sleep(0.01)
+
+            except Exception as e:
+                error(f"Error reading from Windows PTY: {e}")
+                self.stop_process()
+                return

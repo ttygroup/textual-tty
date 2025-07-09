@@ -11,6 +11,7 @@ import os
 import sys
 import subprocess
 from typing import Optional, Dict, Protocol
+from .log import exception
 
 
 class PTYSocket(Protocol):
@@ -183,7 +184,8 @@ class WindowsPTY:
             if isinstance(data, str):
                 return data.encode("utf-8", errors="replace")
             return data
-        except Exception:
+        except Exception as e:
+            exception(f"WindowsPTY read error: {e}")
             return b""
 
     def write(self, data: bytes) -> int:
@@ -196,7 +198,8 @@ class WindowsPTY:
                 data = data.decode("utf-8", errors="replace")
             self.pty.write(data)
             return len(data.encode("utf-8"))
-        except Exception:
+        except Exception as e:
+            exception(f"WindowsPTY write error: {e}")
             return 0
 
     def resize(self, rows: int, cols: int) -> None:
@@ -246,13 +249,14 @@ class WindowsPTY:
 
         try:
             # Use winpty to spawn the process with proper PTY attachment
-            self.pty.spawn(command, env=process_env)
+            self.pty.spawn(command)
 
             # Create a mock subprocess.Popen-like object for compatibility
             class WinptyProcess:
                 def __init__(self, pty):
                     self.pty = pty
                     self.returncode = None
+                    self.pid = None  # winpty doesn't expose process ID
 
                 def poll(self):
                     """Check if process is still running."""
@@ -290,7 +294,8 @@ class WindowsPTY:
             self._process = WinptyProcess(self.pty)
             return self._process
 
-        except Exception:
+        except Exception as e:
+            exception(f"WindowsPTY spawn_process error: {e}")
             # Fallback to regular subprocess if winpty spawning fails
             # This provides compatibility but without PTY features
             return subprocess.Popen(
