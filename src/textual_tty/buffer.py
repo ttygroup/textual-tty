@@ -16,9 +16,6 @@ from rich.text import Text
 class Buffer:
     """
     A buffer that stores terminal content as styled text lines.
-
-    This replaces the old TerminalScreen class but focuses purely on
-    content storage and manipulation, not terminal state management.
     """
 
     def __init__(self, width: int, height: int) -> None:

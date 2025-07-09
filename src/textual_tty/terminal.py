@@ -18,6 +18,8 @@ from .parser import Parser
 from .pty_handler import create_pty
 from .log import info, warning, error
 
+from rich.text import Text
+
 
 class Terminal:
     """
@@ -210,6 +212,50 @@ class Terminal:
         """Set scroll region."""
         self.scroll_top = max(0, min(top, self.height - 1))
         self.scroll_bottom = max(self.scroll_top, min(bottom, self.height - 1))
+
+    def insert_lines(self, count: int) -> None:
+        """Insert blank lines at cursor position."""
+        for _ in range(count):
+            # Insert blank line at cursor row, shift everything down
+            self.current_buffer.lines.insert(self.cursor_y, Text())
+            # Remove lines from bottom to maintain screen height
+            if len(self.current_buffer.lines) > self.height:
+                self.current_buffer.lines.pop()
+
+    def delete_lines(self, count: int) -> None:
+        """Delete lines at cursor position."""
+        for _ in range(count):
+            if self.cursor_y < len(self.current_buffer.lines):
+                self.current_buffer.lines.pop(self.cursor_y)
+            # Add blank line at bottom
+            self.current_buffer.lines.append(Text())
+
+    def insert_characters(self, count: int) -> None:
+        """Insert blank characters at cursor position."""
+        if not (0 <= self.cursor_y < self.height):
+            return
+        spaces = " " * count
+        self.current_buffer.insert(self.cursor_x, self.cursor_y, spaces)
+
+    def delete_characters(self, count: int) -> None:
+        """Delete characters at cursor position."""
+        if not (0 <= self.cursor_y < self.height):
+            return
+        self.current_buffer.delete(self.cursor_x, self.cursor_y, count)
+
+    def scroll_up(self, count: int) -> None:
+        """Scroll content up within scroll region."""
+        for _ in range(count):
+            self.current_buffer.scroll_up(1)
+
+    def scroll_down(self, count: int) -> None:
+        """Scroll content down within scroll region."""
+        for _ in range(count):
+            self.current_buffer.scroll_down(1)
+
+    def set_cursor(self, x: Optional[int], y: Optional[int]) -> None:
+        """Set cursor position (alias for move_cursor)."""
+        self.move_cursor(x, y)
 
     # Process management
     async def start_process(self) -> None:
