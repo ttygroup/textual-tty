@@ -92,4 +92,4 @@ def test_reset_terminal(parser_and_screen):
     parser._reset_terminal()
     screen.clear_screen.assert_called_once_with(2)
     screen.set_cursor.assert_called_once_with(0, 0)
-    assert isinstance(parser.screen.current_style, Style)
+    assert isinstance(parser.terminal.current_style, Style)
