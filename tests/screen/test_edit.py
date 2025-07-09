@@ -137,7 +137,7 @@ def test_clear_rect():
     for y in range(5):
         screen.current_buffer.lines[y] = Text("ABCDE", spans=[Span(0, 5, Style(color="red"))])
 
-    screen.clear_rect(1, 1, 3, 3)  # Clear a 3x3 rectangle in the middle
+    screen.current_buffer.clear_region(1, 1, 3, 3)  # Clear a 3x3 rectangle in the middle
 
     expected_lines = [
         Text("ABCDE", spans=[Span(0, 5, Style(color="red"))]),

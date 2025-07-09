@@ -196,6 +196,14 @@ class Terminal:
         """Terminal bell."""
         pass  # Subclasses can override
 
+    def alignment_test(self) -> None:
+        """Fill the screen with 'E' characters for alignment testing."""
+        from rich.text import Text
+
+        test_line = Text("E" * self.width)
+        for y in range(self.height):
+            self.current_buffer.lines[y] = test_line
+
     def save_cursor(self) -> None:
         """Save cursor position and attributes."""
         self.saved_cursor_x = self.cursor_x
