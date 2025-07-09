@@ -34,11 +34,11 @@ def test_csi_sm_rm_private_autowrap(screen):
     parser = Parser(screen)
 
     # Set auto-wrap mode
-    parser.feed(b"\x1b[?7h")
+    parser.feed("\x1b[?7h")
     assert screen.auto_wrap is True
 
     # Reset auto-wrap mode
-    parser.feed(b"\x1b[?7l")
+    parser.feed("\x1b[?7l")
     assert screen.auto_wrap is False
 
 
@@ -47,24 +47,24 @@ def test_csi_sm_rm_private_cursor_visibility(screen):
     parser = Parser(screen)
 
     # Hide cursor
-    parser.feed(b"\x1b[?25l")
+    parser.feed("\x1b[?25l")
     assert screen.cursor_visible is False
 
     # Show cursor
-    parser.feed(b"\x1b[?25h")
+    parser.feed("\x1b[?25h")
     assert screen.cursor_visible is True
 
 
 def test_parse_byte_csi_intermediate_transition(screen):
     """Test _parse_byte transitions with intermediate characters."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[?1h")  # ESC [ ? 1 h (CSI with intermediate '?')
+    parser.feed("\x1b[?1h")  # ESC [ ? 1 h (CSI with intermediate '?')
     assert parser.current_state == "GROUND"
     assert parser.parsed_params == [1]
     assert parser.intermediate_chars == ["?"]
 
     parser.reset()
-    parser.feed(b"\x1b[>1c")  # ESC [ > 1 c (CSI with intermediate '>')
+    parser.feed("\x1b[>1c")  # ESC [ > 1 c (CSI with intermediate '>')
     assert parser.current_state == "GROUND"
     assert parser.parsed_params == [1]
     assert parser.intermediate_chars == [">"]
@@ -81,35 +81,35 @@ def test_parse_byte_ht_wraps_cursor(screen):
 def test_parse_byte_unknown_escape_sequence(screen):
     """Test that an unknown escape sequence returns to GROUND state."""
     parser = Parser(screen)
-    parser.feed(b"\x1bX")  # ESC then an unknown char 'X'
+    parser.feed("\x1bX")  # ESC then an unknown char 'X'
     assert parser.current_state == "GROUND"
 
 
 def test_parse_byte_invalid_csi_entry(screen):
     """Test that an invalid byte in CSI_ENTRY returns to GROUND state."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[\x01")  # ESC [ then an invalid byte (STX)
+    parser.feed("\x1b[\x01")  # ESC [ then an invalid byte (STX)
     assert parser.current_state == "GROUND"
 
 
 def test_parse_byte_invalid_csi_param(screen):
     """Test that an invalid byte in CSI_PARAM returns to GROUND state."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[1;\x01")  # ESC [ 1 ; then an invalid byte (STX)
+    parser.feed("\x1b[1;\x01")  # ESC [ 1 ; then an invalid byte (STX)
     assert parser.current_state == "GROUND"
 
 
 def test_parse_byte_invalid_csi_intermediate(screen):
     """Test that an invalid byte in CSI_INTERMEDIATE returns to GROUND state."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[?1\x01")  # ESC [ ? 1 then an invalid byte (STX)
+    parser.feed("\x1b[?1\x01")  # ESC [ ? 1 then an invalid byte (STX)
     assert parser.current_state == "GROUND"
 
 
 def test_parse_byte_csi_entry_intermediate_general(screen):
     """Test CSI_ENTRY with general intermediate characters."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[!p")  # ESC [ ! p (CSI with intermediate '!')
+    parser.feed("\x1b[!p")  # ESC [ ! p (CSI with intermediate '!')
     assert parser.current_state == "GROUND"
     assert parser.intermediate_chars == ["!"]
     assert parser.parsed_params == []
@@ -118,7 +118,7 @@ def test_parse_byte_csi_entry_intermediate_general(screen):
 def test_parse_byte_csi_param_intermediate(screen):
     """Test CSI_PARAM with intermediate characters."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[1;!p")  # ESC [ 1 ; ! p
+    parser.feed("\x1b[1;!p")  # ESC [ 1 ; ! p
     assert parser.current_state == "GROUND"
     assert parser.parsed_params == [1]
     assert parser.intermediate_chars == ["!"]  # ; is a parameter separator, ! is intermediate
@@ -127,7 +127,7 @@ def test_parse_byte_csi_param_intermediate(screen):
 def test_parse_byte_csi_intermediate_param_final(screen):
     """Test CSI_INTERMEDIATE with parameter and final byte."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[?1;2@")  # ESC [ ? 1 ; 2 @
+    parser.feed("\x1b[?1;2@")  # ESC [ ? 1 ; 2 @
     assert parser.current_state == "GROUND"
     assert parser.parsed_params == [1, 2]
     assert parser.intermediate_chars == ["?"]
@@ -152,13 +152,13 @@ def test_csi_dispatch_sm_rm_basic_modes(screen):
     parser = Parser(screen)
 
     # Test auto-wrap mode (public mode 7)
-    parser.feed(b"\x1b[7h")  # Set auto-wrap
+    parser.feed("\x1b[7h")  # Set auto-wrap
     assert screen.auto_wrap is True
-    parser.feed(b"\x1b[7l")  # Reset auto-wrap
+    parser.feed("\x1b[7l")  # Reset auto-wrap
     assert screen.auto_wrap is False
 
     # Test cursor visibility (public mode 25)
-    parser.feed(b"\x1b[25l")  # Hide cursor
+    parser.feed("\x1b[25l")  # Hide cursor
     assert screen.cursor_visible is False
-    parser.feed(b"\x1b[25h")  # Show cursor
+    parser.feed("\x1b[25h")  # Show cursor
     assert screen.cursor_visible is True

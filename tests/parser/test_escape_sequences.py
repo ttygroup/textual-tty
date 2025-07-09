@@ -30,14 +30,14 @@ def test_bell_character(screen):
 def test_escape_to_csi_entry(screen):
     """Test transition from ESCAPE to CSI_ENTRY state."""
     parser = Parser(screen)
-    parser.feed(b"\x1b[")  # ESC then [
+    parser.feed("\x1b[")  # ESC then [
     assert parser.current_state == "CSI_ENTRY"
 
 
 def test_ris_reset_terminal(screen):
     """Test RIS (Reset to Initial State) sequence."""
     parser = Parser(screen)
-    parser.feed(b"\x1bc")  # ESC then c
+    parser.feed("\x1bc")  # ESC then c
     screen.clear_screen.assert_called_once_with(2)
     screen.set_cursor.assert_called_once_with(0, 0)
     assert parser.current_state == "GROUND"
@@ -46,7 +46,7 @@ def test_ris_reset_terminal(screen):
 def test_ind_index(screen):
     """Test IND (Index) sequence."""
     parser = Parser(screen)
-    parser.feed(b"\x1bD")  # ESC then D
+    parser.feed("\x1bD")  # ESC then D
     screen.line_feed.assert_called_once()
     assert parser.current_state == "GROUND"
 
@@ -56,7 +56,7 @@ def test_ri_reverse_index_no_scroll(screen):
     parser = Parser(screen)
     screen.cursor_y = 5
     screen.scroll_top = 0
-    parser.feed(b"\x1bM")  # ESC then M
+    parser.feed("\x1bM")  # ESC then M
     assert screen.cursor_y == 4
     screen.scroll_down.assert_not_called()
     assert parser.current_state == "GROUND"
@@ -67,7 +67,7 @@ def test_ri_reverse_index_with_scroll(screen):
     parser = Parser(screen)
     screen.cursor_y = 0  # At the top of the scroll region
     screen.scroll_top = 0
-    parser.feed(b"\x1bM")  # ESC then M
+    parser.feed("\x1bM")  # ESC then M
     screen.scroll_down.assert_called_once_with(1)
     assert parser.current_state == "GROUND"
 
@@ -75,7 +75,7 @@ def test_ri_reverse_index_with_scroll(screen):
 def test_desc_save_cursor(screen):
     """Test DECSC (Save Cursor) sequence."""
     parser = Parser(screen)
-    parser.feed(b"\x1b7")  # ESC then 7
+    parser.feed("\x1b7")  # ESC then 7
     screen.save_cursor.assert_called_once()
     assert parser.current_state == "GROUND"
 
@@ -83,6 +83,6 @@ def test_desc_save_cursor(screen):
 def test_decrc_restore_cursor(screen):
     """Test DECRC (Restore Cursor) sequence."""
     parser = Parser(screen)
-    parser.feed(b"\x1b8")  # ESC then 8
+    parser.feed("\x1b8")  # ESC then 8
     screen.restore_cursor.assert_called_once()
     assert parser.current_state == "GROUND"
