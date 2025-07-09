@@ -119,9 +119,9 @@ class Terminal:
         else:
             self.current_buffer.set(self.cursor_x, self.cursor_y, text, self.current_style)
 
-        # Move cursor forward
+        # Move cursor forward by character count
         if self.auto_wrap or self.cursor_x < self.width - 1:
-            self.cursor_x += 1
+            self.cursor_x += len(text)
 
     def move_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Move cursor to position."""
