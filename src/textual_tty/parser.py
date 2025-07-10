@@ -478,6 +478,16 @@ class Parser:
                 self.terminal.auto_wrap = set_mode
             elif param == 25:  # Show/hide cursor
                 self.terminal.cursor_visible = set_mode
+            elif param == 47:  # Alternate screen buffer (older form)
+                if set_mode:
+                    self.terminal.alternate_screen_on()
+                else:
+                    self.terminal.alternate_screen_off()
+            elif param == 1049:  # Alternate screen buffer (newer form)
+                if set_mode:
+                    self.terminal.alternate_screen_on()
+                else:
+                    self.terminal.alternate_screen_off()
             # Add more private modes as needed
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---
