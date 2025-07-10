@@ -132,28 +132,6 @@ class TextualTerminal(Terminal, Widget):
         """Handle widget unmounting."""
         self.stop_process()
 
-    async def on_resize(self, event) -> None:
-        """Handle widget resize events from Textual."""
-        debug(f"on_resize called with event: {event}")
-
-        # Convert pixel size to character size (approximate)
-        # Textual widgets have size in terms of console cells
-        if hasattr(event, "size"):
-            new_width = event.size.width
-            new_height = event.size.height
-            debug(f"event size: {new_width}x{new_height}")
-        else:
-            # Fallback to current widget size
-            new_width = self.size.width
-            new_height = self.size.height
-            debug(f"widget size: {new_width}x{new_height}")
-
-        # Update terminal dimensions
-        if new_width > 0 and new_height > 0:
-            debug(f"setting width_chars={new_width}, height_chars={new_height}")
-            self.width_chars = new_width
-            self.height_chars = new_height
-
     def _handle_pty_data(self, data: bytes) -> None:
         """Handle PTY data by posting a Textual message."""
         self.post_message(self.PTYDataMessage(data))
@@ -211,26 +189,16 @@ class TextualTerminal(Terminal, Widget):
         """Called when icon title changes."""
         self.post_message(self.IconTitleChanged(new_icon_title))
 
-    def watch_width_chars(self, old_width: int, new_width: int) -> None:
-        """Called when width changes."""
-        debug(f"width_chars changed from {old_width} to {new_width}")
-        # Update the base Terminal size
-        super().resize(new_width, self.height_chars)
-        # Notify the PTY process about the size change
-        self._set_terminal_size()
+    async def on_resize(self, event) -> None:
+        """Handle widget resize events from Textual."""
+        debug(f"on_resize called with size: {event.size}")
 
-    def watch_height_chars(self, old_height: int, new_height: int) -> None:
-        """Called when height changes."""
-        debug(f"height_chars changed from {old_height} to {new_height}")
-        # Update the base Terminal size
-        super().resize(self.width_chars, new_height)
-        # Notify the PTY process about the size change
-        self._set_terminal_size()
+        # Update our reactive attributes
+        self.width_chars = event.size.width
+        self.height_chars = event.size.height
 
-    def _set_terminal_size(self) -> None:
-        """Set the terminal window size."""
-        if self.pty is not None:
-            self.pty.resize(self.height_chars, self.width_chars)
+        # Update the base Terminal size (this calls our resize method)
+        super().resize(event.size.width, event.size.height)
 
     # Input handling
     async def on_mouse_move(self, event) -> None:
@@ -368,8 +336,8 @@ class TextualTerminal(Terminal, Widget):
             "tab": constants.HT,
             "escape": constants.ESC,
             "delete": f"{constants.ESC}[3~",
-            "page_up": f"{constants.ESC}[5~",
-            "page_down": f"{constants.ESC}[6~",
+            "pageup": f"{constants.ESC}[5~",
+            "pagedown": f"{constants.ESC}[6~",
             "space": " ",
         }
 
