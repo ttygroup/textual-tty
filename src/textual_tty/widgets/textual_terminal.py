@@ -250,7 +250,7 @@ class TextualTerminal(Terminal, Widget):
         # Add modifier flags
         if event.shift:
             button |= 4
-        if event.alt:
+        if event.meta:
             button |= 8
         if event.ctrl:
             button |= 16
@@ -276,7 +276,7 @@ class TextualTerminal(Terminal, Widget):
         # Add modifier flags
         if event.shift:
             button |= 4
-        if event.alt:
+        if event.meta:
             button |= 8
         if event.ctrl:
             button |= 16
