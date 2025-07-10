@@ -41,7 +41,6 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 ## todo
 
 - [ ] fix resizing - apps like htop don't resize
-- [ ] implement cursor (with width)
 - [x] implement mouse
 - [ ] arrow keys for input in tui apps (not sure what's happening)
 - [ ] performance improvements
@@ -57,4 +56,7 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [x] redundancy redundancy repeated repeated
   - [ ] code code of of redundancy redundancy
-- [ ] add
+- [ ] add terminal visuals
+  - [ ] text cursor
+  - [ ] mouse cursor (disabled by default)
+  - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
