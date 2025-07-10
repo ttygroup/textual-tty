@@ -495,6 +495,9 @@ class Parser:
             top = self._get_param(0, 1) - 1  # Convert to 0-based
             bottom = self._get_param(1, self.terminal.height) - 1  # Convert to 0-based
             self.terminal.set_scroll_region(top, bottom)
+        elif final_char == "b":  # REP - Repeat
+            count = self._get_param(0, 1)
+            self.terminal.repeat_last_character(count)
         elif final_char == "m":  # SGR - Select Graphic Rendition
             self._csi_dispatch_sgr()
         elif final_char == "h":  # SM - Set Mode
@@ -536,7 +539,7 @@ class Parser:
         else:
             # Unknown CSI sequence, log it
             params_str = self.param_buffer if self.param_buffer else "<no params>"
-            debug(f"Unknown CSI sequence: ESC[{params_str}{final_char!r}")
+            debug(f"Unknown CSI sequence: ESC[{params_str}{final_char}")
 
     def _csi_dispatch_sm_rm_private(self, set_mode: bool) -> None:
         """

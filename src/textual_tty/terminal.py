@@ -66,6 +66,9 @@ class Terminal:
         # Character attributes for next write
         self.current_style = None
 
+        # Last printed character (for REP command)
+        self.last_printed_char = " "
+
         # Saved cursor state (for DECSC/DECRC)
         self.saved_cursor_x = 0
         self.saved_cursor_y = 0
@@ -122,6 +125,10 @@ class Terminal:
         # Move cursor forward by character count
         if self.auto_wrap or self.cursor_x < self.width - 1:
             self.cursor_x += len(text)
+
+        # Remember last character for REP command
+        if text:
+            self.last_printed_char = text[-1]
 
     def move_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Move cursor to position."""
@@ -342,6 +349,12 @@ class Terminal:
     def set_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Set cursor position (alias for move_cursor)."""
         self.move_cursor(x, y)
+
+    def repeat_last_character(self, count: int) -> None:
+        """Repeat the last printed character count times (REP command)."""
+        if count > 0 and self.last_printed_char:
+            repeated_text = self.last_printed_char * count
+            self.write_text(repeated_text)
 
     # Process management
     async def start_process(self) -> None:
