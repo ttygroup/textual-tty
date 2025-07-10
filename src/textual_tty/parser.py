@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 from rich.style import Style
 from rich.color import Color
 from .log import debug
+from . import constants
 
 
 class Parser:
@@ -43,7 +44,7 @@ class Parser:
         self.terminal = terminal
 
         # The current state of the parser (e.g., 'GROUND', 'ESCAPE').
-        self.current_state: str = "GROUND"
+        self.current_state: str = constants.GROUND
 
         # --- Buffers for collecting sequence data ---
         self.intermediate_chars: List[str] = []
@@ -76,159 +77,146 @@ class Parser:
         next state.
         """
         # Simplified parser - handle basic cases
-        if self.current_state == "GROUND":
-            if char == "\x1b":  # ESC
-                self.current_state = "ESCAPE"
+        if self.current_state == constants.GROUND:
+            if char == constants.ESC:
+                self.current_state = constants.ESCAPE
                 self._clear()
-            elif char == "\x07":  # BEL
-                pass  # Bell - could emit sound/flash
-            elif char == "\x08":  # BS (Backspace)
+            elif char == constants.BEL:
+                pass
+            elif char == constants.BS:
                 self.terminal.backspace()
-            elif char == "\x7f":  # DEL (Delete/Backspace)
+            elif char == constants.DEL:
                 self.terminal.backspace()
-            elif char == "\x09":  # HT (Tab)
+            elif char == constants.HT:
                 # Simple tab handling - move to next tab stop
                 self.terminal.cursor_x = ((self.terminal.cursor_x // 8) + 1) * 8
                 if self.terminal.cursor_x >= self.terminal.width:
                     self.terminal.cursor_x = self.terminal.width - 1
-            elif char == "\x0a":  # LF
+            elif char == constants.LF:
                 self.terminal.line_feed()
-            elif char == "\x0d":  # CR
+            elif char == constants.CR:
                 self.terminal.carriage_return()
             elif ord(char) >= 0x20:  # Printable characters
                 self.terminal.current_style = self.current_style
                 self.terminal.write_text(char)
-        elif self.current_state == "ESCAPE":
-            if char == "[":  # CSI
-                self.current_state = "CSI_ENTRY"
-            elif char == "]":  # OSC (Operating System Command)
+        elif self.current_state == constants.ESCAPE:
+            if char == "[":
+                self.current_state = constants.CSI_ENTRY
+            elif char == "]":
                 self._clear()
-                self.current_state = "OSC_STRING"
-            elif char == "=":  # DECKPAM - Application Keypad Mode
-                self.terminal.set_mode(1, True)  # Application keypad mode
-                self.current_state = "GROUND"
-            elif char == ">":  # DECKPNM - Normal Keypad Mode
-                self.terminal.set_mode(1, False)  # Normal keypad mode
-                self.current_state = "GROUND"
-            elif char == "P":  # DCS - Device Control String
+                self.current_state = constants.OSC_STRING
+            elif char == "=":
+                self.terminal.set_mode(constants.DECKPAM_APPLICATION_KEYPAD, True)
+                self.current_state = constants.GROUND
+            elif char == ">":
+                self.terminal.set_mode(constants.DECKPAM_APPLICATION_KEYPAD, False)
+                self.current_state = constants.GROUND
+            elif char == "P":
                 self._clear()
-                self.current_state = "DCS_STRING"
-            elif char == "\\":  # ST - String Terminator
-                # End of string sequence
-                self.current_state = "GROUND"
-            elif char == "c":  # RIS (Reset)
+                self.current_state = constants.DCS_STRING
+            elif char == "\\":
+                self.current_state = constants.GROUND
+            elif char == "c":
                 self._esc_dispatch(char)
-                self.current_state = "GROUND"
-            elif char == "D":  # IND (Index)
+                self.current_state = constants.GROUND
+            elif char == "D":
                 self._esc_dispatch(char)
-                self.current_state = "GROUND"
-            elif char == "M":  # RI (Reverse Index)
+                self.current_state = constants.GROUND
+            elif char == "M":
                 self._esc_dispatch(char)
-                self.current_state = "GROUND"
-            elif char == "7":  # DECSC (Save Cursor)
+                self.current_state = constants.GROUND
+            elif char == "7":
                 self._esc_dispatch(char)
-                self.current_state = "GROUND"
-            elif char == "8":  # DECRC (Restore Cursor)
+                self.current_state = constants.GROUND
+            elif char == "8":
                 self._esc_dispatch(char)
-                self.current_state = "GROUND"
-            elif char == ">":  # DECKPNM (Keypad Numeric Mode)
-                # Set keypad to numeric mode - just consume it
-                self.current_state = "GROUND"
-            elif char == "(":  # G0 character set designation
-                # ESC ( followed by character set designator - consume next char
-                self.current_state = "CHARSET_G0"
-            elif char == ")":  # G1 character set designation
-                # ESC ) followed by character set designator - consume next char
-                self.current_state = "CHARSET_G1"
+                self.current_state = constants.GROUND
+            elif char == ">":
+                self.current_state = constants.GROUND
+            elif char == "(":
+                self.current_state = constants.CHARSET_G0
+            elif char == ")":
+                self.current_state = constants.CHARSET_G1
             else:
-                # Unknown escape sequence, log and go back to ground
                 debug(f"Unknown escape sequence: ESC {char!r}")
-                self.current_state = "GROUND"
-        elif self.current_state in ("CSI_ENTRY", "CSI_PARAM", "CSI_INTERMEDIATE"):
+                self.current_state = constants.GROUND
+        elif self.current_state in (constants.CSI_ENTRY, constants.CSI_PARAM, constants.CSI_INTERMEDIATE):
             self._handle_csi(char)
-        elif self.current_state == "OSC_STRING":
-            if char == "\x07":  # BEL - terminates OSC
+        elif self.current_state == constants.OSC_STRING:
+            if char == constants.BEL:
                 self._handle_osc_dispatch()
-                self.current_state = "GROUND"
-            elif char == "\x1b":  # ESC - might be start of ST (String Terminator)
-                self.current_state = "OSC_ESC"
+                self.current_state = constants.GROUND
+            elif char == constants.ESC:
+                self.current_state = constants.OSC_ESC
             else:
-                # Collect characters for OSC string
                 self.string_buffer += char
-        elif self.current_state == "OSC_ESC":
-            if char == "\\":  # ST (String Terminator) - ESC \
+        elif self.current_state == constants.OSC_ESC:
+            if char == "\\":
                 self._handle_osc_dispatch()
-                self.current_state = "GROUND"
+                self.current_state = constants.GROUND
             else:
-                # Not ST, treat as regular character
-                self.string_buffer += "\x1b" + char
-                self.current_state = "OSC_STRING"
-        elif self.current_state == "DCS_STRING":
-            if char == "\x07":  # BEL - terminates DCS
+                self.string_buffer += constants.ESC + char
+                self.current_state = constants.OSC_STRING
+        elif self.current_state == constants.DCS_STRING:
+            if char == constants.BEL:
                 self._handle_dcs_dispatch()
-                self.current_state = "GROUND"
-            elif char == "\x1b":  # ESC - might be start of ST (String Terminator)
-                self.current_state = "DCS_ESC"
+                self.current_state = constants.GROUND
+            elif char == constants.ESC:
+                self.current_state = constants.DCS_ESC
             else:
-                # Collect characters for DCS string
                 self.string_buffer += char
-        elif self.current_state == "DCS_ESC":
-            if char == "\\":  # ST (String Terminator) - ESC \
+        elif self.current_state == constants.DCS_ESC:
+            if char == "\\":
                 self._handle_dcs_dispatch()
-                self.current_state = "GROUND"
+                self.current_state = constants.GROUND
             else:
-                # Not ST, treat as regular character
-                self.string_buffer += "\x1b" + char
-                self.current_state = "DCS_STRING"
-        elif self.current_state == "CHARSET_G0":
-            # Character set designation for G0 - just consume and go back to ground
-            self.current_state = "GROUND"
-        elif self.current_state == "CHARSET_G1":
-            # Character set designation for G1 - just consume and go back to ground
-            self.current_state = "GROUND"
+                self.string_buffer += constants.ESC + char
+                self.current_state = constants.DCS_STRING
+        elif self.current_state == constants.CHARSET_G0:
+            self.current_state = constants.GROUND
+        elif self.current_state == constants.CHARSET_G1:
+            self.current_state = constants.GROUND
 
     def _handle_csi(self, char: str) -> None:
         """Generic handler for CSI_ENTRY, CSI_PARAM, and CSI_INTERMEDIATE states."""
         # Final byte is the same for all CSI states
         if "\x40" <= char <= "\x7e":
             self._csi_dispatch(char)
-            self.current_state = "GROUND"
+            self.current_state = constants.GROUND
             return
 
         # Parameter bytes
         if "\x30" <= char <= "\x3b":
             self._collect_parameter(char)
-            if self.current_state == "CSI_ENTRY":
-                self.current_state = "CSI_PARAM"
+            if self.current_state == constants.CSI_ENTRY:
+                self.current_state = constants.CSI_PARAM
             return
 
         # Intermediate bytes
         if "\x20" <= char <= "\x2f":
             self._collect_intermediate(char)
-            self.current_state = "CSI_INTERMEDIATE"
+            self.current_state = constants.CSI_INTERMEDIATE
             return
 
         # Private parameter bytes (only valid in CSI_ENTRY)
         if "\x3c" <= char <= "\x3f":
-            if self.current_state == "CSI_ENTRY":
+            if self.current_state == constants.CSI_ENTRY:
                 self._collect_intermediate(char)
-                self.current_state = "CSI_PARAM"
+                self.current_state = constants.CSI_PARAM
             else:
-                # Invalid in other CSI states
                 debug(f"Invalid CSI character: {char!r}")
-                self.current_state = "GROUND"
+                self.current_state = constants.GROUND
             return
 
-        # Any other character is invalid
         debug(f"Invalid CSI character: {char!r}")
-        self.current_state = "GROUND"
+        self.current_state = constants.GROUND
 
     def reset(self) -> None:
         """
         Resets the parser to its initial ground state.
         """
         self._clear()
-        self.current_state = "GROUND"
+        self.current_state = constants.GROUND
 
     # --- State Buffer and Parameter Handling Methods ---
 
@@ -471,33 +459,32 @@ class Parser:
         - `?2004`: Enable bracketed paste mode.
         """
         for param in self.parsed_params:
-            if param == 1:  # DECCKM - Cursor Keys Application Mode
-                # self.terminal.cursor_key_application_mode = set_mode # Not yet implemented
+            if param == constants.DECCKM_CURSOR_KEYS_APPLICATION:
                 pass
-            elif param == 7:  # DECAWM - Auto-wrap Mode
+            elif param == constants.DECAWM_AUTOWRAP:
                 self.terminal.auto_wrap = set_mode
-            elif param == 25:  # Show/hide cursor
+            elif param == constants.DECTCEM_SHOW_CURSOR:
                 self.terminal.cursor_visible = set_mode
-            elif param == 47:  # Alternate screen buffer (older form)
+            elif param == constants.ALT_SCREEN_BUFFER_OLDER:
                 if set_mode:
                     self.terminal.alternate_screen_on()
                 else:
                     self.terminal.alternate_screen_off()
-            elif param == 1049:  # Alternate screen buffer (newer form)
+            elif param == constants.ALT_SCREEN_BUFFER:
                 if set_mode:
                     self.terminal.alternate_screen_on()
                 else:
                     self.terminal.alternate_screen_off()
-            elif param == 1000:  # Basic mouse tracking
-                self.terminal.set_mode(1000, set_mode, private=True)
-            elif param == 1002:  # Button event tracking
-                self.terminal.set_mode(1002, set_mode, private=True)
-            elif param == 1003:  # Any event tracking (movement)
-                self.terminal.set_mode(1003, set_mode, private=True)
-            elif param == 1006:  # SGR mouse mode
-                self.terminal.set_mode(1006, set_mode, private=True)
-            elif param == 1015:  # Extended mouse mode
-                self.terminal.set_mode(1015, set_mode, private=True)
+            elif param == constants.MOUSE_TRACKING_BASIC:
+                self.terminal.set_mode(constants.MOUSE_TRACKING_BASIC, set_mode, private=True)
+            elif param == constants.MOUSE_TRACKING_BUTTON_EVENT:
+                self.terminal.set_mode(constants.MOUSE_TRACKING_BUTTON_EVENT, set_mode, private=True)
+            elif param == constants.MOUSE_TRACKING_ANY_EVENT:
+                self.terminal.set_mode(constants.MOUSE_TRACKING_ANY_EVENT, set_mode, private=True)
+            elif param == constants.MOUSE_SGR_MODE:
+                self.terminal.set_mode(constants.MOUSE_SGR_MODE, set_mode, private=True)
+            elif param == constants.MOUSE_EXTENDED_MODE:
+                self.terminal.set_mode(constants.MOUSE_EXTENDED_MODE, set_mode, private=True)
             # Add more private modes as needed
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---
@@ -531,10 +518,7 @@ class Parser:
         except ValueError:
             return
 
-        # Handle title setting commands (0 and 2)
-        if cmd == 0 or cmd == 2:
-            # Set window/icon title - we ignore this but consume it
-            # so it doesn't leak through to the screen
+        if cmd == constants.OSC_SET_TITLE_AND_ICON or cmd == constants.OSC_SET_TITLE:
             pass
 
         # For now, we just consume OSC sequences without implementing them
@@ -551,7 +535,7 @@ class Parser:
 
     def _reset_terminal(self) -> None:
         """Reset terminal to initial state."""
-        self.terminal.clear_screen(2)
+        self.terminal.clear_screen(constants.ERASE_ALL)
         self.terminal.set_cursor(0, 0)
         self.current_style = Style()
 
@@ -576,8 +560,7 @@ class Parser:
         - `58`: Begins an extended underline color sequence.
         """
         if not self.parsed_params:
-            # Default to [0] if no parameters are given
-            self.parsed_params = [0]
+            self.parsed_params = [constants.SGR_RESET]
 
         # Ensure current_style is always a Style object
         if self.current_style is None:
@@ -594,45 +577,43 @@ class Parser:
             if param is None:
                 continue
 
-            if param == 0:
-                # Reset all attributes
+            if param == constants.SGR_RESET:
                 self.current_style = Style()
-            elif param == 1:
+            elif param == constants.SGR_BOLD:
                 self.current_style += Style(bold=True)
-            elif param == 2:
+            elif param == constants.SGR_DIM:
                 self.current_style += Style(dim=True)
-            elif param == 3:
+            elif param == constants.SGR_ITALIC:
                 self.current_style += Style(italic=True)
-            elif param == 4:
+            elif param == constants.SGR_UNDERLINE:
                 self.current_style += Style(underline=True)
-            elif param == 5:
+            elif param == constants.SGR_BLINK:
                 self.current_style += Style(blink=True)
-            elif param == 7:
+            elif param == constants.SGR_REVERSE:
                 self.current_style += Style(reverse=True)
-            elif param == 8:
+            elif param == constants.SGR_CONCEAL:
                 self.current_style += Style(conceal=True)
-            elif param == 9:
+            elif param == constants.SGR_STRIKE:
                 self.current_style += Style(strike=True)
-            elif param == 21:  # Not bold/double underline
+            elif param == constants.SGR_NOT_BOLD_OR_DOUBLE_UNDERLINE:
                 self.current_style += Style(bold=False)
-            elif param == 22:  # Neither bold nor faint
+            elif param == constants.SGR_NOT_BOLD_NOR_FAINT:
                 self.current_style += Style(bold=False, dim=False)
-            elif param == 23:  # Not italic
+            elif param == constants.SGR_NOT_ITALIC:
                 self.current_style += Style(italic=False)
-            elif param == 24:  # Not underlined
+            elif param == constants.SGR_NOT_UNDERLINED:
                 self.current_style += Style(underline=False)
-            elif param == 25:  # Not blinking
+            elif param == constants.SGR_NOT_BLINKING:
                 self.current_style += Style(blink=False)
-            elif param == 27:  # Not reversed
+            elif param == constants.SGR_NOT_REVERSED:
                 self.current_style += Style(reverse=False)
-            elif param == 28:  # Not hidden
+            elif param == constants.SGR_NOT_CONCEALED:
                 self.current_style += Style(conceal=False)
-            elif param == 29:  # Not strikethrough
+            elif param == constants.SGR_NOT_STRIKETHROUGH:
                 self.current_style += Style(strike=False)
-            elif 30 <= param <= 37:
-                # Standard 16-color foreground
-                self.current_style += Style(color=Color.from_ansi(param - 30))
-            elif param == 38:
+            elif constants.SGR_FG_BLACK <= param <= constants.SGR_FG_WHITE:
+                self.current_style += Style(color=Color.from_ansi(param - constants.SGR_FG_BLACK))
+            elif param == constants.SGR_EXTENDED_COLOR:
                 # Extended foreground color
                 new_color = None
                 try:
@@ -655,13 +636,11 @@ class Parser:
                     pass
                 if new_color is not None:
                     self.current_style += Style(color=new_color)
-            elif param == 39:
-                # Default foreground color
+            elif param == constants.SGR_DEFAULT_FG:
                 self.current_style += Style(color=Color.default())
-            elif 40 <= param <= 47:
-                # Standard 16-color background
-                self.current_style += Style(bgcolor=Color.from_ansi(param - 40))
-            elif param == 48:
+            elif constants.SGR_BG_BLACK <= param <= constants.SGR_BG_WHITE:
+                self.current_style += Style(bgcolor=Color.from_ansi(param - constants.SGR_BG_BLACK))
+            elif param == constants.SGR_EXTENDED_BG_COLOR:
                 # Extended background color
                 new_bgcolor = None
                 try:
@@ -684,15 +663,12 @@ class Parser:
                     pass
                 if new_bgcolor is not None:
                     self.current_style += Style(bgcolor=new_bgcolor)
-            elif param == 49:
-                # Default background color
+            elif param == constants.SGR_DEFAULT_BG:
                 self.current_style += Style(bgcolor=Color.default())
-            elif 90 <= param <= 97:
-                # Bright 16-color foreground
-                self.current_style += Style(color=Color.from_ansi(param - 90 + 8))
-            elif 100 <= param <= 107:
-                # Bright 16-color background
-                self.current_style += Style(bgcolor=Color.from_ansi(param - 100 + 8))
+            elif constants.SGR_BRIGHT_FG_BLACK <= param <= constants.SGR_BRIGHT_FG_WHITE:
+                self.current_style += Style(color=Color.from_ansi(param - constants.SGR_BRIGHT_FG_BLACK + 8))
+            elif constants.SGR_BRIGHT_BG_BLACK <= param <= constants.SGR_BRIGHT_BG_WHITE:
+                self.current_style += Style(bgcolor=Color.from_ansi(param - constants.SGR_BRIGHT_BG_BLACK + 8))
 
         # Update the terminal's current_style
         self.terminal.current_style = self.current_style
@@ -703,9 +679,8 @@ class Parser:
             self._csi_dispatch_sm_rm_private(set_mode)
             return
 
-        # Basic mode handling - expand as needed
         for param in self.parsed_params:
-            if param == 7:  # Auto-wrap mode
+            if param == constants.DECAWM_AUTOWRAP:
                 self.terminal.auto_wrap = set_mode
-            elif param == 25:  # Cursor visibility
+            elif param == constants.DECTCEM_SHOW_CURSOR:
                 self.terminal.cursor_visible = set_mode
