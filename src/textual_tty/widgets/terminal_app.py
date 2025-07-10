@@ -105,6 +105,11 @@ class TerminalApp(Window):
         # Close the window when the program exits
         self.call_later(self.remove)
 
+    def on_textual_terminal_bell(self, event: TextualTerminal.Bell) -> None:
+        """Handle bell message from terminal."""
+        # Use Textual's built-in bell method to make an audible beep
+        self.app.bell()
+
     def get_exit_code(self) -> Optional[int]:
         """Get the exit code of the process if it has exited."""
         if self.terminal and self.terminal.process:
