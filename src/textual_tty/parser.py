@@ -488,6 +488,16 @@ class Parser:
                     self.terminal.alternate_screen_on()
                 else:
                     self.terminal.alternate_screen_off()
+            elif param == 1000:  # Basic mouse tracking
+                self.terminal.set_mode(1000, set_mode, private=True)
+            elif param == 1002:  # Button event tracking  
+                self.terminal.set_mode(1002, set_mode, private=True)
+            elif param == 1003:  # Any event tracking (movement)
+                self.terminal.set_mode(1003, set_mode, private=True)
+            elif param == 1006:  # SGR mouse mode
+                self.terminal.set_mode(1006, set_mode, private=True)
+            elif param == 1015:  # Extended mouse mode
+                self.terminal.set_mode(1015, set_mode, private=True)
             # Add more private modes as needed
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---

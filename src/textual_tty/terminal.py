@@ -52,6 +52,10 @@ class Terminal:
         self.insert_mode = False
         self.application_keypad = False
         self.mouse_tracking = False
+        self.mouse_button_tracking = False
+        self.mouse_any_tracking = False
+        self.mouse_sgr_mode = False
+        self.mouse_extended_mode = False
 
         # Screen buffers
         self.primary_buffer = Buffer(width, height)  # With scrollback (future)
@@ -223,8 +227,16 @@ class Terminal:
                 self.auto_wrap = value
             elif mode == 25:  # Cursor visibility
                 self.cursor_visible = value
-            elif mode == 1000:  # Mouse tracking
+            elif mode == 1000:  # Basic mouse tracking
                 self.mouse_tracking = value
+            elif mode == 1002:  # Button event tracking
+                self.mouse_button_tracking = value
+            elif mode == 1003:  # Any event tracking (movement)
+                self.mouse_any_tracking = value
+            elif mode == 1006:  # SGR mouse mode
+                self.mouse_sgr_mode = value
+            elif mode == 1015:  # Extended mouse mode
+                self.mouse_extended_mode = value
             # Add other private modes as needed
         else:
             # ANSI modes
