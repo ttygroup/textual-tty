@@ -33,10 +33,6 @@ class Buffer:
         if not (0 <= y < self.height):
             return
 
-        # Defensive check: ensure y is within actual lines bounds
-        if y >= len(self.lines):
-            return
-
         line = self.lines[y]
 
         if x < len(line.plain):
@@ -176,16 +172,17 @@ class Buffer:
 
     def resize(self, width: int, height: int) -> None:
         """Resize buffer to new dimensions."""
-        self.width = width
-        self.height = height
-
-        # Adjust number of lines
+        # Adjust number of lines FIRST, before updating height
         if len(self.lines) < height:
             # Add new lines
             self.lines.extend([Text() for _ in range(height - len(self.lines))])
         elif len(self.lines) > height:
             # Remove excess lines
             self.lines = self.lines[:height]
+
+        # Update dimensions AFTER lines are properly sized
+        self.width = width
+        self.height = height
 
         # Truncate lines that are too wide
         for i in range(len(self.lines)):

@@ -173,13 +173,16 @@ class TextualTerminal(Terminal, Widget):
 
     def stop_process(self) -> None:
         """Override to post message when process exits."""
-        # Call parent method
+        # Get exit code before cleaning up the process
+        exit_code = 0
+        if self.process:
+            exit_code = self.process.poll() or 0
+
+        # Call parent method (this will set self.process = None)
         super().stop_process()
 
         # Post exit message
-        if self.process:
-            exit_code = self.process.poll() or 0
-            self.post_message(self.ProcessExited(exit_code))
+        self.post_message(self.ProcessExited(exit_code))
 
     def bell(self) -> None:
         """Override to post bell message."""
