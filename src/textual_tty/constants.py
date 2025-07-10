@@ -108,6 +108,7 @@ SGR_BRIGHT_BG_WHITE = 107
 
 # --- OSC (Operating System Command) Commands ---
 OSC_SET_TITLE_AND_ICON = 0
+OSC_SET_ICON_TITLE = 1
 OSC_SET_TITLE = 2
 
 # --- Mouse Button Modifiers ---

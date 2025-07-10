@@ -518,11 +518,26 @@ class Parser:
         except ValueError:
             return
 
-        if cmd == constants.OSC_SET_TITLE_AND_ICON or cmd == constants.OSC_SET_TITLE:
+        if cmd == constants.OSC_SET_TITLE_AND_ICON:
+            # OSC 0 - Set both title and icon title
+            if len(parts) >= 2:
+                title_text = parts[1]
+                self.terminal.set_title(title_text)
+                self.terminal.set_icon_title(title_text)
+        elif cmd == constants.OSC_SET_ICON_TITLE:
+            # OSC 1 - Set icon title only
+            if len(parts) >= 2:
+                icon_title_text = parts[1]
+                self.terminal.set_icon_title(icon_title_text)
+        elif cmd == constants.OSC_SET_TITLE:
+            # OSC 2 - Set title only
+            if len(parts) >= 2:
+                title_text = parts[1]
+                self.terminal.set_title(title_text)
+        else:
+            # For other OSC sequences, we just consume them without implementing them
+            # This prevents them from leaking through to the terminal output
             pass
-
-        # For now, we just consume OSC sequences without implementing them
-        # This prevents them from leaking through to the terminal output
 
     def _handle_dcs_dispatch(self) -> None:
         """

@@ -48,6 +48,7 @@ class TextualTerminal(Terminal, Widget):
 
     # Terminal attributes as reactive
     title: str = reactive("Terminal", always_update=True)
+    icon_title: str = reactive("Terminal", always_update=True)
     cursor_x: int = reactive(0, always_update=True)
     cursor_y: int = reactive(0, always_update=True)
     command: str = reactive("/bin/bash", always_update=True)
@@ -92,6 +93,13 @@ class TextualTerminal(Terminal, Widget):
 
         def __init__(self, title: str) -> None:
             self.title = title
+            super().__init__()
+
+    class IconTitleChanged(Message):
+        """Posted when terminal icon title changes."""
+
+        def __init__(self, icon_title: str) -> None:
+            self.icon_title = icon_title
             super().__init__()
 
     class ProcessExited(Message):
@@ -198,6 +206,10 @@ class TextualTerminal(Terminal, Widget):
     def watch_title(self, old_title: str, new_title: str) -> None:
         """Called when title changes."""
         self.post_message(self.TitleChanged(new_title))
+
+    def watch_icon_title(self, old_icon_title: str, new_icon_title: str) -> None:
+        """Called when icon title changes."""
+        self.post_message(self.IconTitleChanged(new_icon_title))
 
     def watch_width_chars(self, old_width: int, new_width: int) -> None:
         """Called when width changes."""

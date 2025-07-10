@@ -8,12 +8,8 @@
 - This application is for Python version 3.10+. Use appropriate type hints
 - **DONT USE PRINTS FOR DEBUGGING** this is a TUI app. Use the debug() from
   `textual_tty.log` and check `debug.log`
+- Tests are in pytest functional style. No classes.
+- We are in a `./.venv`, which might not be activated.
+- The user will run tests with: `make test`. It might take a lot of tokens,
+  so don't run it yourself unless asked.
 
-## Testing
-
-Run tests with: `make test`
-
-## Key Implementation Notes
-
-- The buffer.py clear_region method needs to explicitly create spans for cleared regions to match test expectations
-- Rich Text optimizes away default/empty styles, but tests expect explicit spans

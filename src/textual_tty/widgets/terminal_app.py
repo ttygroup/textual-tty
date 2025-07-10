@@ -12,12 +12,40 @@ from typing import Optional
 
 from textual.app import ComposeResult
 from textual_window import Window
+from textual_window.windowcomponents import TitleBar
 
 from .textual_terminal import TextualTerminal
 from ..log import info
 
 
-class TerminalApp(Window):
+class SettableWindow(Window):
+    """A Window that allows setting the name property after initialization."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._settable_name: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        """Get the window name."""
+        if self._settable_name is not None:
+            return self._settable_name
+        return super().name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        """Set the window name."""
+        self._settable_name = value
+        # Update the title bar if it exists
+        try:
+            title_bar = self.query_one(TitleBar)
+            title_bar.update(value)
+        except Exception:
+            # Ignore if title bar doesn't exist or can't be refreshed
+            pass
+
+
+class TerminalApp(SettableWindow):
     """A draggable window containing a terminal emulator.
 
     This widget combines the TextualTerminal widget with Window functionality,
@@ -109,6 +137,16 @@ class TerminalApp(Window):
         """Handle bell message from terminal."""
         # Use Textual's built-in bell method to make an audible beep
         self.app.bell()
+
+    def on_textual_terminal_title_changed(self, event: TextualTerminal.TitleChanged) -> None:
+        """Handle title change from terminal."""
+        # Update the window name with the new title
+        self.name = event.title
+
+    def on_textual_terminal_icon_title_changed(self, event: TextualTerminal.IconTitleChanged) -> None:
+        """Handle icon title change from terminal."""
+        # Update the minimized window name with the icon title
+        self.name_minimized = event.icon_title
 
     def get_exit_code(self) -> Optional[int]:
         """Get the exit code of the process if it has exited."""

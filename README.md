@@ -60,7 +60,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] blank background to end of line
   - [ ] corruption in stream
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
-  - [ ] window titles not being set
+  - [x] window titles not being set
 - [ ] testing
   - [ ] move tests
     - [ ] integration ./tests/integration
