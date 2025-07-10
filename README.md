@@ -40,16 +40,24 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 
 ## todo
 
-- [ ] fix resizing - apps like htop don't resize
+- [ ] resizing oddities
+  - [ ] htop doesn't resize properly
 - [x] implement mouse
-- [ ] arrow keys for input in tui apps (not sure what's happening)
 - [ ] performance improvements
   - [x] profile it!
   - [ ] reduce draw calls
+- [ ] scrollback buffer
+  - [ ] rewrite app so we have consistent + performant buffer class
+  - [ ] understand text wrapping
+  - [ ] scrollbar support
 - [ ] bugs
   - [ ] blank background to end of line
   - [x] clear + flip buffer = restore before clear
   - [ ] corruption in stream
+  - [ ] text input issues
+    - [ ] arrow keys in htop
+    - [ ] home and end keys?
+    - [ ] input debugger maybe?
 - [x] fix terminal bell
 - [x] replace magic numbers with constants
 - [ ] more coverage
@@ -60,3 +68,14 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
   - [ ] text cursor
   - [ ] mouse cursor (disabled by default)
   - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
+- [ ] Theme support
+  - [ ] base terminal using config + themes
+  - [ ] textual widget using CSS styles
+  - [ ] textual app using theme/css loader
+- [ ] flesh out terminal app
+  - [ ] multiple tabs
+  - [ ] settings panel
+    - [ ] bell: system [Y/n], title bar [y/N], flash [y/N]
+    - [ ] mouse: display [y/N]
+    - [ ] wide chars detection
+    - [ ] theme selector/editor
