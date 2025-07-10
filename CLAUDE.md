@@ -5,6 +5,7 @@
 - **NEVER put imports inside functions** - top of the file only.
 - Always ask for explicit permission before adding legacy fallback methods.
 - By default, old methods are removed. This is a pre-alpha release.
+- This application is for Python version 3.10+. Use appropriate type hints
 
 ## Testing
 
