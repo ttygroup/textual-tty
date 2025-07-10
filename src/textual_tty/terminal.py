@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import asyncio
 import subprocess
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 from .buffer import Buffer
 from .parser import Parser
@@ -77,9 +77,22 @@ class Terminal:
         # Process management
         self.process: Optional[subprocess.Popen] = None
         self.pty: Optional[Any] = None
+        self._pty_reader_task: Optional[asyncio.Task] = None
+
+        # PTY data callback for async handling
+        self._pty_data_callback: Optional[Callable[[bytes], None]] = None
 
         # Parser
         self.parser = Parser(self)
+
+    def set_pty_data_callback(self, callback: Callable[[bytes], None]) -> None:
+        """Set callback for handling PTY data asynchronously."""
+        self._pty_data_callback = callback
+
+    def _process_pty_data_sync(self, data: bytes) -> None:
+        """Process PTY data synchronously (fallback)."""
+        text = data.decode("utf-8", errors="replace")
+        self.parser.feed(text)
 
     def resize(self, width: int, height: int) -> None:
         """Resize terminal to new dimensions."""
@@ -370,9 +383,8 @@ class Terminal:
             self.process = self.pty.spawn_process(self.command)
             info(f"Spawned process: pid={self.process.pid}")
 
-            # Start reading from PTY
-            loop = asyncio.get_event_loop()
-            loop.add_reader(self.pty.master_fd, self._read_from_pty)
+            # Start async PTY reader task
+            self._pty_reader_task = asyncio.create_task(self._async_read_from_pty())
 
         except Exception:
             exception("Failed to start terminal process")
@@ -383,13 +395,10 @@ class Terminal:
         if self.pty is None and self.process is None:
             return
 
-        # Remove PTY reader
-        if self.pty and self.pty.master_fd:
-            try:
-                loop = asyncio.get_event_loop()
-                loop.remove_reader(self.pty.master_fd)
-            except (ValueError, OSError):
-                pass
+        # Cancel PTY reader task
+        if self._pty_reader_task and not self._pty_reader_task.done():
+            self._pty_reader_task.cancel()
+            self._pty_reader_task = None
 
         # Close PTY
         if self.pty is not None:
@@ -398,27 +407,57 @@ class Terminal:
 
         self.process = None
 
-    def _read_from_pty(self) -> None:
-        """Read data from PTY and process it."""
-        if self.pty is None or self.pty.closed:
-            return
+    async def _async_read_from_pty(self) -> None:
+        """Async task to read PTY data and dispatch to callback or process directly."""
+        import fcntl
 
-        try:
-            data = os.read(self.pty.master_fd, 4096)
-            if not data:
-                warning("Read returned empty data, process may have exited")
+        # Make PTY non-blocking
+        flags = fcntl.fcntl(self.pty.master_fd, fcntl.F_GETFL)
+        fcntl.fcntl(self.pty.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        while self.pty is not None and not self.pty.closed:
+            try:
+                # Wait for data to be available
+                loop = asyncio.get_event_loop()
+                ready, _, _ = await loop.run_in_executor(
+                    None, lambda: __import__("select").select([self.pty.master_fd], [], [], 0.1)
+                )
+
+                if not ready:
+                    # No data available, yield and continue
+                    await asyncio.sleep(0.01)
+                    continue
+
+                # Read available data (non-blocking)
+                try:
+                    data = os.read(self.pty.master_fd, 4096)
+                except BlockingIOError:
+                    # No data after all, continue
+                    await asyncio.sleep(0.01)
+                    continue
+
+                if not data:
+                    warning("Read returned empty data, process may have exited")
+                    self.stop_process()
+                    break
+
+                # Use callback if set, otherwise process directly
+                if self._pty_data_callback:
+                    self._pty_data_callback(data)
+                else:
+                    self._process_pty_data_sync(data)
+
+                # Yield control to other async operations (like resize)
+                await asyncio.sleep(0)
+
+            except asyncio.CancelledError:
+                # Task was cancelled, exit cleanly
+                break
+            except OSError as e:
+                info(f"PTY read error: {e}")
                 self.stop_process()
-                return
-
-            # Decode UTF-8
-            text = data.decode("utf-8", errors="replace")
-
-            # Process through parser
-            self.parser.feed(text)
-
-        except OSError as e:
-            info(f"PTY read error: {e}")
-            self.stop_process()
-        except Exception:
-            exception("Error reading from terminal")
-            self.stop_process()
+                break
+            except Exception:
+                exception("Error reading from terminal")
+                self.stop_process()
+                break

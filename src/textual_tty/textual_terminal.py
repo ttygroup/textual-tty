@@ -7,7 +7,6 @@ Terminal class with Textual's reactive system and UI components.
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Optional
 
 from textual.app import ComposeResult
@@ -76,7 +75,17 @@ class TextualTerminal(Terminal, Widget):
         # RichLog widget for display
         self.rich_log: Optional[RichLog] = None
 
+        # Set up async PTY handling
+        self.set_pty_data_callback(self._handle_pty_data)
+
     # Message classes for events
+    class PTYDataMessage(Message):
+        """Message containing PTY data."""
+
+        def __init__(self, data: bytes) -> None:
+            self.data = data
+            super().__init__()
+
     class TitleChanged(Message):
         """Posted when terminal title changes."""
 
@@ -136,13 +145,18 @@ class TextualTerminal(Terminal, Widget):
             self.width_chars = new_width
             self.height_chars = new_height
 
-    def _read_from_pty(self) -> None:
-        """Override to add display update."""
-        # Call parent method
-        super()._read_from_pty()
+    def _handle_pty_data(self, data: bytes) -> None:
+        """Handle PTY data by posting a Textual message."""
+        self.post_message(self.PTYDataMessage(data))
 
-        # Update display asynchronously
-        asyncio.create_task(self._update_display())
+    async def on_textual_terminal_ptydata_message(self, message: PTYDataMessage) -> None:
+        """Handle PTY data messages through Textual's message system."""
+        # Process the PTY data
+        text = message.data.decode("utf-8", errors="replace")
+        self.parser.feed(text)
+
+        # Update display
+        await self._update_display()
 
     async def _update_display(self) -> None:
         """Update the RichLog display with current screen content."""

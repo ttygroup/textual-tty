@@ -33,6 +33,10 @@ class Buffer:
         if not (0 <= y < self.height):
             return
 
+        # Defensive check: ensure y is within actual lines bounds
+        if y >= len(self.lines):
+            return
+
         line = self.lines[y]
 
         if x < len(line.plain):
