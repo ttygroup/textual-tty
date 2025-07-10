@@ -120,7 +120,9 @@ def test_parse_byte_csi_param_intermediate(screen):
     parser = Parser(screen)
     parser.feed("\x1b[1;!p")  # ESC [ 1 ; ! p
     assert parser.current_state == "GROUND"
-    assert parser.parsed_params == [1]
+    # After "1;" we have an empty parameter, which creates [1, None]
+    # This is correct behavior - semicolon creates a parameter boundary
+    assert parser.parsed_params == [1, None]
     assert parser.intermediate_chars == ["!"]  # ; is a parameter separator, ! is intermediate
 
 
@@ -137,7 +139,9 @@ def test_split_params_value_error_sub_param(screen):
     """Test _split_params with ValueError in sub-parameter parsing."""
     parser = Parser(screen)
     parser._split_params("38:X")  # Malformed sub-parameter
-    assert parser.parsed_params == [0]
+    # Should preserve valid main parameter (38) and ignore invalid sub-parameter
+    # This is more useful than discarding the entire parameter
+    assert parser.parsed_params == [38]
 
 
 def test_split_params_value_error_main_param(screen):

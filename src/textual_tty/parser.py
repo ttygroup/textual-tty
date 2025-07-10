@@ -76,16 +76,13 @@ class Parser:
 
         This is the main entry point. It iterates over the data and passes each
         character to the state machine engine.
-
-        Args:
-            data: A chunk of text read from the application's pty.
         """
         for char in data:
             self._parse_char(char)
 
     def _parse_char(self, char: str) -> None:
         """
-        The core state machine engine. Replaces the main loop in `input_parse()`.
+        The core state machine engine.
 
         It looks up the current state in `self.states`, finds the appropriate
         transition for the given byte, executes the handler, and moves to the
@@ -241,7 +238,7 @@ class Parser:
 
     def reset(self) -> None:
         """
-        Resets the parser to its initial ground state. Replaces `input_reset()`.
+        Resets the parser to its initial ground state.
         """
         self._clear()
         self.current_state = "GROUND"
@@ -289,47 +286,30 @@ class Parser:
 
     def _split_params(self, param_string: str) -> None:
         """
-        Parses the collected parameter string into a list of numbers/sub-params.
+        Parses parameter string like "1;2;3" or "38;5;196" into integers.
 
-        It splits the string by ';' and handles sub-parameters separated by ':'.
-        This logic replaces `input_split`.
+        Handles empty parameters and sub-parameters (takes only the first part before ':').
         """
         self.parsed_params.clear()
         if not param_string:
             return
 
-        parts = param_string.split(";")
-        for i, part in enumerate(parts):
-            if ":" in part:
-                # Sub-parameters - validate all parts, not just the first
-                sub_parts = part.split(":")
-                try:
-                    # Validate the main parameter
-                    if sub_parts[0]:
-                        main_param = int(sub_parts[0])
-                        # Also validate sub-parameters (but don't store them for now)
-                        for sub_part in sub_parts[1:]:
-                            if sub_part:  # Skip empty sub-parts
-                                int(sub_part)  # Just validate, don't store
-                        self.parsed_params.append(main_param)
-                    else:
-                        self.parsed_params.append(None)
-                except ValueError:
-                    self.parsed_params.append(0)
-            else:
-                try:
-                    if part:
-                        self.parsed_params.append(int(part))
-                    elif i < len(parts) - 1:  # Only add None for empty parts in the middle, not at the end
-                        self.parsed_params.append(None)
-                    # Skip empty parts at the end (trailing semicolons)
-                except ValueError:
-                    self.parsed_params.append(0)
+        for part in param_string.split(";"):
+            if not part:
+                self.parsed_params.append(None)
+                continue
+
+            # Handle sub-parameters: take only the main part before ':'
+            main_part = part.split(":")[0]
+
+            try:
+                self.parsed_params.append(int(main_part))
+            except ValueError:
+                self.parsed_params.append(0)
 
     def _get_param(self, index: int, default: int) -> int:
         """
         Gets a numeric parameter from the parsed list, with a default value.
-        This replaces `input_get`.
         """
         if index < len(self.parsed_params):
             param = self.parsed_params[index]
