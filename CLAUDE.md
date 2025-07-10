@@ -6,6 +6,8 @@
 - Always ask for explicit permission before adding legacy fallback methods.
 - By default, old methods are removed. This is a pre-alpha release.
 - This application is for Python version 3.10+. Use appropriate type hints
+- **DONT USE PRINTS FOR DEBUGGING** this is a TUI app. Use the debug() from
+  `textual_tty.log` and check `debug.log`
 
 ## Testing
 

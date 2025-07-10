@@ -1,11 +1,9 @@
 # textual-tty
 
-A terminal emulator for Textual apps.
+A pure Python terminal emulator for Textual apps, that aims for tmux
+compatibility.
 
-Made by summarizing tmux's code, implementing a similar structure then almost
-vibe coding it into existence with Claude and Gemini.
-
-Currently lacks a cursor, mouse, any decent debugging tools, and is too chatty,
+Currently lacks a cursor, any decent debugging tools, and is too chatty,
 but it's still somewhat usable.
 
 ## Demo
@@ -18,11 +16,11 @@ uvx textual-tty
 
 There's 3 main classes:
 
-1. `textual_tty.Terminal`, a standalone terminal that doesn't need Textual.
-2. `textual_tty.TextualTerminal`, a tty widget subclass.
-3. `textual_tty.TerminalApp`, a terminal emulator in a window.
+1. `Terminal`, a standalone terminal that doesn't need Textual.
+2. `TextualTerminal`, a tty widget subclass.
+3. `TerminalApp`, a terminal emulator in a window.
 
-See the demo for more info.
+Read the demo code for more info.
 
 ## Links
 
@@ -36,15 +34,23 @@ WTFPL with one additional clause
 
 1. Don't blame me
 
-Do wtf you want, but don't blame me if it rips a hole in your trousers.
+Do wtf you want, but don't blame me when it rips a hole in your trousers.
 
-## todo
+## todo / ideas
 
+- [ ] debug logger
+  - [ ] make file logging optional
+  - [ ] add arg parser to demo app
+- [ ] break terminal project out from Textual deps
+  - [ ] pick a snazzy name
+  - [ ] stdio -> pty wrapper
+  - [ ] gui
+    - [ ] make `framebuffer.py`
+    - [ ] choose a backend
+  - [ ] asciinema streaming -> terminal web
 - [ ] resizing oddities
   - [ ] htop doesn't resize properly
-- [x] implement mouse
 - [ ] performance improvements
-  - [x] profile it!
   - [ ] reduce draw calls
 - [ ] scrollback buffer
   - [ ] rewrite app so we have consistent + performant buffer class
@@ -52,22 +58,15 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
   - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
-  - [x] clear + flip buffer = restore before clear
   - [ ] corruption in stream
-  - [x] text input issues
-    - This was caused by us not supporting all modes.
-    - [x] implement keymapping that works inside and outside textual
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
-- [x] fix terminal bell
-- [x] replace magic numbers with constants
+  - [ ] window titles not being set
 - [ ] testing
   - [ ] move tests
-    - [x] unit tests to ./tests/unit
     - [ ] integration ./tests/integration
     - [ ] comparison scripts ./tests/integration/scripts
   - [ ] more coverage
 - [ ] reduce redundancy redundancy of repeated repeated code code
-  - [x] redundancy redundancy repeated repeated
   - [ ] code code of of redundancy redundancy
 - [ ] add terminal visuals
   - [ ] text cursor
