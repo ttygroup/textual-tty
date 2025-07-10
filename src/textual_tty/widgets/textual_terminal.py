@@ -224,11 +224,11 @@ class TextualTerminal(Terminal, Widget):
         """Handle mouse movement events."""
         if self.pty is None or not self.mouse_any_tracking:
             return
-        
+
         # Convert screen coordinates to terminal coordinates
         x = event.x + 1  # Terminal coordinates are 1-based
         y = event.y + 1
-        
+
         # Send SGR mouse movement event (button 35 = movement, no buttons pressed)
         if self.mouse_sgr_mode:
             mouse_seq = f"\033[<35;{x};{y}M"
@@ -238,23 +238,23 @@ class TextualTerminal(Terminal, Widget):
         """Handle mouse button press events."""
         if self.pty is None or not self.mouse_tracking:
             return
-            
-        # Convert screen coordinates to terminal coordinates  
+
+        # Convert screen coordinates to terminal coordinates
         x = event.x + 1
         y = event.y + 1
-        
+
         # Map mouse buttons (0=left, 1=middle, 2=right)
         button_map = {"left": 0, "middle": 1, "right": 2}
         button = button_map.get(event.button, 0)
-        
+
         # Add modifier flags
         if event.shift:
             button |= 4
         if event.alt:
-            button |= 8  
+            button |= 8
         if event.ctrl:
             button |= 16
-        
+
         # Send SGR mouse press event
         if self.mouse_sgr_mode:
             mouse_seq = f"\033[<{button};{x};{y}M"
@@ -264,15 +264,15 @@ class TextualTerminal(Terminal, Widget):
         """Handle mouse button release events."""
         if self.pty is None or not self.mouse_tracking:
             return
-            
+
         # Convert screen coordinates to terminal coordinates
-        x = event.x + 1  
+        x = event.x + 1
         y = event.y + 1
-        
+
         # Map mouse buttons
         button_map = {"left": 0, "middle": 1, "right": 2}
         button = button_map.get(event.button, 0)
-        
+
         # Add modifier flags
         if event.shift:
             button |= 4
@@ -280,7 +280,7 @@ class TextualTerminal(Terminal, Widget):
             button |= 8
         if event.ctrl:
             button |= 16
-        
+
         # Send SGR mouse release event (lowercase 'm')
         if self.mouse_sgr_mode:
             mouse_seq = f"\033[<{button};{x};{y}m"

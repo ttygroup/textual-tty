@@ -54,12 +54,12 @@ echo ""
 while true; do
     # Read a single character/sequence
     read -rsn1 input
-    
+
     # Check for 'q' to quit
     if [[ "$input" == "q" ]]; then
         break
     fi
-    
+
     # Check for escape sequence (mouse event)
     if [[ "$input" == $'\033' ]]; then
         # Read the rest of the escape sequence
@@ -75,14 +75,14 @@ while true; do
                     break
                 fi
             done
-            
+
             # Parse mouse event (SGR format: ESC[<b;x;yM or ESC[<b;x;ym)
             if [[ "$sequence" =~ ^\<([0-9]+)\;([0-9]+)\;([0-9]+)([Mm]) ]]; then
                 button="${BASH_REMATCH[1]}"
                 x="${BASH_REMATCH[2]}"
                 y="${BASH_REMATCH[3]}"
                 action="${BASH_REMATCH[4]}"
-                
+
                 # Decode button state
                 button_num=$((button & 3))
                 case $button_num in
@@ -91,7 +91,7 @@ while true; do
                     2) button_name="Right" ;;
                     3) button_name="Release" ;;
                 esac
-                
+
                 # Check for drag
                 if (( button & 32 )); then
                     event_type="Drag"
@@ -100,38 +100,38 @@ while true; do
                 else
                     event_type="Release"
                 fi
-                
+
                 # Check for modifiers
                 modifiers=""
                 if (( button & 4 )); then modifiers+="Shift "; fi
                 if (( button & 8 )); then modifiers+="Meta "; fi
                 if (( button & 16 )); then modifiers+="Ctrl "; fi
                 if [[ -z "$modifiers" ]]; then modifiers="None"; fi
-                
+
                 # Clear old cursor position (if within terminal bounds)
                 if (( last_mouse_y >= 10 && last_mouse_y <= TERM_ROWS && last_mouse_x >= 1 && last_mouse_x <= TERM_COLS )); then
                     printf "\033[%d;%dH " "$last_mouse_y" "$last_mouse_x"
                 fi
-                
+
                 # Draw new cursor at mouse position (if within terminal bounds, below header)
                 if (( y >= 10 && y <= TERM_ROWS && x >= 1 && x <= TERM_COLS )); then
                     printf "\033[%d;%dH${CURSOR}" "$y" "$x"
                 fi
-                
+
                 # Update tracking variables
                 last_mouse_x="$x"
                 last_mouse_y="$y"
-                
+
                 # Update display
                 printf "\033[4;1H"  # Go to line 4, column 1
                 printf "\033[K${GREEN}Mouse Position: ${NC}%3d, %3d" "$x" "$y"
-                printf "\033[5;1H"  # Go to line 5, column 1  
+                printf "\033[5;1H"  # Go to line 5, column 1
                 printf "\033[K${GREEN}Button State:   ${NC}%s" "$button_name"
                 printf "\033[6;1H"  # Go to line 6, column 1
                 printf "\033[K${GREEN}Event Type:     ${NC}%s" "$event_type"
                 printf "\033[7;1H"  # Go to line 7, column 1
                 printf "\033[K${GREEN}Modifiers:      ${NC}%s" "$modifiers"
-                
+
                 # Add some debug info
                 printf "\033[9;1H"  # Go to line 9, column 1
                 printf "\033[K${BLUE}Raw: ${NC}ESC[<%d;%d;%d%s (button=%d)" "$button" "$x" "$y" "$action" "$button"
