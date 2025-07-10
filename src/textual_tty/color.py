@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 from textual.color import Color
 from rich.color import Color as RichColor
 
+COLOR_PALETTE_SIZE = 256
 
 # X11 color names mapped to hex codes (tmux compatibility)
 X11_NAMES = {

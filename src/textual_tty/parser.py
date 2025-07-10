@@ -82,7 +82,7 @@ class Parser:
                 self.current_state = constants.ESCAPE
                 self._clear()
             elif char == constants.BEL:
-                pass
+                self.terminal.bell()
             elif char == constants.BS:
                 self.terminal.backspace()
             elif char == constants.DEL:

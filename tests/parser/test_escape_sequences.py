@@ -18,10 +18,11 @@ def screen():
 
 
 def test_bell_character(screen):
-    """Test that the BEL character (0x07) is handled (does nothing visible)."""
+    """Test that the BEL character (0x07) calls terminal.bell() method."""
     parser = Parser(screen)
     parser.feed(BEL)
-    # BEL typically just makes a sound, no screen changes, so no screen methods should be called.
+    # BEL should call the bell method but not cause visible screen changes
+    screen.bell.assert_called_once()
     screen.write_text.assert_not_called()
     screen.backspace.assert_not_called()
     screen.line_feed.assert_not_called()

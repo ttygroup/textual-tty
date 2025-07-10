@@ -42,13 +42,19 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 
 - [ ] fix resizing - apps like htop don't resize
 - [ ] implement cursor (with width)
-- [ ] arrow keys for input in tui apps, not sure what's happening
+- [x] implement mouse
+- [ ] arrow keys for input in tui apps (not sure what's happening)
 - [ ] performance improvements
   - [x] profile it!
   - [ ] reduce draw calls
 - [ ] bugs
   - [ ] blank background to end of line
+  - [x] clear + flip buffer = restore before clear
+  - [ ] corruption in stream
+- [x] fix terminal bell
+- [x] replace magic numbers with constants
 - [ ] more coverage
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [x] redundancy redundancy repeated repeated
   - [ ] code code of of redundancy redundancy
+- [ ] add
