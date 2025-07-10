@@ -12,6 +12,8 @@ from typing import List, Optional
 from rich.style import Style
 from rich.text import Text, Span
 
+from . import constants
+
 
 class Buffer:
     """
@@ -137,25 +139,25 @@ class Buffer:
             new_line = line[:clear_start] + cleared_text + line[clear_end:]
             self.lines[y] = new_line
 
-    def clear_line(self, y: int, mode: int = 0, cursor_x: int = 0) -> None:
+    def clear_line(self, y: int, mode: int = constants.ERASE_FROM_CURSOR_TO_END, cursor_x: int = 0) -> None:
         """Clear line content."""
         if not (0 <= y < self.height):
             return
 
         line = self.lines[y]
 
-        if mode == 0:  # Clear from cursor to end of line
+        if mode == constants.ERASE_FROM_CURSOR_TO_END:
             if cursor_x < len(line.plain):
                 self.lines[y] = line[:cursor_x]
             # If cursor is at or beyond end, no need to clear
-        elif mode == 1:  # Clear from beginning to cursor
+        elif mode == constants.ERASE_FROM_START_TO_CURSOR:
             if cursor_x < len(line.plain):
                 cleared_part = Text(" " * cursor_x)
                 self.lines[y] = cleared_part + line[cursor_x:]
             else:
                 # Clear entire line if cursor is beyond content
                 self.lines[y] = Text()
-        elif mode == 2:  # Clear entire line
+        elif mode == constants.ERASE_ALL:
             self.lines[y] = Text()
 
     def scroll_up(self, count: int) -> None:

@@ -12,11 +12,13 @@ import sys
 import subprocess
 from typing import Optional, Dict, Protocol
 
+from . import constants
+
 
 class PTYSocket(Protocol):
     """Protocol for PTY socket-like interface."""
 
-    def read(self, size: int = 4096) -> bytes:
+    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
         """Read data from the PTY."""
         ...
 
@@ -41,7 +43,7 @@ class PTYSocket(Protocol):
 class UnixPTY:
     """Unix/Linux/macOS PTY implementation."""
 
-    def __init__(self, rows: int = 24, cols: int = 80):
+    def __init__(self, rows: int = constants.DEFAULT_TERMINAL_HEIGHT, cols: int = constants.DEFAULT_TERMINAL_WIDTH):
         import pty
 
         self.master_fd, self.slave_fd = pty.openpty()
@@ -50,14 +52,14 @@ class UnixPTY:
         self._closed = False
         self.resize(rows, cols)
 
-    def read(self, size: int = 4096) -> bytes:
+    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
         """Read data from the PTY."""
         if self._closed:
             return b""
         try:
             return os.read(self.master_fd, size)
         except OSError as e:
-            if e.errno in (9, 22):  # EBADF or EINVAL - fd is closed
+            if e.errno in (constants.EBADF, constants.EINVAL):
                 self._closed = True
                 raise
             return b""
@@ -170,7 +172,7 @@ class WinptyProcessWrapper:
             return None
         else:
             if self._returncode is None:
-                self._returncode = 0  # winpty doesn't provide detailed exit codes
+                self._returncode = constants.DEFAULT_EXIT_CODE
             return self._returncode
 
     def wait(self):
@@ -178,7 +180,7 @@ class WinptyProcessWrapper:
         while self.pty.isalive():
             import time
 
-            time.sleep(0.1)
+            time.sleep(constants.PTY_POLL_INTERVAL)
         return self.poll()
 
     def terminate(self):
@@ -198,7 +200,7 @@ class WinptyProcessWrapper:
 class WindowsPTY:
     """Windows PTY implementation using pywinpty."""
 
-    def __init__(self, rows: int = 24, cols: int = 80):
+    def __init__(self, rows: int = constants.DEFAULT_TERMINAL_HEIGHT, cols: int = constants.DEFAULT_TERMINAL_WIDTH):
         try:
             import winpty
 
@@ -209,7 +211,7 @@ class WindowsPTY:
         except ImportError:
             raise OSError("pywinpty not installed. Install with: pip install textual-terminal[windows]")
 
-    def read(self, size: int = 4096) -> bytes:
+    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
         """Read data from the PTY."""
         if self._closed:
             return b""
@@ -287,7 +289,9 @@ class WindowsPTY:
         return WinptyProcessWrapper(self.pty)
 
 
-def create_pty(rows: int = 24, cols: int = 80) -> PTYSocket:
+def create_pty(
+    rows: int = constants.DEFAULT_TERMINAL_HEIGHT, cols: int = constants.DEFAULT_TERMINAL_WIDTH
+) -> PTYSocket:
     """Create a platform-appropriate PTY socket.
 
     Args:
