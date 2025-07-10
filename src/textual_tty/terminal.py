@@ -179,7 +179,7 @@ class Terminal:
 
     def clear_screen(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear screen."""
-        if mode == constants.ERASE_FROM_CURSOR_TO_END:  # Clear from cursor to end of screen
+        if mode == constants.ERASE_FROM_CURSOR_TO_END:
             # Clear current line from cursor to end, padding to full width
             if 0 <= self.cursor_y < len(self.current_buffer.lines):
                 line = self.current_buffer.lines[self.cursor_y]
@@ -195,14 +195,12 @@ class Terminal:
             # Clear all lines below cursor
             for y in range(self.cursor_y + 1, min(self.height, len(self.current_buffer.lines))):
                 self.current_buffer.lines[y] = Text()
-        elif mode == constants.ERASE_FROM_START_TO_CURSOR:  # Clear from beginning of screen to cursor
+        elif mode == constants.ERASE_FROM_START_TO_CURSOR:
             # Clear all lines above cursor
             for y in range(min(self.cursor_y, len(self.current_buffer.lines))):
                 self.current_buffer.lines[y] = Text()
-            # Clear current line from beginning to cursor
             self.clear_line(constants.ERASE_FROM_START_TO_CURSOR)
-        elif mode == constants.ERASE_ALL:  # Clear entire screen
-            # Clear all lines in-place to preserve buffer reference
+        elif mode == constants.ERASE_ALL:
             for y in range(len(self.current_buffer.lines)):
                 self.current_buffer.lines[y] = Text()
 
@@ -225,29 +223,25 @@ class Terminal:
     def set_mode(self, mode: int, value: bool = True, private: bool = False) -> None:
         """Set terminal mode."""
         if private:
-            # DECSET private modes
-            if mode == constants.DECAWM_AUTOWRAP:  # Auto wrap
+            if mode == constants.DECAWM_AUTOWRAP:
                 self.auto_wrap = value
-            elif mode == constants.DECTCEM_SHOW_CURSOR:  # Cursor visibility
+            elif mode == constants.DECTCEM_SHOW_CURSOR:
                 self.cursor_visible = value
-            elif mode == constants.MOUSE_TRACKING_BASIC:  # Basic mouse tracking
+            elif mode == constants.MOUSE_TRACKING_BASIC:
                 self.mouse_tracking = value
-            elif mode == constants.MOUSE_TRACKING_BUTTON_EVENT:  # Button event tracking
+            elif mode == constants.MOUSE_TRACKING_BUTTON_EVENT:
                 self.mouse_button_tracking = value
-            elif mode == constants.MOUSE_TRACKING_ANY_EVENT:  # Any event tracking (movement)
+            elif mode == constants.MOUSE_TRACKING_ANY_EVENT:
                 self.mouse_any_tracking = value
-            elif mode == constants.MOUSE_SGR_MODE:  # SGR mouse mode
+            elif mode == constants.MOUSE_SGR_MODE:
                 self.mouse_sgr_mode = value
-            elif mode == constants.MOUSE_EXTENDED_MODE:  # Extended mouse mode
+            elif mode == constants.MOUSE_EXTENDED_MODE:
                 self.mouse_extended_mode = value
-            # Add other private modes as needed
         else:
-            # ANSI modes
-            if mode == constants.IRM_INSERT_REPLACE:  # Insert mode
+            if mode == constants.IRM_INSERT_REPLACE:
                 self.insert_mode = value
-            elif mode == constants.DECKPAM_APPLICATION_KEYPAD:  # Application keypad mode
+            elif mode == constants.DECKPAM_APPLICATION_KEYPAD:
                 self.application_keypad = value
-            # Add other ANSI modes as needed
 
     def clear_mode(self, mode, private: bool = False) -> None:
         """Clear terminal mode."""
