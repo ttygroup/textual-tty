@@ -14,7 +14,7 @@ between states, and calls the appropriate handler methods for escape sequences.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 if TYPE_CHECKING:
     from .terminal import Terminal
@@ -45,11 +45,6 @@ class Parser:
         # The current state of the parser (e.g., 'GROUND', 'ESCAPE').
         self.current_state: str = "GROUND"
 
-        # A mapping of states to their transition handlers. In Python, this
-        # replaces the C array of structs. The values would be dictionaries
-        # mapping byte ranges to handler methods and next states.
-        self.states: Dict[str, Any] = {}
-
         # --- Buffers for collecting sequence data ---
         self.intermediate_chars: List[str] = []
         self.param_buffer: str = ""
@@ -57,18 +52,10 @@ class Parser:
         self.string_buffer: str = ""  # For OSC, DCS, APC strings
         self._string_exit_handler: Optional[Callable] = None
 
-        # --- Saved Cursor and Attribute State (for DECSC/DECRC) ---
-        self.saved_cx: int = 0
-        self.saved_cy: int = 0
-        self.saved_style: Optional[Style] = None
-        self.saved_charset: Dict[str, str] = {}  # G0/G1 charset state
-
         # --- Current Cell Attributes ---
         # A `Style` object representing the style to be applied to the next
         # character written to the grid.
         self.current_style: Optional[Style] = None
-        # State for G0/G1 character sets.
-        self.current_charset: Dict[str, str] = {}
 
     def feed(self, data: str) -> None:
         """
@@ -257,15 +244,6 @@ class Parser:
         self.parsed_params.clear()
         self.string_buffer = ""
 
-    def _ground(self) -> None:
-        """
-        Handler for transitioning to the GROUND state.
-
-        This is the default state where printable characters are processed. This
-        handler ensures any long-running sequence timers are cancelled.
-        """
-        pass
-
     def _collect_intermediate(self, char: str) -> None:
         """
         Collects an intermediate character for an escape sequence.
@@ -315,48 +293,6 @@ class Parser:
             param = self.parsed_params[index]
             return param if param is not None else default
         return default
-
-    # --- C0 Control Code Dispatcher ---
-
-    def _c0_dispatch(self, char_code: int) -> None:
-        """
-        Handles C0 control codes (bytes from 0x00 to 0x1F).
-
-        This is a dispatch method that calls the appropriate `screen_writer`
-        method based on the control code.
-
-        Relevant constants from C (`input_c0_dispatch`):
-        - `\a` (BEL): Triggers a bell/alert.
-        - `\b` (BS): Moves cursor back one space.
-        - `\t` (HT): Moves cursor to the next tab stop.
-        - `\n` (LF), `\v` (VT), `\f` (FF): Line feed. May also perform a
-          carriage return if MODE_CRLF is set.
-        - `\r` (CR): Carriage return (moves cursor to column 0).
-        - `\x0e` (SO): Shift Out, activates the G1 charset (for line drawing).
-        - `\x0f` (SI): Shift In, activates the G0 charset (the default).
-        """
-        pass
-
-    # --- Printable Character Handlers ---
-
-    def _print(self, char: str) -> None:
-        """
-        Handles a standard printable character.
-
-        This method gets the current character attributes (color, bold, etc.)
-        and calls the screen writer's `write_cell` method.
-        """
-        pass
-
-    def _handle_utf8(self, byte: int) -> None:
-        """
-        Assembles multi-byte UTF-8 characters. Replaces `input_top_bit_set`.
-
-        This method collects bytes for a UTF-8 sequence until a complete
-        character is formed, then passes the resulting character and its
-        calculated width to the screen writer.
-        """
-        pass
 
     # --- Escape (ESC) Sequence Dispatchers ---
 
@@ -546,19 +482,6 @@ class Parser:
 
     # --- OSC, DCS, and other String-based Sequence Handlers ---
 
-    def _enter_string_mode(self, next_state: str, exit_handler: Callable) -> None:
-        """Generic handler for entering a string-based escape mode."""
-        self.current_state = next_state
-        self._string_exit_handler = exit_handler
-        self.string_buffer = ""
-
-    def _exit_string_mode(self) -> None:
-        """Generic handler for exiting a string-based escape mode."""
-        if self._string_exit_handler:
-            self._string_exit_handler()
-        self._clear()
-        self.current_state = "GROUND"
-
     def _handle_osc_dispatch(self) -> None:
         """
         Dispatches an OSC (Operating System Command) string.
@@ -603,41 +526,6 @@ class Parser:
 
         Primarily used for passthrough (`tmux;...`) sequences or for things
         like Sixel graphics if support is enabled.
-        """
-        pass
-
-    def _handle_apc_dispatch(self) -> None:
-        """Dispatches an APC (Application Program Command) string."""
-        pass
-
-    def _handle_rename_dispatch(self) -> None:
-        """Handles the `screen` program's window renaming sequence."""
-        pass
-
-    # --- Functions That Will Be Re-implemented Differently ---
-
-    def _reply(self, response: bytes) -> None:
-        """
-        REIMPLEMENTED: In Python, this should emit an event, not write to a fd.
-
-        In tmux's C code, this function writes a response back to the pty, for
-        example in response to a DSR (Device Status Report) query. In a Textual
-        app, the parser should not have direct access to the pty output.
-
-        Instead, this method should be replaced with `self.post_message(...)`,
-        sending a custom event that the parent widget can listen for and handle
-        by writing the data to the process.
-        """
-        pass
-
-    def _start_timer(self) -> None:
-        """
-        REIMPLEMENTED: In Python, this should use `asyncio` or Textual's timers.
-
-        This function in C starts a timeout to prevent the parser from getting
-        stuck waiting for a sequence terminator. In a Textual application, this
-        should be implemented using `self.set_timer()` to call a reset method
-        if the sequence doesn't complete in time.
         """
         pass
 

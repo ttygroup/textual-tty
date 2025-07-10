@@ -40,7 +40,7 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 
 ## todo
 
-- [x] fix resizing - apps like htop don't resize
+- [ ] fix resizing - apps like htop don't resize
 - [ ] implement cursor (with width)
 - [ ] arrow keys for input in tui apps, not sure what's happening
 - [ ] performance improvements
