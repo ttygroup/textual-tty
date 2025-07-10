@@ -1,9 +1,9 @@
 """
-Program window widget for Textual applications.
+Terminal app widget for Textual applications.
 
-This module provides a ProgramWindow widget that combines a Program widget
+This module provides a TerminalApp widget that combines a TextualTerminal widget
 with a Window from textual-window, creating a draggable window containing
-a terminal program that closes when the process exits.
+a terminal that closes when the process exits.
 """
 
 from __future__ import annotations
@@ -13,23 +13,23 @@ from typing import Optional
 from textual.app import ComposeResult
 from textual_window import Window
 
-from .program import Program
+from .textual_terminal import TextualTerminal
 from ..log import info
 
 
-class ProgramWindow(Window):
-    """A draggable window containing a terminal program.
+class TerminalApp(Window):
+    """A draggable window containing a terminal emulator.
 
-    This widget combines the Program widget with Window functionality,
+    This widget combines the TextualTerminal widget with Window functionality,
     creating a movable window that automatically closes when the
-    contained process exits.
+    terminal process exits.
     """
 
     # Let focus pass through to the terminal inside
     can_focus = False
 
     DEFAULT_CSS = """
-    ProgramWindow {
+    TerminalApp {
         padding: 0;
         margin: 0;
         width: 83;
@@ -37,21 +37,25 @@ class ProgramWindow(Window):
         background: black;
     }
 
-    ProgramWindow #content_pane {
+    TerminalApp #content_pane {
         padding: 0;
         margin: 0;
         background: black;
     }
 
-    ProgramWindow Terminal RichLog {
-        scrollbar-size: 0 0;
-    }
-
-    ProgramWindow Program {
+    TerminalApp TextualTerminal {
         padding: 0;
         margin: 0;
         width: 100%;
         height: 100%;
+        background: black;
+        color: white;
+    }
+
+    TerminalApp TextualTerminal > RichLog {
+        scrollbar-size: 0 0;
+        background: black;
+        color: white;
     }
     """
 
@@ -78,12 +82,12 @@ class ProgramWindow(Window):
         self.command = command
         self.show_header = show_header
         self.show_footer = show_footer
-        self.program: Optional[Program] = None
+        self.terminal: Optional[TextualTerminal] = None
 
     def compose(self) -> ComposeResult:
-        """Compose the program window."""
-        self.program = Program(command=self.command, show_header=self.show_header, show_footer=self.show_footer)
-        yield self.program
+        """Compose the terminal app window."""
+        self.terminal = TextualTerminal(command=self.command or "/bin/bash")
+        yield self.terminal
 
     def on_mount(self) -> None:
         """Handle when the window is mounted."""
@@ -91,20 +95,20 @@ class ProgramWindow(Window):
         self.call_after_refresh(self._focus_terminal)
 
     def _focus_terminal(self) -> None:
-        """Focus the terminal inside the program."""
-        if self.program and self.program.terminal:
-            self.program.terminal.focus()
+        """Focus the terminal."""
+        if self.terminal:
+            self.terminal.focus()
 
-    def on_program_program_exited(self, event: Program.ProgramExited) -> None:
-        """Handle when the program process exits."""
-        info(f"ProgramWindow: Program exited with code {event.exit_code}")
+    def on_textual_terminal_process_exited(self, event: TextualTerminal.ProcessExited) -> None:
+        """Handle when the terminal process exits."""
+        info(f"TerminalApp: Terminal process exited with code {event.exit_code}")
         # Close the window when the program exits
         self.call_later(self.remove)
 
     def get_exit_code(self) -> Optional[int]:
         """Get the exit code of the process if it has exited."""
-        if self.program:
-            return self.program.get_exit_code()
+        if self.terminal and self.terminal.process:
+            return self.terminal.process.poll()
         return None
 
     def is_running(self) -> bool:

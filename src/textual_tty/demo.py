@@ -11,7 +11,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 
-from textual_tty.widgets import ProgramWindow, DebugLog
+from textual_tty.widgets import TerminalApp, DebugLog
 
 
 class DemoApp(App):
@@ -106,8 +106,8 @@ class DemoApp(App):
         """Create a new terminal window."""
         self.window_count += 1
 
-        # Create a ProgramWindow - a draggable window with a terminal program
-        window = ProgramWindow(
+        # Create a TerminalApp - a draggable window with a terminal emulator
+        window = TerminalApp(
             command=command,
             id=f"Terminal {self.window_count}",
             start_open=True,

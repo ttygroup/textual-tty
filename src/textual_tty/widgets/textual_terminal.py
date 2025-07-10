@@ -15,8 +15,8 @@ from textual.widget import Widget
 from textual.reactive import reactive
 from textual.message import Message
 
-from .terminal import Terminal
-from .log import debug
+from ..terminal import Terminal
+from ..log import debug
 
 
 class TextualTerminal(Terminal, Widget):
