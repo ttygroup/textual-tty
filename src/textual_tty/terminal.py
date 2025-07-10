@@ -52,6 +52,7 @@ class Terminal:
         self.auto_wrap = True
         self.insert_mode = False
         self.application_keypad = False
+        self.cursor_application_mode = False
         self.mouse_tracking = False
         self.mouse_button_tracking = False
         self.mouse_any_tracking = False
@@ -354,6 +355,92 @@ class Terminal:
         if count > 0 and self.last_printed_char:
             repeated_text = self.last_printed_char * count
             self.write_text(repeated_text)
+
+    # Input handling methods
+    def input_key(self, char: str, modifier: int = constants.KEY_MOD_NONE) -> None:
+        """Convert key + modifier to standard control codes, then send to input()."""
+        # Handle cursor keys (up, down, left, right)
+        if char in constants.CURSOR_KEYS:
+            if modifier == constants.KEY_MOD_NONE:
+                # Simple cursor keys - send standard sequences
+                sequence = f"{constants.ESC}[{constants.CURSOR_KEYS[char]}"
+            else:
+                # Modified cursor keys - CSI format with modifier
+                sequence = f"{constants.ESC}[1;{modifier}{constants.CURSOR_KEYS[char]}"
+            self.input(sequence)
+            return
+
+        # Handle navigation keys (home, end)
+        if char in constants.NAV_KEYS:
+            if modifier == constants.KEY_MOD_NONE:
+                sequence = f"{constants.ESC}[{constants.NAV_KEYS[char]}"
+            else:
+                sequence = f"{constants.ESC}[1;{modifier}{constants.NAV_KEYS[char]}"
+            self.input(sequence)
+            return
+
+        # Handle control characters (Ctrl+A = \x01, etc.)
+        if modifier == constants.KEY_MOD_CTRL and len(char) == 1:
+            upper_char = char.upper()
+            if "A" <= upper_char <= "Z":
+                control_char = chr(ord(upper_char) - ord("A") + 1)
+                self.input(control_char)
+                return
+
+        # Handle regular printable characters
+        if len(char) == 1 and char.isprintable():
+            self.input(char)
+            return
+
+        # Fallback: send any unhandled character directly to input()
+        self.input(char)
+
+    def input_fkey(self, num: int, modifier: int = constants.KEY_MOD_NONE) -> None:
+        """Convert function key + modifier to standard control codes, then send to input()."""
+        # Function key escape sequences (standard codes)
+        if 1 <= num <= 4:
+            # F1-F4 use ESC O P/Q/R/S format
+            base_chars = {1: "P", 2: "Q", 3: "R", 4: "S"}
+            if modifier == constants.KEY_MOD_NONE:
+                sequence = f"{constants.ESC}O{base_chars[num]}"
+            else:
+                sequence = f"{constants.ESC}[1;{modifier}{base_chars[num]}"
+        elif 5 <= num <= 12:
+            # F5-F12 use ESC [ n ~ format
+            codes = {5: 15, 6: 17, 7: 18, 8: 19, 9: 20, 10: 21, 11: 23, 12: 24}
+            if modifier == constants.KEY_MOD_NONE:
+                sequence = f"{constants.ESC}[{codes[num]}~"
+            else:
+                sequence = f"{constants.ESC}[{codes[num]};{modifier}~"
+        else:
+            # Unsupported function key
+            return
+
+        self.input(sequence)
+
+    def input(self, data: str) -> None:
+        """Translate control codes based on terminal modes and send to PTY."""
+        # Check if this is a cursor key sequence that needs mode translation
+        if data.startswith(f"{constants.ESC}[") and len(data) == 3 and data[2] in "ABCD":
+            # This is a cursor key: ESC[A, ESC[B, ESC[C, ESC[D
+            if self.cursor_application_mode:
+                # Convert to application mode: ESC[A -> ESC OA
+                key_char = data[2]
+                translated = f"{constants.ESC}O{key_char}"
+                self._send_to_pty(translated)
+                return
+
+        # Check if this is a function key that needs keypad mode translation
+        # F1-F4 in application keypad mode might behave differently
+        # For now, most function keys are the same in both modes
+
+        # No special translation needed, send as-is
+        self._send_to_pty(data)
+
+    def _send_to_pty(self, data: str) -> None:
+        """Send data directly to PTY."""
+        if self.pty:
+            self.pty.write(data.encode("utf-8"))
 
     # Process management
     async def start_process(self) -> None:

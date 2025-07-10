@@ -460,7 +460,7 @@ class Parser:
         """
         for param in self.parsed_params:
             if param == constants.DECCKM_CURSOR_KEYS_APPLICATION:
-                pass
+                self.terminal.cursor_application_mode = set_mode
             elif param == constants.DECAWM_AUTOWRAP:
                 self.terminal.auto_wrap = set_mode
             elif param == constants.DECTCEM_SHOW_CURSOR:

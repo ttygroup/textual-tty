@@ -54,13 +54,17 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
   - [ ] blank background to end of line
   - [x] clear + flip buffer = restore before clear
   - [ ] corruption in stream
-  - [ ] text input issues
-    - [ ] arrow keys in htop
-    - [ ] home and end keys?
-    - [ ] input debugger maybe?
+  - [x] text input issues
+    - This was caused by us not supporting all modes.
+    - [x] implement keymapping that works inside and outside textual
 - [x] fix terminal bell
 - [x] replace magic numbers with constants
-- [ ] more coverage
+- [ ] testing
+  - [ ] move tests
+    - [ ] unit tests to ./tests/unit
+    - [ ] integration ./tests/integration
+    - [ ] comparison scripts ./tests/integration/scripts
+  - [ ] more coverage
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [x] redundancy redundancy repeated repeated
   - [ ] code code of of redundancy redundancy
@@ -79,3 +83,4 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
     - [ ] mouse: display [y/N]
     - [ ] wide chars detection
     - [ ] theme selector/editor
+

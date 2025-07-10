@@ -121,6 +121,22 @@ MOUSE_BUTTON_MIDDLE = 1
 MOUSE_BUTTON_RIGHT = 2
 MOUSE_BUTTON_MOVEMENT = 35
 
+# --- Keyboard Modifier Codes (for CSI sequences) ---
+KEY_MOD_NONE = 1
+KEY_MOD_SHIFT = 2
+KEY_MOD_ALT = 3
+KEY_MOD_SHIFT_ALT = 4
+KEY_MOD_CTRL = 5
+KEY_MOD_SHIFT_CTRL = 6
+KEY_MOD_ALT_CTRL = 7
+KEY_MOD_SHIFT_ALT_CTRL = 8
+
+# --- Cursor Key Mappings ---
+CURSOR_KEYS = {"up": "A", "down": "B", "right": "C", "left": "D"}
+
+# --- Navigation Key Mappings ---
+NAV_KEYS = {"home": "H", "end": "F"}
+
 # --- PTY and System Constants ---
 DEFAULT_TERMINAL_WIDTH = 80
 DEFAULT_TERMINAL_HEIGHT = 24
