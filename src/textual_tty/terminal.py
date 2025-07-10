@@ -201,7 +201,9 @@ class Terminal:
             # Clear current line from beginning to cursor
             self.clear_line(1)
         elif mode == 2:  # Clear entire screen
-            self.current_buffer = Buffer(self.width, self.height)
+            # Clear all lines in-place to preserve buffer reference
+            for y in range(len(self.current_buffer.lines)):
+                self.current_buffer.lines[y] = Text()
 
     def clear_line(self, mode: int = 0) -> None:
         """Clear line."""
