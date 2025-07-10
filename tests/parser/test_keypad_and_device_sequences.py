@@ -33,7 +33,7 @@ def test_keypad_normal_mode():
     parser = Parser(terminal)
 
     # Start in application mode
-    terminal.set_mode("application_keypad", True)
+    terminal.set_mode(1, True)  # Application keypad mode
     assert terminal.application_keypad
 
     # Send DECKPNM sequence

@@ -25,25 +25,25 @@ def test_resize():
 def test_alternate_screen_switching():
     screen = Terminal(width=80, height=24)
     assert not screen.in_alt_screen
-    assert screen.current_console == screen.main_console
+    assert screen.current_buffer == screen.primary_buffer
 
     screen.alternate_screen_on()
     assert screen.in_alt_screen
-    assert screen.current_console == screen.alt_console
+    assert screen.current_buffer == screen.alt_buffer
 
     # Calling again should do nothing
     screen.alternate_screen_on()
     assert screen.in_alt_screen
-    assert screen.current_console == screen.alt_console
+    assert screen.current_buffer == screen.alt_buffer
 
     screen.alternate_screen_off()
     assert not screen.in_alt_screen
-    assert screen.current_console == screen.main_console
+    assert screen.current_buffer == screen.primary_buffer
 
     # Calling again should do nothing
     screen.alternate_screen_off()
     assert not screen.in_alt_screen
-    assert screen.current_console == screen.main_console
+    assert screen.current_buffer == screen.primary_buffer
 
 
 def test_alignment_test():

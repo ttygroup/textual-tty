@@ -207,21 +207,6 @@ class Terminal:
         """Clear a rectangular region."""
         self.current_buffer.clear_region(x1, y1, x2, y2, style)
 
-    @property
-    def current_console(self):
-        """Get current buffer (alias for compatibility)."""
-        return self.current_buffer
-
-    @property
-    def main_console(self):
-        """Get primary buffer (alias for compatibility)."""
-        return self.primary_buffer
-
-    @property
-    def alt_console(self):
-        """Get alternate buffer (alias for compatibility)."""
-        return self.alt_buffer
-
     def alternate_screen_on(self) -> None:
         """Switch to alternate screen."""
         self.switch_screen(True)
@@ -230,32 +215,24 @@ class Terminal:
         """Switch to primary screen."""
         self.switch_screen(False)
 
-    def set_mode(self, mode, value: bool = True, private: bool = False) -> None:
+    def set_mode(self, mode: int, value: bool = True, private: bool = False) -> None:
         """Set terminal mode."""
-        # Handle both string and numeric modes
-        if isinstance(mode, int):
-            if private:
-                # DECSET private modes
-                if mode == 7:  # Auto wrap
-                    self.auto_wrap = value
-                # Add other private modes as needed
-            else:
-                # ANSI modes
-                if mode == 4:  # Insert mode
-                    self.insert_mode = value
-                # Add other ANSI modes as needed
-        else:
-            # String-based mode names (legacy)
-            if mode == "auto_wrap":
+        if private:
+            # DECSET private modes
+            if mode == 7:  # Auto wrap
                 self.auto_wrap = value
-            elif mode == "insert_mode":
-                self.insert_mode = value
-            elif mode == "cursor_visible":
+            elif mode == 25:  # Cursor visibility
                 self.cursor_visible = value
-            elif mode == "application_keypad":
-                self.application_keypad = value
-            elif mode == "mouse_tracking":
+            elif mode == 1000:  # Mouse tracking
                 self.mouse_tracking = value
+            # Add other private modes as needed
+        else:
+            # ANSI modes
+            if mode == 4:  # Insert mode
+                self.insert_mode = value
+            elif mode == 1:  # Application keypad mode
+                self.application_keypad = value
+            # Add other ANSI modes as needed
 
     def clear_mode(self, mode, private: bool = False) -> None:
         """Clear terminal mode."""

@@ -157,6 +157,44 @@ class UnixPTY:
         return process
 
 
+class WinptyProcessWrapper:
+    """Wrapper to provide subprocess.Popen-like interface for winpty PTY."""
+
+    def __init__(self, pty):
+        self.pty = pty
+        self._returncode = None
+
+    def poll(self):
+        """Check if process is still running."""
+        if self.pty.isalive():
+            return None
+        else:
+            if self._returncode is None:
+                self._returncode = 0  # winpty doesn't provide detailed exit codes
+            return self._returncode
+
+    def wait(self):
+        """Wait for process to complete."""
+        while self.pty.isalive():
+            import time
+
+            time.sleep(0.1)
+        return self.poll()
+
+    def terminate(self):
+        """Terminate the process."""
+        self.pty.close()
+
+    def kill(self):
+        """Kill the process."""
+        self.pty.close()
+
+    @property
+    def returncode(self):
+        """Get the return code."""
+        return self.poll()
+
+
 class WindowsPTY:
     """Windows PTY implementation using pywinpty."""
 
@@ -215,12 +253,16 @@ class WindowsPTY:
 
     def spawn_process(self, command: str, env: Optional[Dict[str, str]] = None) -> subprocess.Popen:
         """Spawn a process attached to this PTY."""
-        process_env = dict(os.environ)
+        if self._closed:
+            raise OSError("PTY is closed")
+
+        # Set environment variables for the process
         if env:
-            process_env.update(env)
+            for key, value in env.items():
+                os.environ[key] = value
 
         # Add terminal environment variables
-        process_env.update(
+        os.environ.update(
             {
                 "TERM": "xterm-256color",
                 "LINES": str(self.rows),
@@ -228,20 +270,21 @@ class WindowsPTY:
             }
         )
 
-        # Ensure UTF-8 locale if not already set
-        if "LANG" not in process_env or "UTF-8" not in process_env.get("LANG", ""):
-            process_env["LANG"] = "en_US.UTF-8"
-        if "LC_ALL" not in process_env:
-            process_env["LC_ALL"] = process_env.get("LANG", "en_US.UTF-8")
+        # Use winpty to spawn the process attached to the PTY
+        # Convert command to bytes as required by winpty
+        if isinstance(command, str):
+            # For shell commands, use cmd.exe
+            if command.strip().startswith(("cmd", "powershell", "pwsh")):
+                command_bytes = command.encode("utf-8")
+            else:
+                command_bytes = f'cmd.exe /c "{command}"'.encode("utf-8")
+        else:
+            command_bytes = command
 
-        # Windows: Use winpty to spawn the process attached to the PTY
-        # For now, fallback to regular subprocess - winpty integration needs more work
-        # TODO: Properly integrate winpty process spawning
-        return subprocess.Popen(
-            command,
-            shell=True,
-            env=process_env,
-        )
+        self.pty.spawn(command_bytes)
+
+        # Return a process-like object that provides compatibility with subprocess.Popen
+        return WinptyProcessWrapper(self.pty)
 
 
 def create_pty(rows: int = 24, cols: int = 80) -> PTYSocket:

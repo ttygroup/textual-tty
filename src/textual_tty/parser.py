@@ -105,10 +105,10 @@ class Parser:
                 self._clear()
                 self.current_state = "OSC_STRING"
             elif char == "=":  # DECKPAM - Application Keypad Mode
-                self.terminal.set_mode("application_keypad", True)
+                self.terminal.set_mode(1, True)  # Application keypad mode
                 self.current_state = "GROUND"
             elif char == ">":  # DECKPNM - Normal Keypad Mode
-                self.terminal.set_mode("application_keypad", False)
+                self.terminal.set_mode(1, False)  # Normal keypad mode
                 self.current_state = "GROUND"
             elif char == "P":  # DCS - Device Control String
                 self._clear()
