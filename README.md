@@ -47,8 +47,8 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
   - [x] profile it!
   - [ ] reduce draw calls
 - [ ] bugs
-  - [x] scroll region
   - [ ] blank background to end of line
-  - [x] `ESC[nnnnb` repeat sequence (nethogs)
 - [ ] more coverage
 - [ ] reduce redundancy redundancy of repeated repeated code code
+  - [x] redundancy redundancy repeated repeated
+  - [ ] code code of of redundancy redundancy
