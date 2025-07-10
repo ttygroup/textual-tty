@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import ESC, BEL, ERASE_ALL, GROUND, CSI_ENTRY
 
 
 @pytest.fixture
@@ -19,7 +20,7 @@ def screen():
 def test_bell_character(screen):
     """Test that the BEL character (0x07) is handled (does nothing visible)."""
     parser = Parser(screen)
-    parser.feed("\x07")
+    parser.feed(BEL)
     # BEL typically just makes a sound, no screen changes, so no screen methods should be called.
     screen.write_text.assert_not_called()
     screen.backspace.assert_not_called()
@@ -30,17 +31,17 @@ def test_bell_character(screen):
 def test_escape_to_csi_entry(screen):
     """Test transition from ESCAPE to CSI_ENTRY state."""
     parser = Parser(screen)
-    parser.feed("\x1b[")  # ESC then [
-    assert parser.current_state == "CSI_ENTRY"
+    parser.feed(f"{ESC}[")  # ESC then [
+    assert parser.current_state == CSI_ENTRY
 
 
 def test_ris_reset_terminal(screen):
     """Test RIS (Reset to Initial State) sequence."""
     parser = Parser(screen)
-    parser.feed("\x1bc")  # ESC then c
-    screen.clear_screen.assert_called_once_with(2)
+    parser.feed(f"{ESC}c")  # ESC then c
+    screen.clear_screen.assert_called_once_with(ERASE_ALL)
     screen.set_cursor.assert_called_once_with(0, 0)
-    assert parser.current_state == "GROUND"
+    assert parser.current_state == GROUND
 
 
 def test_ind_index(screen):

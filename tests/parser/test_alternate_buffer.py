@@ -3,6 +3,12 @@ from unittest.mock import Mock
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
 from rich.style import Style
+from textual_tty.constants import (
+    DEFAULT_TERMINAL_WIDTH,
+    DEFAULT_TERMINAL_HEIGHT,
+    ALT_SCREEN_BUFFER,
+    ESC,
+)
 
 
 @pytest.fixture
@@ -10,8 +16,8 @@ def screen():
     """Return a mock Screen object with necessary attributes."""
     screen = Mock(spec=Terminal)
     screen.current_style = Style()  # Initialize with a real Style object
-    screen.width = 80
-    screen.height = 24
+    screen.width = DEFAULT_TERMINAL_WIDTH
+    screen.height = DEFAULT_TERMINAL_HEIGHT
     screen.cursor_x = 0
     screen.cursor_y = 0
     screen.scroll_top = 0
@@ -32,7 +38,7 @@ def screen():
 def test_alternate_buffer_enable(screen):
     """Test CSI ? 1049 h (Enable alternate screen buffer)."""
     parser = Parser(screen)
-    parser.feed("\x1b[?1049h")
+    parser.feed(f"{ESC}[?{ALT_SCREEN_BUFFER}h")
 
     # Should call alternate_screen_on
     screen.alternate_screen_on.assert_called_once()

@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import ESC
 
 
 @pytest.fixture
@@ -29,14 +30,14 @@ def screen():
 def test_csi_cup_cursor_position(screen):
     """Test CSI H (CUP - Cursor Position) with parameters."""
     parser = Parser(screen)
-    parser.feed("\x1b[10;20H")  # ESC[10;20H -> move to row 10, col 20
+    parser.feed(f"{ESC}[10;20H")  # ESC[10;20H -> move to row 10, col 20
     screen.set_cursor.assert_called_once_with(19, 9)  # 0-based
 
 
 def test_csi_cup_cursor_position_no_params(screen):
     """Test CSI H (CUP) with no parameters (defaults to 1;1)."""
     parser = Parser(screen)
-    parser.feed("\x1b[H")  # ESC[H -> move to row 1, col 1
+    parser.feed(f"{ESC}[H")  # ESC[H -> move to row 1, col 1
     screen.set_cursor.assert_called_once_with(0, 0)  # 0-based
 
 
@@ -44,7 +45,7 @@ def test_csi_cuu_cursor_up(screen):
     """Test CSI A (CUU - Cursor Up) with parameter."""
     parser = Parser(screen)
     screen.cursor_y = 10
-    parser.feed("\x1b[5A")  # ESC[5A -> move up 5 rows
+    parser.feed(f"{ESC}[5A")  # ESC[5A -> move up 5 rows
     assert screen.cursor_y == 5
 
 
@@ -52,7 +53,7 @@ def test_csi_cuu_cursor_up_no_param(screen):
     """Test CSI A (CUU) with no parameter (defaults to 1)."""
     parser = Parser(screen)
     screen.cursor_y = 10
-    parser.feed("\x1b[A")  # ESC[A -> move up 1 row
+    parser.feed(f"{ESC}[A")  # ESC[A -> move up 1 row
     assert screen.cursor_y == 9
 
 
@@ -60,7 +61,7 @@ def test_csi_cud_cursor_down(screen):
     """Test CSI B (CUD - Cursor Down) with parameter."""
     parser = Parser(screen)
     screen.cursor_y = 10
-    parser.feed("\x1b[5B")  # ESC[5B -> move down 5 rows
+    parser.feed(f"{ESC}[5B")  # ESC[5B -> move down 5 rows
     assert screen.cursor_y == 15
 
 

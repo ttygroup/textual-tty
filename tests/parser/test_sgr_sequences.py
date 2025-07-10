@@ -4,6 +4,15 @@ from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
 from rich.style import Style
 from rich.color import Color
+from textual_tty.constants import (
+    DEFAULT_TERMINAL_WIDTH,
+    DEFAULT_TERMINAL_HEIGHT,
+    ESC,
+    SGR_RESET,
+    SGR_BOLD,
+    SGR_FG_RED,
+    SGR_BG_GREEN,
+)
 
 
 @pytest.fixture
@@ -11,8 +20,8 @@ def screen():
     """Return a mock Screen object with necessary attributes."""
     screen = Mock(spec=Terminal)
     screen.current_style = Style()  # Initialize with a real Style object
-    screen.width = 80
-    screen.height = 24
+    screen.width = DEFAULT_TERMINAL_WIDTH
+    screen.height = DEFAULT_TERMINAL_HEIGHT
     screen.cursor_x = 0
     screen.cursor_y = 0
     screen.scroll_top = 0
@@ -34,12 +43,12 @@ def test_sgr_reset_all_attributes(screen):
     """Test SGR 0 (Reset all attributes)."""
     parser = Parser(screen)
     # Set some attributes first
-    parser.feed("\x1b[1;31;42m")  # Bold, red foreground, green background
+    parser.feed(f"{ESC}[{SGR_BOLD};{SGR_FG_RED};{SGR_BG_GREEN}m")  # Bold, red foreground, green background
     assert screen.current_style.bold is True
     assert screen.current_style.color == Color.from_ansi(1)
     assert screen.current_style.bgcolor == Color.from_ansi(2)
 
-    parser.feed("\x1b[0m")  # Reset all attributes
+    parser.feed(f"{ESC}[{SGR_RESET}m")  # Reset all attributes
     assert screen.current_style == Style()
 
 

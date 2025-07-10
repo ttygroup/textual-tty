@@ -1,4 +1,5 @@
 from textual_tty.terminal import Terminal
+from textual_tty import constants
 from rich.text import Text, Span
 from rich.style import Style
 
@@ -157,7 +158,7 @@ def test_clear_screen():
     screen.set_cursor(5, 2)  # Cursor at Line 2, char 5
 
     # Mode 0: Clear from cursor to end of screen
-    screen.clear_screen(0)
+    screen.clear_screen(constants.ERASE_FROM_CURSOR_TO_END)
     assert screen.current_buffer.lines[0] == Text("Line 0", spans=[Span(0, 6, Style(color="red"))])
     assert screen.current_buffer.lines[1] == Text("Line 1", spans=[Span(0, 6, Style(color="red"))])
     assert screen.current_buffer.lines[2] == Text("Line      ", spans=[Span(0, 5, Style(color="red"))])
@@ -170,7 +171,7 @@ def test_clear_screen():
     screen.set_cursor(5, 2)
 
     # Mode 1: Clear from beginning of screen to cursor
-    screen.clear_screen(1)
+    screen.clear_screen(constants.ERASE_FROM_START_TO_CURSOR)
     _compare_text_with_spans(screen.current_buffer.lines[0], Text(""))
     _compare_text_with_spans(screen.current_buffer.lines[1], Text(""))
     _compare_text_with_spans(
@@ -185,7 +186,7 @@ def test_clear_screen():
     screen.set_cursor(5, 2)
 
     # Mode 2: Clear entire screen
-    screen.clear_screen(2)
+    screen.clear_screen(constants.ERASE_ALL)
     for y in range(5):
         _compare_text_with_spans(screen.current_buffer.lines[y], Text(""))
 
@@ -196,7 +197,7 @@ def test_clear_line():
     screen.set_cursor(5, 0)
 
     # Mode 0: Clear from cursor to end of line
-    screen.clear_line(0)
+    screen.clear_line(constants.ERASE_FROM_CURSOR_TO_END)
     expected_line_0 = Text("ABCDE", spans=[Span(0, 5, Style(color="red"))])
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line_0)
 
@@ -205,7 +206,7 @@ def test_clear_line():
     screen.set_cursor(5, 0)
 
     # Mode 1: Clear from beginning of line to cursor
-    screen.clear_line(1)
+    screen.clear_line(constants.ERASE_FROM_START_TO_CURSOR)
     expected_line_1 = Text("     FGHIJ", spans=[Span(5, 10, Style(color="red"))])
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line_1)
 
@@ -214,7 +215,7 @@ def test_clear_line():
     screen.set_cursor(5, 0)
 
     # Mode 2: Clear entire line
-    screen.clear_line(2)
+    screen.clear_line(constants.ERASE_ALL)
     expected_line_2 = Text("")
     _compare_text_with_spans(screen.current_buffer.lines[0], expected_line_2)
 

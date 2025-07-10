@@ -1,9 +1,10 @@
 from textual_tty.terminal import Terminal
 from rich.text import Text
+from textual_tty.constants import DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_HEIGHT, DECAWM_AUTOWRAP, IRM_INSERT_REPLACE
 
 
 def test_resize():
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     screen.cursor_x = 70
     screen.cursor_y = 20
 
@@ -23,7 +24,7 @@ def test_resize():
 
 
 def test_alternate_screen_switching():
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     assert not screen.in_alt_screen
     assert screen.current_buffer == screen.primary_buffer
 
@@ -70,19 +71,19 @@ def test_set_and_clear_modes():
     screen = Terminal(width=80, height=24)
 
     # Test setting a private mode
-    screen.set_mode(7, private=True)
+    screen.set_mode(DECAWM_AUTOWRAP, private=True)
     assert screen.auto_wrap
 
     # Test clearing a private mode
-    screen.clear_mode(7, private=True)
+    screen.clear_mode(DECAWM_AUTOWRAP, private=True)
     assert not screen.auto_wrap
 
     # Test setting a non-private mode
-    screen.set_mode(4, private=False)
+    screen.set_mode(IRM_INSERT_REPLACE, private=False)
     assert screen.insert_mode
 
     # Test clearing a non-private mode
-    screen.clear_mode(4, private=False)
+    screen.clear_mode(IRM_INSERT_REPLACE, private=False)
     assert not screen.insert_mode
 
     # Test an unknown mode

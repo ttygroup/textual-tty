@@ -3,6 +3,12 @@ from unittest.mock import Mock
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
 from rich.style import Style
+from textual_tty.constants import (
+    DEFAULT_TERMINAL_WIDTH,
+    DEFAULT_TERMINAL_HEIGHT,
+    DECAWM_AUTOWRAP,
+    ESC,
+)
 
 
 @pytest.fixture
@@ -10,8 +16,8 @@ def screen():
     """Return a mock Screen object with necessary attributes."""
     screen = Mock(spec=Terminal)
     screen.current_style = Style()  # Initialize with a real Style object
-    screen.width = 80
-    screen.height = 24
+    screen.width = DEFAULT_TERMINAL_WIDTH
+    screen.height = DEFAULT_TERMINAL_HEIGHT
     screen.cursor_x = 0
     screen.cursor_y = 0
     screen.scroll_top = 0
@@ -34,11 +40,11 @@ def test_csi_sm_rm_private_autowrap(screen):
     parser = Parser(screen)
 
     # Set auto-wrap mode
-    parser.feed("\x1b[?7h")
+    parser.feed(f"{ESC}[?{DECAWM_AUTOWRAP}h")
     assert screen.auto_wrap is True
 
     # Reset auto-wrap mode
-    parser.feed("\x1b[?7l")
+    parser.feed(f"{ESC}[?{DECAWM_AUTOWRAP}l")
     assert screen.auto_wrap is False
 
 

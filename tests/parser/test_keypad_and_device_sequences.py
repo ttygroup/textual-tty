@@ -2,6 +2,7 @@
 
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import ESC, DECKPAM_APPLICATION_KEYPAD
 
 
 def render_terminal_to_string(terminal: Terminal) -> str:
@@ -21,7 +22,7 @@ def test_keypad_application_mode():
     assert not terminal.application_keypad
 
     # Send DECKPAM sequence
-    parser.feed("\x1b=")
+    parser.feed(f"{ESC}=")
 
     # Should now be in application keypad mode
     assert terminal.application_keypad
@@ -33,7 +34,7 @@ def test_keypad_normal_mode():
     parser = Parser(terminal)
 
     # Start in application mode
-    terminal.set_mode(1, True)  # Application keypad mode
+    terminal.set_mode(DECKPAM_APPLICATION_KEYPAD, True)  # Application keypad mode
     assert terminal.application_keypad
 
     # Send DECKPNM sequence

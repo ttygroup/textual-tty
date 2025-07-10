@@ -2,6 +2,10 @@
 
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import (
+    DEFAULT_TERMINAL_WIDTH,
+    DEFAULT_TERMINAL_HEIGHT,
+)
 
 
 def render_terminal_to_string(terminal: Terminal) -> str:
@@ -14,7 +18,7 @@ def render_terminal_to_string(terminal: Terminal) -> str:
 
 def test_osc_window_title():
     """Test OSC sequence for setting window title."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # OSC 0 sets window title
@@ -30,7 +34,7 @@ def test_osc_window_title():
 
 def test_osc_window_title_with_text():
     """Test OSC sequence followed by regular text."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # OSC sequence followed by text
@@ -52,7 +56,7 @@ def test_ps1_osc_title_sequence():
     # \[\033[00m\] - Reset
     # \[\033[01;34m\] - Blue bold
 
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # Simulate a typical PS1 prompt output

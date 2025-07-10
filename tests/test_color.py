@@ -6,6 +6,7 @@ import pytest
 from textual.color import Color
 from rich.color import Color as RichColor
 from textual_tty import color as color_module
+from textual_tty.color import COLOR_PALETTE_SIZE
 
 # --- Tests for parse_color() ---
 
@@ -76,8 +77,8 @@ def test_parse_color_handles_invalid_color_n_format():
 
 def test_palette_init_creates_correctly_sized_empty_list():
     """`palette_init` should return a list of 256 None values."""
-    expected_size = 256
-    expected_content = [None] * 256
+    expected_size = COLOR_PALETTE_SIZE
+    expected_content = [None] * COLOR_PALETTE_SIZE
 
     actual = color_module.palette_init()
 

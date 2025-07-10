@@ -2,11 +2,12 @@
 
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_HEIGHT
 
 
 def test_csi_p_device_status():
     """Test CSI p sequence (device status query)."""
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(screen)
 
     # CSI p is a device status query - should be consumed without error
@@ -19,7 +20,7 @@ def test_csi_p_device_status():
 
 def test_esc_greater_than_keypad_numeric_mode():
     """Test ESC > sequence (DECKPNM - keypad numeric mode)."""
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(screen)
 
     # ESC > sets keypad to numeric mode - should be consumed without error
@@ -32,7 +33,7 @@ def test_esc_greater_than_keypad_numeric_mode():
 
 def test_keypad_sequences_with_text():
     """Test keypad sequences followed by regular text."""
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(screen)
 
     # Send keypad sequences followed by text
@@ -52,7 +53,7 @@ def test_keypad_sequences_with_text():
 
 def test_csi_cursor_save_restore():
     """Test CSI s/u cursor save/restore sequences."""
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(screen)
 
     # Move cursor and save position
@@ -72,7 +73,7 @@ def test_csi_cursor_save_restore():
 
 def test_csi_privacy_message():
     """Test CSI ^ sequence (Privacy Message)."""
-    screen = Terminal(width=80, height=24)
+    screen = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(screen)
 
     # CSI ^ with parameter should be consumed

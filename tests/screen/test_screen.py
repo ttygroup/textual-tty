@@ -2,6 +2,11 @@ from rich.style import Style
 from rich.text import Text, Span
 
 from textual_tty.terminal import Terminal
+from textual_tty.constants import (
+    ERASE_FROM_CURSOR_TO_END,
+    ERASE_FROM_START_TO_CURSOR,
+    ERASE_ALL,
+)
 
 
 def test_clear_rect():
@@ -145,7 +150,7 @@ def test_insert_characters_at_end_of_line():
 def test_clear_line_invalid_cursor():
     screen = Terminal(width=10, height=5)
     screen.cursor_y = 10  # Invalid cursor position
-    screen.clear_line(0)
+    screen.clear_line(ERASE_FROM_CURSOR_TO_END)
     # Should not raise an error and do nothing
 
 
@@ -396,7 +401,7 @@ def test_clear_line_from_cursor_to_end():
     screen.current_buffer.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="red"))])
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.clear_line(0)
+    screen.clear_line(ERASE_FROM_CURSOR_TO_END)
     expected_line = Text("01234", spans=[Span(0, 5, Style(color="red"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -406,7 +411,7 @@ def test_clear_line_from_beginning_to_cursor():
     screen.current_buffer.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="red"))])
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.clear_line(1)
+    screen.clear_line(ERASE_FROM_START_TO_CURSOR)
     expected_line = Text("     56789", spans=[Span(5, 10, Style(color="red"))])
     assert screen.current_buffer.lines[0] == expected_line
 
@@ -415,7 +420,7 @@ def test_clear_line_entire_line():
     screen = Terminal(width=10, height=5)
     screen.current_buffer.lines[0] = Text("0123456789", spans=[Span(0, 10, Style(color="red"))])
     screen.cursor_y = 0
-    screen.clear_line(2)
+    screen.clear_line(ERASE_ALL)
     expected_line = Text("")
     assert screen.current_buffer.lines[0] == expected_line
 

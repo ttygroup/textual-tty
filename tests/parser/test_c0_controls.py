@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import BS, HT
 
 
 @pytest.fixture
@@ -13,7 +14,7 @@ def screen():
 def test_backspace(screen):
     """Test that backspace moves the cursor back."""
     parser = Parser(screen)
-    parser.feed("\x08")
+    parser.feed(BS)
     screen.backspace.assert_called_once()
 
 
@@ -22,7 +23,7 @@ def test_horizontal_tab(screen):
     parser = Parser(screen)
     screen.cursor_x = 2
     screen.width = 80
-    parser.feed("\x09")
+    parser.feed(HT)
     assert screen.cursor_x == 8
 
 

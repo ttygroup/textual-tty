@@ -2,6 +2,7 @@
 
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_HEIGHT
 
 
 def render_terminal_to_string(terminal: Terminal) -> str:
@@ -14,7 +15,7 @@ def render_terminal_to_string(terminal: Terminal) -> str:
 
 def test_unicode_emoji():
     """Test 4-byte Unicode emoji character."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # Test with house emoji 🏠 (U+1F3E0)
@@ -31,7 +32,7 @@ def test_unicode_emoji():
 
 def test_unicode_various():
     """Test various Unicode characters."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # Test various Unicode: ASCII, Latin-1, CJK, Emoji
@@ -52,7 +53,7 @@ def test_unicode_various():
 
 def test_unicode_box_drawing():
     """Test Unicode box drawing characters."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # Common box drawing characters used in terminal UIs
@@ -66,7 +67,7 @@ def test_unicode_box_drawing():
 
 def test_malformed_utf8():
     """Test handling of malformed UTF-8 sequences."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # Invalid UTF-8 sequence (already decoded by terminal widget)
@@ -83,7 +84,7 @@ def test_malformed_utf8():
 
 def test_utf8_split_across_feeds():
     """Test UTF-8 sequence split across multiple feed() calls."""
-    terminal = Terminal(width=80, height=24)
+    terminal = Terminal(width=DEFAULT_TERMINAL_WIDTH, height=DEFAULT_TERMINAL_HEIGHT)
     parser = Parser(terminal)
 
     # UTF-8 already decoded by terminal widget, so no need to test split sequences

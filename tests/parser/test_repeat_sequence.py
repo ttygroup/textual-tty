@@ -2,6 +2,7 @@
 
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
+from textual_tty.constants import ESC
 
 
 def test_rep_basic():
@@ -11,7 +12,7 @@ def test_rep_basic():
 
     # Write a character, then repeat it
     parser.feed("A")
-    parser.feed("\x1b[5b")  # REP 5
+    parser.feed(f"{ESC}[5b")  # REP 5
 
     # Should have "AAAAAA" (1 original + 5 repeats)
     line = terminal.current_buffer.lines[0]
@@ -26,17 +27,17 @@ def test_rep_with_different_counts():
 
     # Test count = 1
     parser.feed("X")
-    parser.feed("\x1b[1b")
+    parser.feed(f"{ESC}[1b")
     assert terminal.current_buffer.lines[0].plain[:2] == "XX"
 
     # Test count = 10
     parser.feed("=")
-    parser.feed("\x1b[10b")
+    parser.feed(f"{ESC}[10b")
     assert terminal.current_buffer.lines[0].plain[2:13] == "==========="
 
     # Test count = 0 (should do nothing)
     pos = terminal.cursor_x
-    parser.feed("\x1b[0b")
+    parser.feed(f"{ESC}[0b")
     assert terminal.cursor_x == pos
 
 
@@ -46,7 +47,7 @@ def test_rep_with_no_parameter():
     parser = Parser(terminal)
 
     parser.feed("Z")
-    parser.feed("\x1b[b")  # No parameter, should repeat once
+    parser.feed(f"{ESC}[b")  # No parameter, should repeat once
 
     assert terminal.current_buffer.lines[0].plain[:2] == "ZZ"
 
@@ -57,9 +58,9 @@ def test_rep_with_styled_character():
     parser = Parser(terminal)
 
     # Set red color, write char, then repeat
-    parser.feed("\x1b[31m")  # Red
+    parser.feed(f"{ESC}[31m")  # Red
     parser.feed("*")
-    parser.feed("\x1b[3b")  # Repeat 3 times
+    parser.feed(f"{ESC}[3b")  # Repeat 3 times
 
     line = terminal.current_buffer.lines[0]
     assert line.plain[:4] == "****"
@@ -75,9 +76,9 @@ def test_rep_at_line_wrap():
     parser = Parser(terminal)
 
     # Move to near end of line
-    parser.feed("\x1b[8G")  # Column 8 (0-based = position 7)
+    parser.feed(f"{ESC}[8G")  # Column 8 (0-based = position 7)
     parser.feed("X")  # Now at position 8
-    parser.feed("\x1b[5b")  # Try to repeat 5 times
+    parser.feed(f"{ESC}[5b")  # Try to repeat 5 times
 
     # With auto_wrap, REP continues past line width
     # The cursor_x increases beyond terminal width
@@ -94,7 +95,7 @@ def test_rep_with_no_previous_character():
     parser = Parser(terminal)
 
     # REP without printing anything first
-    parser.feed("\x1b[5b")
+    parser.feed(f"{ESC}[5b")
 
     # Should repeat the default character (space)
     assert terminal.current_buffer.lines[0].plain[:5] == "     "
@@ -106,8 +107,8 @@ def test_rep_after_control_sequence():
     parser = Parser(terminal)
 
     parser.feed("A")
-    parser.feed("\x1b[2C")  # Move cursor forward
-    parser.feed("\x1b[3b")  # Repeat last char (A) 3 times
+    parser.feed(f"{ESC}[2C")  # Move cursor forward
+    parser.feed(f"{ESC}[3b")  # Repeat last char (A) 3 times
 
     line = terminal.current_buffer.lines[0].plain
     assert line[0] == "A"
@@ -121,7 +122,7 @@ def test_rep_complex_sequence():
 
     # Simulate drawing a line
     parser.feed("─")
-    parser.feed("\x1b[49b")  # Repeat 49 times
+    parser.feed(f"{ESC}[49b")  # Repeat 49 times
 
     line = terminal.current_buffer.lines[0].plain
     assert all(c == "─" for c in line[:50])
