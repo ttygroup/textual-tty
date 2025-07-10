@@ -120,8 +120,8 @@ class UnixPTY:
         process_env.update(
             {
                 "TERM": "xterm-256color",
-                "LINES": str(self.rows),
-                "COLUMNS": str(self.cols),
+                # Don't set LINES/COLUMNS - let process discover size via ioctl
+                # Setting these prevents ncurses from responding to SIGWINCH properly
             }
         )
 
@@ -267,8 +267,8 @@ class WindowsPTY:
         os.environ.update(
             {
                 "TERM": "xterm-256color",
-                "LINES": str(self.rows),
-                "COLUMNS": str(self.cols),
+                # Don't set LINES/COLUMNS - let process discover size via ioctl
+                # Setting these prevents ncurses from responding to SIGWINCH properly
             }
         )
 

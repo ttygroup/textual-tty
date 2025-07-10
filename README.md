@@ -48,8 +48,9 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] make `framebuffer.py`
     - [ ] choose a backend
   - [ ] asciinema streaming -> terminal web
-- [ ] resizing oddities
-  - [ ] htop doesn't resize properly
+- [x] resizing oddities
+  - [x] htop doesn't resize properly
+    - [caused by $LINES, $COLS in ncurses](https://linux.die.net/man/3/resize_term)
 - [ ] performance improvements
   - [ ] reduce draw calls
 - [ ] scrollback buffer
@@ -60,7 +61,6 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] blank background to end of line
   - [ ] corruption in stream
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
-  - [x] window titles not being set
 - [ ] testing
   - [ ] move tests
     - [ ] integration ./tests/integration
