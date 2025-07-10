@@ -17,6 +17,7 @@ from .buffer import Buffer
 from .parser import Parser
 from .pty_handler import create_pty
 from .log import info, warning, exception
+from . import constants
 
 from rich.text import Text
 from rich.style import Style
@@ -176,9 +177,9 @@ class Terminal:
             self.cursor_y -= 1
             self.cursor_x = self.width - 1
 
-    def clear_screen(self, mode: int = 0) -> None:
+    def clear_screen(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear screen."""
-        if mode == 0:  # Clear from cursor to end of screen
+        if mode == constants.ERASE_FROM_CURSOR_TO_END:  # Clear from cursor to end of screen
             # Clear current line from cursor to end, padding to full width
             if 0 <= self.cursor_y < len(self.current_buffer.lines):
                 line = self.current_buffer.lines[self.cursor_y]
@@ -194,18 +195,18 @@ class Terminal:
             # Clear all lines below cursor
             for y in range(self.cursor_y + 1, min(self.height, len(self.current_buffer.lines))):
                 self.current_buffer.lines[y] = Text()
-        elif mode == 1:  # Clear from beginning of screen to cursor
+        elif mode == constants.ERASE_FROM_START_TO_CURSOR:  # Clear from beginning of screen to cursor
             # Clear all lines above cursor
             for y in range(min(self.cursor_y, len(self.current_buffer.lines))):
                 self.current_buffer.lines[y] = Text()
             # Clear current line from beginning to cursor
-            self.clear_line(1)
-        elif mode == 2:  # Clear entire screen
+            self.clear_line(constants.ERASE_FROM_START_TO_CURSOR)
+        elif mode == constants.ERASE_ALL:  # Clear entire screen
             # Clear all lines in-place to preserve buffer reference
             for y in range(len(self.current_buffer.lines)):
                 self.current_buffer.lines[y] = Text()
 
-    def clear_line(self, mode: int = 0) -> None:
+    def clear_line(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear line."""
         self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x)
 
@@ -225,26 +226,26 @@ class Terminal:
         """Set terminal mode."""
         if private:
             # DECSET private modes
-            if mode == 7:  # Auto wrap
+            if mode == constants.DECAWM_AUTOWRAP:  # Auto wrap
                 self.auto_wrap = value
-            elif mode == 25:  # Cursor visibility
+            elif mode == constants.DECTCEM_SHOW_CURSOR:  # Cursor visibility
                 self.cursor_visible = value
-            elif mode == 1000:  # Basic mouse tracking
+            elif mode == constants.MOUSE_TRACKING_BASIC:  # Basic mouse tracking
                 self.mouse_tracking = value
-            elif mode == 1002:  # Button event tracking
+            elif mode == constants.MOUSE_TRACKING_BUTTON_EVENT:  # Button event tracking
                 self.mouse_button_tracking = value
-            elif mode == 1003:  # Any event tracking (movement)
+            elif mode == constants.MOUSE_TRACKING_ANY_EVENT:  # Any event tracking (movement)
                 self.mouse_any_tracking = value
-            elif mode == 1006:  # SGR mouse mode
+            elif mode == constants.MOUSE_SGR_MODE:  # SGR mouse mode
                 self.mouse_sgr_mode = value
-            elif mode == 1015:  # Extended mouse mode
+            elif mode == constants.MOUSE_EXTENDED_MODE:  # Extended mouse mode
                 self.mouse_extended_mode = value
             # Add other private modes as needed
         else:
             # ANSI modes
-            if mode == 4:  # Insert mode
+            if mode == constants.IRM_INSERT_REPLACE:  # Insert mode
                 self.insert_mode = value
-            elif mode == 1:  # Application keypad mode
+            elif mode == constants.DECKPAM_APPLICATION_KEYPAD:  # Application keypad mode
                 self.application_keypad = value
             # Add other ANSI modes as needed
 
