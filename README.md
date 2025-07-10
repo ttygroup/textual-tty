@@ -57,6 +57,7 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
   - [x] text input issues
     - This was caused by us not supporting all modes.
     - [x] implement keymapping that works inside and outside textual
+  - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
 - [x] fix terminal bell
 - [x] replace magic numbers with constants
 - [ ] testing
