@@ -17,6 +17,7 @@ from textual.message import Message
 
 from ..terminal import Terminal
 from ..log import debug
+from .. import constants
 
 
 class TextualTerminal(Terminal, Widget):
@@ -229,9 +230,9 @@ class TextualTerminal(Terminal, Widget):
         x = event.x + 1  # Terminal coordinates are 1-based
         y = event.y + 1
 
-        # Send SGR mouse movement event (button 35 = movement, no buttons pressed)
+        # Send SGR mouse movement event
         if self.mouse_sgr_mode:
-            mouse_seq = f"\033[<35;{x};{y}M"
+            mouse_seq = f"{constants.ESC}[<{constants.MOUSE_BUTTON_MOVEMENT};{x};{y}M"
             self.pty.write(mouse_seq.encode("utf-8"))
 
     async def on_mouse_down(self, event) -> None:
@@ -243,21 +244,25 @@ class TextualTerminal(Terminal, Widget):
         x = event.x + 1
         y = event.y + 1
 
-        # Map mouse buttons (0=left, 1=middle, 2=right)
-        button_map = {"left": 0, "middle": 1, "right": 2}
-        button = button_map.get(event.button, 0)
+        # Map mouse buttons
+        button_map = {
+            "left": constants.MOUSE_BUTTON_LEFT,
+            "middle": constants.MOUSE_BUTTON_MIDDLE,
+            "right": constants.MOUSE_BUTTON_RIGHT,
+        }
+        button = button_map.get(event.button, constants.MOUSE_BUTTON_LEFT)
 
         # Add modifier flags
         if event.shift:
-            button |= 4
+            button |= constants.MOUSE_MOD_SHIFT
         if event.meta:
-            button |= 8
+            button |= constants.MOUSE_MOD_META
         if event.ctrl:
-            button |= 16
+            button |= constants.MOUSE_MOD_CTRL
 
         # Send SGR mouse press event
         if self.mouse_sgr_mode:
-            mouse_seq = f"\033[<{button};{x};{y}M"
+            mouse_seq = f"{constants.ESC}[<{button};{x};{y}M"
             self.pty.write(mouse_seq.encode("utf-8"))
 
     async def on_mouse_up(self, event) -> None:
@@ -270,20 +275,24 @@ class TextualTerminal(Terminal, Widget):
         y = event.y + 1
 
         # Map mouse buttons
-        button_map = {"left": 0, "middle": 1, "right": 2}
-        button = button_map.get(event.button, 0)
+        button_map = {
+            "left": constants.MOUSE_BUTTON_LEFT,
+            "middle": constants.MOUSE_BUTTON_MIDDLE,
+            "right": constants.MOUSE_BUTTON_RIGHT,
+        }
+        button = button_map.get(event.button, constants.MOUSE_BUTTON_LEFT)
 
         # Add modifier flags
         if event.shift:
-            button |= 4
+            button |= constants.MOUSE_MOD_SHIFT
         if event.meta:
-            button |= 8
+            button |= constants.MOUSE_MOD_META
         if event.ctrl:
-            button |= 16
+            button |= constants.MOUSE_MOD_CTRL
 
         # Send SGR mouse release event (lowercase 'm')
         if self.mouse_sgr_mode:
-            mouse_seq = f"\033[<{button};{x};{y}m"
+            mouse_seq = f"{constants.ESC}[<{button};{x};{y}m"
             self.pty.write(mouse_seq.encode("utf-8"))
 
     async def on_key(self, event) -> None:
@@ -339,31 +348,31 @@ class TextualTerminal(Terminal, Widget):
 
         # Special keys
         key_map = {
-            "enter": "\r",
-            "tab": "\t",
-            "escape": "\x1b",
-            "backspace": "\x7f",
-            "delete": "\x1b[3~",
-            "up": "\x1b[A",
-            "down": "\x1b[B",
-            "right": "\x1b[C",
-            "left": "\x1b[D",
-            "home": "\x1b[H",
-            "end": "\x1b[F",
-            "page_up": "\x1b[5~",
-            "page_down": "\x1b[6~",
-            "f1": "\x1bOP",
-            "f2": "\x1bOQ",
-            "f3": "\x1bOR",
-            "f4": "\x1bOS",
-            "f5": "\x1b[15~",
-            "f6": "\x1b[17~",
-            "f7": "\x1b[18~",
-            "f8": "\x1b[19~",
-            "f9": "\x1b[20~",
-            "f10": "\x1b[21~",
-            "f11": "\x1b[23~",
-            "f12": "\x1b[24~",
+            "enter": constants.CR,
+            "tab": constants.HT,
+            "escape": constants.ESC,
+            "backspace": constants.DEL,
+            "delete": f"{constants.ESC}[3~",
+            "up": f"{constants.ESC}[A",
+            "down": f"{constants.ESC}[B",
+            "right": f"{constants.ESC}[C",
+            "left": f"{constants.ESC}[D",
+            "home": f"{constants.ESC}[H",
+            "end": f"{constants.ESC}[F",
+            "page_up": f"{constants.ESC}[5~",
+            "page_down": f"{constants.ESC}[6~",
+            "f1": f"{constants.ESC}OP",
+            "f2": f"{constants.ESC}OQ",
+            "f3": f"{constants.ESC}OR",
+            "f4": f"{constants.ESC}OS",
+            "f5": f"{constants.ESC}[15~",
+            "f6": f"{constants.ESC}[17~",
+            "f7": f"{constants.ESC}[18~",
+            "f8": f"{constants.ESC}[19~",
+            "f9": f"{constants.ESC}[20~",
+            "f10": f"{constants.ESC}[21~",
+            "f11": f"{constants.ESC}[23~",
+            "f12": f"{constants.ESC}[24~",
             "space": " ",
         }
         return key_map.get(key, "")
@@ -372,4 +381,4 @@ class TextualTerminal(Terminal, Widget):
         """Action handler for keys that should go to terminal."""
         # This will be called for tab key, send it to terminal
         if self.pty:
-            self.pty.write(b"\t")
+            self.pty.write(constants.HT.encode("utf-8"))
