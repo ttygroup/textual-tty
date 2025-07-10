@@ -590,6 +590,10 @@ class Parser:
             except StopIteration:
                 break
 
+            # Skip None parameters (empty params in sequence)
+            if param is None:
+                continue
+
             if param == 0:
                 # Reset all attributes
                 self.current_style = Style()
