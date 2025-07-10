@@ -1,14 +1,14 @@
 # Claude Development Notes
 
-## Code Style Guidelines
+## Code Style Requirements
 
-- **NEVER put imports inside functions** - all imports should be at the top of the file
-- Follow existing code patterns and conventions
-- Maintain consistency with Rich Text span handling
+- **NEVER put imports inside functions** - top of the file only.
+- Always ask for explicit permission before adding legacy fallback methods.
+- By default, old methods are removed. This is a pre-alpha release.
 
 ## Testing
 
-Run tests with: `python -m pytest`
+Run tests with: `make test`
 
 ## Key Implementation Notes
 
