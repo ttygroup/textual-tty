@@ -49,7 +49,7 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 - [ ] scrollback buffer
   - [ ] rewrite app so we have consistent + performant buffer class
   - [ ] understand text wrapping
-  - [ ] scrollbar support
+  - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
   - [x] clear + flip buffer = restore before clear
@@ -62,7 +62,7 @@ Do wtf you want, but don't blame me if it rips a hole in your trousers.
 - [x] replace magic numbers with constants
 - [ ] testing
   - [ ] move tests
-    - [ ] unit tests to ./tests/unit
+    - [x] unit tests to ./tests/unit
     - [ ] integration ./tests/integration
     - [ ] comparison scripts ./tests/integration/scripts
   - [ ] more coverage
