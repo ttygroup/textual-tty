@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from textual.app import ComposeResult
-from textual.widgets import RichLog
 from textual.widget import Widget
 from textual.reactive import reactive
 from textual.message import Message
@@ -18,6 +17,7 @@ from textual.message import Message
 from ..terminal import Terminal
 from ..log import debug
 from .. import constants
+from .terminal_scroll_view import TerminalScrollView
 
 
 class TextualTerminal(Terminal, Widget):
@@ -37,7 +37,7 @@ class TextualTerminal(Terminal, Widget):
         color: white;
     }
 
-    TextualTerminal > RichLog {
+    TextualTerminal > TerminalScrollView {
         background: black;
         color: white;
         border: none;
@@ -54,6 +54,7 @@ class TextualTerminal(Terminal, Widget):
     command: str = reactive("/bin/bash", always_update=True)
     width_chars: int = reactive(80, always_update=True)
     height_chars: int = reactive(24, always_update=True)
+    current_buffer = reactive(None, always_update=True)
 
     def __init__(
         self,
@@ -74,11 +75,14 @@ class TextualTerminal(Terminal, Widget):
         self.width_chars = width
         self.height_chars = height
 
-        # RichLog widget for display
-        self.rich_log: Optional[RichLog] = None
+        # Terminal scroll view for display
+        self.terminal_view: Optional[TerminalScrollView] = None
 
         # Set up async PTY handling
         self.set_pty_data_callback(self._handle_pty_data)
+
+        # Initialize current_buffer reactive
+        self.current_buffer = self.primary_buffer
 
     # Message classes for events
     class PTYDataMessage(Message):
@@ -114,15 +118,17 @@ class TextualTerminal(Terminal, Widget):
 
         pass
 
+    class BufferSwitched(Message):
+        """Posted when switching between primary and alternate buffers."""
+
+        def __init__(self, buffer_name: str) -> None:
+            self.buffer_name = buffer_name
+            super().__init__()
+
     def compose(self) -> ComposeResult:
         """Compose the terminal widget."""
-        self.rich_log = RichLog(
-            highlight=False,
-            markup=False,
-            wrap=False,
-            auto_scroll=False,
-        )
-        yield self.rich_log
+        self.terminal_view = TerminalScrollView()
+        yield self.terminal_view
 
     async def on_mount(self) -> None:
         """Handle widget mounting."""
@@ -146,17 +152,17 @@ class TextualTerminal(Terminal, Widget):
         await self._update_display()
 
     async def _update_display(self) -> None:
-        """Update the RichLog display with current screen content."""
-        if self.rich_log is None:
+        """Update the TerminalScrollView display with current screen content."""
+        if self.terminal_view is None:
             return
 
         # Get the current screen content as Rich renderables
         content = self.get_content()
 
-        # Clear and update the display
-        self.rich_log.clear()
-        for line in content:
-            self.rich_log.write(line)
+        # Update the scroll view
+        self.terminal_view.update_content(content)
+        self.terminal_view.set_cursor_position(self.cursor_x, self.cursor_y)
+        self.terminal_view.set_cursor_visible(self.cursor_visible)
 
     def stop_process(self) -> None:
         """Override to post message when process exits."""
@@ -188,6 +194,12 @@ class TextualTerminal(Terminal, Widget):
     def watch_icon_title(self, old_icon_title: str, new_icon_title: str) -> None:
         """Called when icon title changes."""
         self.post_message(self.IconTitleChanged(new_icon_title))
+
+    def watch_current_buffer(self, old_buffer, new_buffer) -> None:
+        """Called when current buffer changes."""
+        # Determine buffer name
+        buffer_name = "alternate" if new_buffer is self.alt_buffer else "primary"
+        self.post_message(self.BufferSwitched(buffer_name))
 
     async def on_resize(self, event) -> None:
         """Handle widget resize events from Textual."""

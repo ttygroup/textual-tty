@@ -52,10 +52,10 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [x] htop doesn't resize properly
     - [caused by $LINES, $COLS in ncurses](https://linux.die.net/man/3/resize_term)
 - [ ] performance improvements
-  - [ ] reduce draw calls
+  - [x] reduce draw calls
 - [ ] scrollback buffer
   - [ ] rewrite app so we have consistent + performant buffer class
-  - [ ] understand text wrapping
+  - [x] understand text wrapping
   - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
@@ -69,7 +69,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [ ] code code of of redundancy redundancy
 - [ ] add terminal visuals
-  - [ ] text cursor
+  - [x] text cursor
   - [ ] mouse cursor (disabled by default)
   - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
 - [ ] Theme support
