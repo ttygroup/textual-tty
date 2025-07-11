@@ -59,7 +59,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
-  - [ ] corruption in stream
+  - [x] corruption in stream
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
 - [ ] testing
   - [ ] move tests
