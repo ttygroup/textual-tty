@@ -6,3 +6,4 @@ dist
 coverage.json
 *.log
 docs/pydoc
+*.txt
