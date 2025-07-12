@@ -93,8 +93,12 @@ class TerminalScrollView(ScrollView):
         # Pad to width if needed
         current_width = min(len(row), self.size.width)
         if current_width < self.size.width:
+            # Reset all attributes for padding (including background)
             parts.append(reset_code())
             parts.append(" " * (self.size.width - current_width))
+
+        # Always end with a reset to prevent bleeding to next line
+        parts.append(reset_code())
 
         # Create Rich Text from ANSI string and convert to segments
         ansi_string = "".join(parts)

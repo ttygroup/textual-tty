@@ -205,3 +205,15 @@ def get_cursor_code() -> str:
 def get_clear_line_code() -> str:
     """Get ANSI code to clear to end of line."""
     return "\033[K"
+
+
+@lru_cache(maxsize=1)
+def reset_foreground_code() -> str:
+    """Get ANSI code to reset foreground color only."""
+    return "\033[39m"
+
+
+@lru_cache(maxsize=1)
+def reset_text_attributes() -> str:
+    """Reset text attributes but preserve background color."""
+    return "\033[0;22;23;24;25;27;28;29;39m"

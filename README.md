@@ -49,15 +49,15 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] choose a backend
   - [ ] asciinema streaming -> terminal web
 - [ ] performance improvements
-  - [ ] rewrite using ANSI buffer grid
+  - [x] rewrite using ANSI buffer grid
   - [ ] parse with regex over large buffer sizes
-  - [ ] lazily draw the outputs, render to Rich at the last moment
+  - [x] lazily draw the outputs, render to Rich at the last moment
 - [ ] scrollback buffer
   - [ ] rewrite app so we have consistent + performant buffer class
   - [ ] scrollbar support when used
 - [ ] bugs
-  - [ ] blank background to end of line
-    - [ ] Move away from rich
+  - [x] blank background to end of line
+    - [x] Move away from rich
   - [ ] corruption in stream
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
 - [ ] testing
@@ -66,11 +66,11 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] comparison scripts ./tests/integration/scripts
     - [x] performance ./test/performance
   - [ ] more coverage
-  - [ ] diagnostic tools + performance counters
+  - [x] performance counters
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [ ] code code of of redundancy redundancy
 - [ ] add terminal visuals
-  - [ ] mouse cursor (disabled by default)
+  - [x] mouse cursor (disabled by default)
   - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
 - [ ] Theme support
   - [ ] base terminal using config + themes
