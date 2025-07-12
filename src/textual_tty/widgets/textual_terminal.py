@@ -244,10 +244,14 @@ class TextualTerminal(Terminal, Widget):
         self.input_mouse(
             x=event.x + 1,
             y=event.y + 1,
-            button=constants.MOUSE_BUTTON_MOVEMENT,  # Not relevant for move
+            button=constants.MOUSE_BUTTON_MOVEMENT,
             event_type="move",
             modifiers=self._get_modifiers(event),
         )
+
+        # Trigger display update for mouse cursor
+        if self.show_mouse:
+            await self._update_display()
 
     async def on_mouse_down(self, event) -> None:
         """Handle mouse button press events."""
@@ -288,6 +292,36 @@ class TextualTerminal(Terminal, Widget):
             event_type="release",
             modifiers=self._get_modifiers(event),
         )
+
+    async def on_mouse_scroll_down(self, event) -> None:
+        """Handle mouse wheel scroll down events."""
+        if self.pty is None:
+            return
+
+        # Check if mouse tracking is enabled
+        if self.mouse_tracking or self.mouse_button_tracking or self.mouse_any_tracking:
+            self.input_mouse(
+                x=event.x + 1,
+                y=event.y + 1,
+                button=constants.MOUSE_BUTTON_WHEEL_DOWN,
+                event_type="press",
+                modifiers=self._get_modifiers(event),
+            )
+
+    async def on_mouse_scroll_up(self, event) -> None:
+        """Handle mouse wheel scroll up events."""
+        if self.pty is None:
+            return
+
+        # Check if mouse tracking is enabled
+        if self.mouse_tracking or self.mouse_button_tracking or self.mouse_any_tracking:
+            self.input_mouse(
+                x=event.x + 1,
+                y=event.y + 1,
+                button=constants.MOUSE_BUTTON_WHEEL_UP,
+                event_type="press",
+                modifiers=self._get_modifiers(event),
+            )
 
     async def on_key(self, event) -> None:
         """Handle key events."""

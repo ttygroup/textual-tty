@@ -202,8 +202,7 @@ class Buffer:
                 # Add cursor style
                 parts.append(ansi_code)
                 parts.append(get_cursor_code())
-                parts.append(char)
-                parts.append(reset_code())
+                parts.append(char + reset_code())
             else:
                 # Normal cell
                 parts.append(ansi_code)

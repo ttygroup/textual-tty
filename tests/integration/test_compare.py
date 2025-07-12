@@ -10,7 +10,7 @@ from textual_tty import Terminal
 
 def get_ansi_files():
     """Get all .ansi files in the test directory."""
-    test_dir = Path(__file__).parent
+    test_dir = Path(__file__).parent / "compare"
     return list(test_dir.glob("*.ansi"))
 
 

@@ -33,11 +33,15 @@ class Terminal:
         command: str = "/bin/bash",
         width: int = 80,
         height: int = 24,
+        stdin=None,
+        stdout=None,
     ) -> None:
         """Initialize terminal."""
         self.command = command
         self.width = width
         self.height = height
+        self.stdin = stdin
+        self.stdout = stdout
 
         # Terminal state - these can be made reactive in subclasses
         self.title = "Terminal"
@@ -125,23 +129,8 @@ class Terminal:
             self.pty.resize(height, width)
 
     def get_content(self):
-        """Get current screen content."""
-        content = self.current_buffer.get_content()
-        if self.show_mouse:
-            # Superimpose mouse cursor
-            x = self.mouse_x - 1  # Convert to 0-based index
-            y = self.mouse_y - 1
-            if 0 <= y < self.height and 0 <= x < self.width:
-                if y < len(content):
-                    line = content[y]
-                    if x < len(line.plain):
-                        # Create a new Text object for the line to avoid modifying the original
-                        new_line = line.copy()
-                        new_line.plain = line.plain[:x] + "↖" + line.plain[x + 1 :]
-                        # Re-apply spans
-                        new_line.spans = line.spans
-                        content[y] = new_line
-        return content
+        """Get current screen content as raw buffer data."""
+        return self.current_buffer.get_content()
 
     def capture_pane(self) -> str:
         """Capture terminal content like tmux capture-pane."""
@@ -507,30 +496,83 @@ class Terminal:
             self._send_to_pty(mouse_seq)
 
     def _send_to_pty(self, data: str) -> None:
-        """Send data directly to PTY."""
+        """Send data to PTY or stdout."""
         if self.pty:
+            # PTY mode
             self.pty.write(data.encode("utf-8"))
+        elif self.stdout:
+            # Stream mode
+            self.stdout.write(data)
+            self.stdout.flush()
 
     # Process management
     async def start_process(self) -> None:
-        """Start the child process with PTY."""
+        """Start the child process with PTY or set up stream mode."""
         try:
-            info(f"Starting terminal process: {self.command}")
+            if self.stdin is not None and self.stdout is not None:
+                # Stream mode - create PTY for child process but also read from stdin
+                info("Starting terminal in stream mode")
 
-            # Create PTY socket
-            self.pty = create_pty(self.height, self.width)
-            info(f"Created PTY: {self.width}x{self.height}")
+                # Create PTY and spawn child process (for output)
+                self.pty = create_pty(self.height, self.width)
+                info(f"Created PTY: {self.width}x{self.height}")
+                self.process = self.pty.spawn_process(self.command)
+                info(f"Spawned process: pid={self.process.pid}")
 
-            # Spawn process attached to PTY
-            self.process = self.pty.spawn_process(self.command)
-            info(f"Spawned process: pid={self.process.pid}")
+                # Start both PTY reader (for child output) and stdin reader (for input)
+                self._pty_reader_task = asyncio.create_task(self._async_read_from_pty())
+                self._stdin_reader_task = asyncio.create_task(self._async_read_from_stdin())
+            else:
+                # PTY mode - create child process
+                info(f"Starting terminal process: {self.command}")
 
-            # Start async PTY reader task
-            self._pty_reader_task = asyncio.create_task(self._async_read_from_pty())
+                # Create PTY socket
+                self.pty = create_pty(self.height, self.width)
+                info(f"Created PTY: {self.width}x{self.height}")
+
+                # Spawn process attached to PTY
+                self.process = self.pty.spawn_process(self.command)
+                info(f"Spawned process: pid={self.process.pid}")
+
+                # Start async PTY reader task
+                self._pty_reader_task = asyncio.create_task(self._async_read_from_pty())
 
         except Exception:
             exception("Failed to start terminal process")
             self.stop_process()
+
+    async def _async_read_from_stdin(self) -> None:
+        """Async task to read from stdin in stream mode."""
+        loop = asyncio.get_running_loop()
+
+        def read_stdin():
+            try:
+                # Read available data from stdin
+                import os
+
+                return os.read(self.stdin.fileno(), 1024)
+            except (OSError, IOError):
+                return b""
+
+        try:
+            while True:
+                # Read from stdin in a thread to avoid blocking
+                data = await loop.run_in_executor(None, read_stdin)
+                if not data:
+                    await asyncio.sleep(0.01)  # Small delay if no data
+                    continue
+
+                # Forward input directly to PTY - parser is for output parsing only
+                try:
+                    if self.pty:
+                        self.pty.write(data)
+                except UnicodeDecodeError:
+                    pass
+
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            exception(f"Error reading from stdin: {e}")
 
     def stop_process(self) -> None:
         """Stop the child process and clean up."""

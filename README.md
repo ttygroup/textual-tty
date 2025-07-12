@@ -42,35 +42,31 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] make file logging optional
   - [ ] add arg parser to demo app
 - [ ] break terminal project out from Textual deps
-  - [ ] pick a snazzy name
-  - [ ] stdio -> pty wrapper
+  - [x] pick a snazzy name - bitty/titty
+  - [x] stdio -> pty wrapper
   - [ ] gui
     - [ ] make `framebuffer.py`
     - [ ] choose a backend
   - [ ] asciinema streaming -> terminal web
 - [ ] performance improvements
-  - [x] rewrite using ANSI buffer grid
   - [ ] parse with regex over large buffer sizes
-  - [x] lazily draw the outputs, render to Rich at the last moment
 - [ ] scrollback buffer
   - [ ] rewrite app so we have consistent + performant buffer class
   - [ ] scrollbar support when used
 - [ ] bugs
-  - [x] blank background to end of line
-    - [x] Move away from rich
+  - [ ] blank background to end of line
+    - [ ] figure out proper order
   - [ ] corruption in stream
+    - [ ]
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
 - [ ] testing
   - [ ] move tests
     - [ ] integration ./tests/integration
-    - [ ] comparison scripts ./tests/integration/scripts
-    - [x] performance ./test/performance
-  - [ ] more coverage
-  - [x] performance counters
+    - [x] comparison scripts ./tests/integration/compare
+  - [ ] fix coverage after refactor
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [ ] code code of of redundancy redundancy
 - [ ] add terminal visuals
-  - [x] mouse cursor (disabled by default)
   - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
 - [ ] Theme support
   - [ ] base terminal using config + themes
@@ -83,4 +79,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] mouse: display [y/N]
     - [ ] wide chars detection
     - [ ] theme selector/editor
+- [ ] terminal quantizer
+  - [x] stdin mode
+  - [ ] move inside app
 
