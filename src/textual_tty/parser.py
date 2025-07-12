@@ -19,11 +19,9 @@ from typing import TYPE_CHECKING, Callable, List, Optional
 if TYPE_CHECKING:
     from .terminal import Terminal
 
-from typing import Optional as Opt
 
 from .log import debug
 from . import constants
-from .color import get_combined_code
 
 
 class Parser:
@@ -55,19 +53,8 @@ class Parser:
         self._string_exit_handler: Optional[Callable] = None
 
         # --- Current Cell Attributes ---
-        # Individual attributes for generating ANSI codes
-        self.fg_color: Opt[int] = None  # 256-color palette
-        self.bg_color: Opt[int] = None  # 256-color palette
-        self.fg_rgb: Opt[tuple[int, int, int]] = None  # RGB color
-        self.bg_rgb: Opt[tuple[int, int, int]] = None  # RGB color
-        self.bold: bool = False
-        self.dim: bool = False
-        self.italic: bool = False
-        self.underline: bool = False
-        self.blink: bool = False
-        self.reverse: bool = False
-        self.strike: bool = False
-        self.conceal: bool = False
+        # Just store the current ANSI sequence
+        self.current_ansi_sequence: str = ""
 
     def feed(self, data: str) -> None:
         """
@@ -108,9 +95,8 @@ class Parser:
             elif char == constants.CR:
                 self.terminal.carriage_return()
             elif ord(char) >= 0x20:  # Printable characters
-                # Generate ANSI code from current attributes
-                ansi_code = self._generate_ansi_code()
-                self.terminal.write_text(char, ansi_code)
+                # Use current ANSI sequence
+                self.terminal.write_text(char, self.current_ansi_sequence)
         elif self.current_state == constants.ESCAPE:
             if char == "[":
                 self.current_state = constants.CSI_ENTRY
@@ -397,9 +383,8 @@ class Parser:
             self.terminal.delete_lines(count)
         elif final_char == "@":  # ICH - Insert Characters
             count = self._get_param(0, 1)
-            # Generate ANSI code for inserted spaces
-            ansi_code = self._generate_ansi_code()
-            self.terminal.insert_characters(count, ansi_code)
+            # Use current ANSI sequence for inserted spaces
+            self.terminal.insert_characters(count, self.current_ansi_sequence)
         elif final_char == "P":  # DCH - Delete Characters
             count = self._get_param(0, 1)
             self.terminal.delete_characters(count)
@@ -418,8 +403,6 @@ class Parser:
             self.terminal.repeat_last_character(count)
         elif final_char == "m":  # SGR - Select Graphic Rendition
             self._csi_dispatch_sgr()
-            # Update terminal's current ANSI code after SGR changes
-            self.terminal.current_ansi_code = self._generate_ansi_code()
         elif final_char == "h":  # SM - Set Mode
             self._csi_dispatch_sm_rm(True)
         elif final_char == "l":  # RM - Reset Mode
@@ -568,166 +551,19 @@ class Parser:
         """Reset terminal to initial state."""
         self.terminal.clear_screen(constants.ERASE_ALL)
         self.terminal.set_cursor(0, 0)
-        self._reset_attributes()
-
-    def _reset_attributes(self) -> None:
-        """Reset all text attributes to default."""
-        self.fg_color = None
-        self.bg_color = None
-        self.fg_rgb = None
-        self.bg_rgb = None
-        self.bold = False
-        self.dim = False
-        self.italic = False
-        self.underline = False
-        self.blink = False
-        self.reverse = False
-        self.strike = False
-        self.conceal = False
-
-    def _generate_ansi_code(self) -> Opt[str]:
-        """Generate ANSI code from current attributes."""
-        # If no attributes are set, return None
-        if (
-            not any(
-                [self.bold, self.dim, self.italic, self.underline, self.blink, self.reverse, self.strike, self.conceal]
-            )
-            and self.fg_color is None
-            and self.bg_color is None
-            and self.fg_rgb is None
-            and self.bg_rgb is None
-        ):
-            return None
-
-        # Use the combined code generator from ansi_cache
-        return get_combined_code(
-            fg=self.fg_color,
-            bg=self.bg_color,
-            fg_rgb=self.fg_rgb,
-            bg_rgb=self.bg_rgb,
-            bold=self.bold,
-            dim=self.dim,
-            italic=self.italic,
-            underline=self.underline,
-            blink=self.blink,
-            reverse=self.reverse,
-            strike=self.strike,
-            conceal=self.conceal,
-        )
+        self.current_ansi_sequence = ""
 
     def _csi_dispatch_sgr(self) -> None:
         """
         Handles SGR (Select Graphic Rendition) sequences to set text style.
+        Just store the original ANSI sequence.
         """
         if not self.parsed_params:
-            self.parsed_params = [constants.SGR_RESET]
+            self.parsed_params = [0]  # Default to reset
 
-        it = iter(self.parsed_params)
-        while True:
-            try:
-                param = next(it)
-            except StopIteration:
-                break
-
-            # Skip None parameters (empty params in sequence)
-            if param is None:
-                continue
-
-            if param == constants.SGR_RESET:
-                self._reset_attributes()
-            elif param == constants.SGR_BOLD:
-                self.bold = True
-            elif param == constants.SGR_DIM:
-                self.dim = True
-            elif param == constants.SGR_ITALIC:
-                self.italic = True
-            elif param == constants.SGR_UNDERLINE:
-                self.underline = True
-            elif param == constants.SGR_BLINK:
-                self.blink = True
-            elif param == constants.SGR_REVERSE:
-                self.reverse = True
-            elif param == constants.SGR_CONCEAL:
-                self.conceal = True
-            elif param == constants.SGR_STRIKE:
-                self.strike = True
-            elif param == constants.SGR_NOT_BOLD_OR_DOUBLE_UNDERLINE:
-                self.bold = False
-            elif param == constants.SGR_NOT_BOLD_NOR_FAINT:
-                self.bold = False
-                self.dim = False
-            elif param == constants.SGR_NOT_ITALIC:
-                self.italic = False
-            elif param == constants.SGR_NOT_UNDERLINED:
-                self.underline = False
-            elif param == constants.SGR_NOT_BLINKING:
-                self.blink = False
-            elif param == constants.SGR_NOT_REVERSED:
-                self.reverse = False
-            elif param == constants.SGR_NOT_CONCEALED:
-                self.conceal = False
-            elif param == constants.SGR_NOT_STRIKETHROUGH:
-                self.strike = False
-            elif constants.SGR_FG_BLACK <= param <= constants.SGR_FG_WHITE:
-                # Basic 8 colors (0-7)
-                self.fg_color = param - constants.SGR_FG_BLACK
-                self.fg_rgb = None  # Clear RGB when setting palette color
-            elif param == constants.SGR_EXTENDED_COLOR:
-                # Extended foreground color
-                try:
-                    color_type = next(it)
-                    if color_type == 5:  # 256-color
-                        color_code = next(it)
-                        if color_code is not None:
-                            self.fg_color = color_code
-                            self.fg_rgb = None
-                    elif color_type == 2:  # Truecolor (RGB)
-                        r = next(it)
-                        g = next(it)
-                        b = next(it)
-                        if r is not None and g is not None and b is not None:
-                            self.fg_rgb = (r, g, b)
-                            self.fg_color = None
-                except StopIteration:
-                    # Malformed sequence, ignore
-                    pass
-            elif param == constants.SGR_DEFAULT_FG:
-                self.fg_color = None
-                self.fg_rgb = None
-            elif constants.SGR_BG_BLACK <= param <= constants.SGR_BG_WHITE:
-                # Basic 8 background colors (0-7)
-                self.bg_color = param - constants.SGR_BG_BLACK
-                self.bg_rgb = None
-            elif param == constants.SGR_EXTENDED_BG_COLOR:
-                # Extended background color
-                try:
-                    color_type = next(it)
-                    if color_type == 5:  # 256-color
-                        color_code = next(it)
-                        if color_code is not None:
-                            self.bg_color = color_code
-                            self.bg_rgb = None
-                    elif color_type == 2:  # Truecolor (RGB)
-                        r = next(it)
-                        g = next(it)
-                        b = next(it)
-                        if r is not None and g is not None and b is not None:
-                            self.bg_rgb = (r, g, b)
-                            self.bg_color = None
-                except StopIteration:
-                    # Malformed sequence, ignore
-                    pass
-            elif param == constants.SGR_DEFAULT_BG:
-                self.bg_color = None
-                self.bg_rgb = None
-            elif constants.SGR_BRIGHT_FG_BLACK <= param <= constants.SGR_BRIGHT_FG_WHITE:
-                # Bright colors (8-15)
-                self.fg_color = param - constants.SGR_BRIGHT_FG_BLACK + 8
-                self.fg_rgb = None
-            elif constants.SGR_BRIGHT_BG_BLACK <= param <= constants.SGR_BRIGHT_BG_WHITE:
-                # Bright background colors (8-15)
-                self.bg_color = param - constants.SGR_BRIGHT_BG_BLACK + 8
-                self.bg_rgb = None
+        # Build the ANSI sequence from the original parameters
+        params_str = ";".join(str(p) if p is not None else "" for p in self.parsed_params)
+        self.current_ansi_sequence = f"\033[{params_str}m"
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""

@@ -74,7 +74,7 @@ class Terminal:
         self.scroll_bottom = height - 1
 
         # Current ANSI code for next write
-        self.current_ansi_code: Optional[str] = None
+        self.current_ansi_code: str = ""
 
         # Last printed character (for REP command)
         self.last_printed_char = " "
@@ -82,7 +82,7 @@ class Terminal:
         # Saved cursor state (for DECSC/DECRC)
         self.saved_cursor_x = 0
         self.saved_cursor_y = 0
-        self.saved_ansi_code: Optional[str] = None
+        self.saved_ansi_code: str = ""
 
         # Process management
         self.process: Optional[subprocess.Popen] = None
@@ -144,7 +144,7 @@ class Terminal:
         return content
 
     # Methods called by parser
-    def write_text(self, text: str, ansi_code: Optional[str] = None) -> None:
+    def write_text(self, text: str, ansi_code: str = "") -> None:
         """Write text at cursor position."""
         # Handle line wrapping or clipping
         if self.cursor_x >= self.width:
@@ -155,7 +155,7 @@ class Terminal:
                 self.cursor_x = self.width - 1
 
         # Use provided ANSI code or current one
-        code_to_use = ansi_code if ansi_code is not None else self.current_ansi_code
+        code_to_use = ansi_code if ansi_code else self.current_ansi_code
 
         # Insert or overwrite based on mode
         if self.insert_mode:
@@ -221,7 +221,7 @@ class Terminal:
         """Clear line."""
         self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x)
 
-    def clear_rect(self, x1: int, y1: int, x2: int, y2: int, ansi_code: Optional[str] = None) -> None:
+    def clear_rect(self, x1: int, y1: int, x2: int, y2: int, ansi_code: str = "") -> None:
         """Clear a rectangular region."""
         self.current_buffer.clear_region(x1, y1, x2, y2, ansi_code)
 
@@ -332,7 +332,7 @@ class Terminal:
             # Clear the bottom line
             self.current_buffer.clear_line(self.height - 1, constants.ERASE_ALL)
 
-    def insert_characters(self, count: int, ansi_code: Optional[str] = None) -> None:
+    def insert_characters(self, count: int, ansi_code: str = "") -> None:
         """Insert blank characters at cursor position."""
         if not (0 <= self.cursor_y < self.height):
             return

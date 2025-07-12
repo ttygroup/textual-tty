@@ -10,6 +10,7 @@
   `textual_tty.log` and check `debug.log`
 - Tests are in pytest functional style. No classes.
 - We are in a `./.venv`, which might not be activated.
-- The user will run tests with: `make test`. It might take a lot of tokens,
-  so don't run it yourself unless asked.
-
+- The user will run tests with: `make test`. It might take a lot of tokens, so
+  don't run it yourself unless asked.
+- Claude is running in a tmux panel, so when the user says "peep the pane", use
+  "tmux capture-pane -p -e -t" with the given pane. This is how we debug.

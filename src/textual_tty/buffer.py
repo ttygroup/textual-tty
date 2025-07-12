@@ -7,13 +7,13 @@ as a 2D grid of (ansi_code, character) tuples.
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from . import constants
 
 
-# Type alias for a cell: (optional ANSI code, character)
-Cell = Tuple[Optional[str], str]
+# Type alias for a cell: (ANSI code, character)
+Cell = Tuple[str, str]
 
 
 class Buffer:
@@ -21,7 +21,7 @@ class Buffer:
     A buffer that stores terminal content as a 2D grid.
 
     Each cell contains a tuple of (ansi_code, character) where:
-    - ansi_code: Optional ANSI escape sequence for styling
+    - ansi_code: ANSI escape sequence for styling (empty string for no styling)
     - character: The actual character to display
     """
 
@@ -30,7 +30,7 @@ class Buffer:
         self.width = width
         self.height = height
         # Initialize grid with empty cells
-        self.grid: List[List[Cell]] = [[(None, " ") for _ in range(width)] for _ in range(height)]
+        self.grid: List[List[Cell]] = [[("", " ") for _ in range(width)] for _ in range(height)]
 
     def get_content(self) -> List[List[Cell]]:
         """Get buffer content as a 2D grid."""
@@ -40,14 +40,14 @@ class Buffer:
         """Get cell at position."""
         if 0 <= y < self.height and 0 <= x < self.width:
             return self.grid[y][x]
-        return (None, " ")
+        return ("", " ")
 
-    def set_cell(self, x: int, y: int, char: str, ansi_code: Optional[str] = None) -> None:
+    def set_cell(self, x: int, y: int, char: str, ansi_code: str = "") -> None:
         """Set a single cell at position."""
         if 0 <= y < self.height and 0 <= x < self.width:
             self.grid[y][x] = (ansi_code, char)
 
-    def set(self, x: int, y: int, text: str, ansi_code: Optional[str] = None) -> None:
+    def set(self, x: int, y: int, text: str, ansi_code: str = "") -> None:
         """Set text at position, overwriting existing content."""
         if not (0 <= y < self.height):
             return
@@ -57,7 +57,7 @@ class Buffer:
                 break
             self.grid[y][x + i] = (ansi_code, char)
 
-    def insert(self, x: int, y: int, text: str, ansi_code: Optional[str] = None) -> None:
+    def insert(self, x: int, y: int, text: str, ansi_code: str = "") -> None:
         """Insert text at position, shifting existing content right."""
         if not (0 <= y < self.height) or x >= self.width:
             return
@@ -78,7 +78,7 @@ class Buffer:
             # Pad with spaces if needed
             padding_needed = x - len(row)
             if padding_needed > 0:
-                row.extend([(None, " ")] * padding_needed)
+                row.extend([("", " ")] * padding_needed)
             row.extend(new_cells)
             # Truncate to width
             self.grid[y] = row[: self.width]
@@ -96,10 +96,10 @@ class Buffer:
             new_row = row[:x] + row[end_pos:]
             # Pad with spaces to maintain width
             while len(new_row) < self.width:
-                new_row.append((None, " "))
+                new_row.append(("", " "))
             self.grid[y] = new_row
 
-    def clear_region(self, x1: int, y1: int, x2: int, y2: int, ansi_code: Optional[str] = None) -> None:
+    def clear_region(self, x1: int, y1: int, x2: int, y2: int, ansi_code: str = "") -> None:
         """Clear a rectangular region."""
         for y in range(max(0, y1), min(self.height, y2 + 1)):
             for x in range(max(0, x1), min(self.width, x2 + 1)):
@@ -113,26 +113,26 @@ class Buffer:
         if mode == constants.ERASE_FROM_CURSOR_TO_END:
             # Clear from cursor to end of line
             for x in range(cursor_x, self.width):
-                self.grid[y][x] = (None, " ")
+                self.grid[y][x] = ("", " ")
         elif mode == constants.ERASE_FROM_START_TO_CURSOR:
             # Clear from start to cursor
             for x in range(0, min(cursor_x + 1, self.width)):
-                self.grid[y][x] = (None, " ")
+                self.grid[y][x] = ("", " ")
         elif mode == constants.ERASE_ALL:
             # Clear entire line
-            self.grid[y] = [(None, " ") for _ in range(self.width)]
+            self.grid[y] = [("", " ") for _ in range(self.width)]
 
     def scroll_up(self, count: int) -> None:
         """Scroll content up, removing top lines and adding blank lines at bottom."""
         for _ in range(count):
             self.grid.pop(0)
-            self.grid.append([(None, " ") for _ in range(self.width)])
+            self.grid.append([("", " ") for _ in range(self.width)])
 
     def scroll_down(self, count: int) -> None:
         """Scroll content down, removing bottom lines and adding blank lines at top."""
         for _ in range(count):
             self.grid.pop()
-            self.grid.insert(0, [(None, " ") for _ in range(self.width)])
+            self.grid.insert(0, [("", " ") for _ in range(self.width)])
 
     def resize(self, width: int, height: int) -> None:
         """Resize buffer to new dimensions."""
@@ -140,7 +140,7 @@ class Buffer:
         if len(self.grid) < height:
             # Add new rows
             for _ in range(height - len(self.grid)):
-                self.grid.append([(None, " ") for _ in range(width)])
+                self.grid.append([("", " ") for _ in range(width)])
         elif len(self.grid) > height:
             # Remove excess rows
             self.grid = self.grid[:height]
@@ -150,7 +150,7 @@ class Buffer:
             row = self.grid[y]
             if len(row) < width:
                 # Extend row
-                row.extend([(None, " ")] * (width - len(row)))
+                row.extend([("", " ")] * (width - len(row)))
             elif len(row) > width:
                 # Truncate row
                 self.grid[y] = row[:width]

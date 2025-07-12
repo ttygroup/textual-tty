@@ -16,17 +16,21 @@ from dataclasses import dataclass, field
 logger: Optional[logging.Logger] = None
 
 
-def setup_logger(name: str = "textual_tty") -> logging.Logger:
+def setup_logger(name: str = "textual_tty", log_dir: Path = Path("logs"), level: int = logging.DEBUG) -> logging.Logger:
     """Set up a global logger."""
     global logger
 
     if logger is None:
         logger = logging.getLogger(name)
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
 
-        # Create file handler only
-        file_handler = logging.FileHandler("debug.log", mode="w")
-        file_handler.setLevel(logging.DEBUG)
+        # Ensure log directory exists
+        log_dir.mkdir(exist_ok=True)
+        log_file = log_dir / "debug.log"
+
+        # Create file handler
+        file_handler = logging.FileHandler(log_file, mode="a")
+        file_handler.setLevel(level)
 
         # Create formatter
         formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")

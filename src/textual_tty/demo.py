@@ -6,12 +6,17 @@ Demo: Launch programs in a window in Textual
 from __future__ import annotations
 
 
+import argparse
+import logging
+from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, Input, Button, Label, Static
 
 from textual_tty.widgets import TerminalApp, DebugLog
+from textual_tty.log import setup_logger
 
 
 class DemoApp(App):
@@ -159,6 +164,26 @@ class DemoApp(App):
 
 def main():
     """Run the demo application."""
+    parser = argparse.ArgumentParser(description="Run the textual-tty demo app.")
+    parser.add_argument(
+        "--log-dir",
+        type=Path,
+        default=Path("logs"),
+        help="The directory to store log files.",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="DEBUG",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="The logging level to use.",
+    )
+    args = parser.parse_args()
+
+    # Set up logging
+    log_level = getattr(logging, args.log_level.upper(), logging.DEBUG)
+    setup_logger(log_dir=args.log_dir, level=log_level)
+
     app = DemoApp()
     app.run()
 
