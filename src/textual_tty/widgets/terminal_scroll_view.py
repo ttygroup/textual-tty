@@ -1,33 +1,31 @@
 """
-TerminalScrollView: High-performance terminal display widget.
+TerminalScrollView: High-performance terminal display widget with direct grid rendering.
 """
 
 from __future__ import annotations
 
-from typing import List, Dict, Tuple
+from typing import List
 
 from textual.scroll_view import ScrollView
 from textual.geometry import Size
 from textual.strip import Strip
-from rich.text import Text
 from rich.segment import Segment
 from rich.style import Style
 
 from ..log import measure_performance
+from ..buffer import Cell
+from ..color import get_cursor_code, reset_code
 
 
 class TerminalScrollView(ScrollView):
-    """High-performance terminal display using direct strip rendering."""
+    """High-performance terminal display using direct grid rendering."""
 
     def __init__(self, **kwargs) -> None:
         """Initialize the terminal scroll view."""
         super().__init__(**kwargs)
-        self._content_lines: List[Text] = []
+        self._content_grid: List[List[Cell]] = []
         self._cursor_position: tuple[int, int] = (0, 0)
         self._show_cursor: bool = True
-
-        # Simple cache: (line_index, content_hash) -> List[Segment]
-        self._segment_cache: Dict[Tuple[int, int], List[Segment]] = {}
 
         self.can_focus = True
 
@@ -35,23 +33,17 @@ class TerminalScrollView(ScrollView):
         """No child widgets - render directly."""
         return []
 
-    def update_content(self, lines: List[Text]) -> None:
-        """Update the terminal content with new lines."""
-        self._content_lines = lines
+    def update_content(self, grid: List[List[Cell]]) -> None:
+        """Update the terminal content with new grid."""
+        self._content_grid = grid
 
-        # Clear cache when content changes
-        self._segment_cache.clear()
-
-        # Calculate virtual size naively - sum all wrapped lines
-        total_visual_lines = 0
-        max_width = 80  # Default
-
-        if lines and self.size.width > 0:
-            for line in lines:
-                line_width = len(line.plain)
-                visual_lines = max(1, (line_width + self.size.width - 1) // self.size.width)
-                total_visual_lines += visual_lines
-                max_width = max(max_width, line_width)
+        # Calculate virtual size based on grid
+        if grid:
+            max_width = max(len(row) for row in grid) if grid else 80
+            total_visual_lines = len(grid)
+        else:
+            max_width = 80
+            total_visual_lines = 24
 
         self.virtual_size = Size(max_width, total_visual_lines)
         self.refresh()
@@ -66,185 +58,135 @@ class TerminalScrollView(ScrollView):
         self._show_cursor = visible
         self.refresh()
 
-    def _find_logical_line_for_visual_y(self, visual_y: int) -> Tuple[int, int]:
-        """
-        Find which logical line contains visual_y and the offset within that line.
-        Returns (logical_line_index, visual_line_offset_within_logical_line)
-        """
-        if not self._content_lines or self.size.width <= 0:
-            return (0, 0)
-
-        current_visual = 0
-
-        for logical_idx, line in enumerate(self._content_lines):
-            line_width = len(line.plain)
-            visual_lines_for_this_logical = max(1, (line_width + self.size.width - 1) // self.size.width)
-
-            if current_visual + visual_lines_for_this_logical > visual_y:
-                # Found it! visual_y is within this logical line
-                offset_within_logical = visual_y - current_visual
-                return (logical_idx, offset_within_logical)
-
-            current_visual += visual_lines_for_this_logical
-
-        # Beyond all lines
-        return (len(self._content_lines), 0)
-
     @measure_performance("TerminalScrollView")
     def render_line(self, visual_y: int) -> Strip:
-        """Render a single visual line."""
+        """Render a single visual line directly from grid."""
         # Account for scrolling
         actual_visual_y = visual_y + int(self.scroll_y)
 
-        logical_idx, visual_offset = self._find_logical_line_for_visual_y(actual_visual_y)
-
-        if logical_idx >= len(self._content_lines):
-            # Beyond content
+        if actual_visual_y >= len(self._content_grid):
+            # Beyond content - return empty line
             return Strip([Segment(" " * self.size.width)])
 
-        line = self._content_lines[logical_idx]
+        row = self._content_grid[actual_visual_y]
 
-        # Simple cache key
-        content_hash = hash(tuple(line.render(self.app.console)))
-        cache_key = (logical_idx, content_hash)
+        # Convert grid row to ANSI string and then to segments
+        line_string = self._grid_row_to_ansi_string(row, actual_visual_y)
 
-        if cache_key not in self._segment_cache:
-            # Render the logical line to segments
-            segments = list(line.render(self.app.console))
-            self._segment_cache[cache_key] = segments
-        else:
-            segments = self._segment_cache[cache_key]
+        # Parse the ANSI string back to segments for Textual
+        segments = self._parse_ansi_to_segments(line_string)
 
-        # Handle wrapping - extract the visual line we want
-        if self.size.width <= 0:
-            return Strip([])
+        # Ensure we fill the full width
+        segments = self._fill_to_width(segments, self.size.width)
 
-        # Split segments based on width and visual_offset
-        wrapped_segments = self._wrap_segments_to_lines(segments, self.size.width)
+        return Strip(segments)
 
-        if visual_offset < len(wrapped_segments):
-            line_segments = wrapped_segments[visual_offset]
-        else:
-            line_segments = []
-
-        # Fill to end of line using preserved background style
-        line_segments = self._fill_line_to_width(line_segments, self.size.width)
-
-        # Add cursor if appropriate (after filling)
-        cursor_y = self._cursor_position[1]
-        if self._show_cursor and logical_idx == cursor_y:
-            cursor_x = self._cursor_position[0]
-            # Only show cursor on the visual line that contains cursor_x
-            char_start = visual_offset * self.size.width
-            char_end = char_start + self.size.width
-            if char_start <= cursor_x < char_end:
-                line_segments = self._add_cursor_to_segments(line_segments, cursor_x - char_start)
-
-        return Strip(line_segments)
-
-    def _wrap_segments_to_lines(self, segments: List[Segment], width: int) -> List[List[Segment]]:
-        """Split segments into visual lines based on width."""
-        if width <= 0:
-            return [[]]
-
-        wrapped_lines = []
-        current_line = []
-        current_width = 0
-
-        for segment in segments:
-            text = segment.text
-            style = segment.style
-
-            while text:
-                remaining_width = width - current_width
-
-                if len(text) <= remaining_width:
-                    # Fits on current line
-                    current_line.append(Segment(text, style))
-                    current_width += len(text)
-                    text = ""
-                else:
-                    # Need to split
-                    part = text[:remaining_width]
-                    text = text[remaining_width:]
-
-                    current_line.append(Segment(part, style))
-                    wrapped_lines.append(current_line)
-
-                    current_line = []
-                    current_width = 0
-
-        if current_line or not wrapped_lines:
-            wrapped_lines.append(current_line)
-
-        return wrapped_lines
-
-    def _add_cursor_to_segments(self, segments: List[Segment], cursor_x: int) -> List[Segment]:
-        """Add cursor styling at position cursor_x within the segments."""
-        from rich.style import Style
-
-        if not segments and cursor_x == 0:
-            # Empty line, cursor at start
-            return [Segment(" ", Style(reverse=True))]
+    def _grid_row_to_ansi_string(self, row: List[Cell], y: int) -> str:
+        """Convert a grid row to an ANSI-formatted string."""
+        if not row:
+            return " " * self.size.width
 
         result = []
-        current_x = 0
+        current_ansi = None
 
-        for segment in segments:
-            text = segment.text
-            style = segment.style
+        # Determine which cells to process (up to viewport width)
+        cells_to_process = min(len(row), self.size.width)
 
-            if current_x + len(text) <= cursor_x:
-                # Cursor is after this segment
-                result.append(segment)
-                current_x += len(text)
-            elif current_x <= cursor_x < current_x + len(text):
-                # Cursor is within this segment
-                offset = cursor_x - current_x
+        for x in range(cells_to_process):
+            ansi_code, char = row[x]
 
-                before = text[:offset]
-                cursor_char = text[offset] if offset < len(text) else " "
-                after = text[offset + 1 :]
-
-                if before:
-                    result.append(Segment(before, style))
-                result.append(Segment(cursor_char, Style(reverse=True)))
-                if after:
-                    result.append(Segment(after, style))
-                current_x += len(text)
+            # Add cursor if at this position
+            cursor_x, cursor_y = self._cursor_position
+            if self._show_cursor and x == cursor_x and y == cursor_y:
+                # Apply cursor style (reverse video)
+                if ansi_code:
+                    result.append(ansi_code)
+                result.append(get_cursor_code())
+                result.append(char)
+                result.append(reset_code())
+                current_ansi = None  # Reset state after cursor
             else:
-                # Cursor is before this segment
-                result.append(segment)
-                current_x += len(text)
+                # Normal character
+                if ansi_code != current_ansi:
+                    if ansi_code:
+                        result.append(ansi_code)
+                    elif current_ansi:
+                        # Reset if we had an ANSI code but now don't
+                        result.append(reset_code())
+                    current_ansi = ansi_code
+                result.append(char)
 
-        # If cursor is beyond all segments, add it
-        if cursor_x >= current_x:
-            padding = cursor_x - current_x
-            if padding > 0:
-                result.append(Segment(" " * padding))
-            result.append(Segment(" ", Style(reverse=True)))
+        # Pad to width if needed
+        remaining = self.size.width - cells_to_process
+        if remaining > 0:
+            if current_ansi:
+                result.append(reset_code())
+            result.append(" " * remaining)
 
-        return result
+        return "".join(result)
 
-    def _fill_line_to_width(self, segments: List[Segment], width: int) -> List[Segment]:
-        """Fill line to terminal width using preserved background from zero-length segments."""
+    def _parse_ansi_to_segments(self, ansi_string: str) -> List[Segment]:
+        """Parse ANSI string back to Rich segments."""
+        segments = []
+        i = 0
+        current_style = Style()
+        text_buffer = []
+
+        while i < len(ansi_string):
+            if ansi_string[i] == "\033" and i + 1 < len(ansi_string) and ansi_string[i + 1] == "[":
+                # Found ANSI escape sequence
+                if text_buffer:
+                    # Flush any accumulated text
+                    segments.append(Segment("".join(text_buffer), current_style))
+                    text_buffer = []
+
+                # Find end of sequence
+                j = i + 2
+                while j < len(ansi_string) and ansi_string[j] not in "mHABCDfHlh":
+                    j += 1
+
+                if j < len(ansi_string):
+                    # Parse the sequence and update style
+                    sequence = ansi_string[i : j + 1]
+                    current_style = self._parse_ansi_sequence(sequence, current_style)
+                    i = j + 1
+                else:
+                    # Malformed sequence, skip
+                    i += 1
+            else:
+                # Regular character
+                text_buffer.append(ansi_string[i])
+                i += 1
+
+        # Flush any remaining text
+        if text_buffer:
+            segments.append(Segment("".join(text_buffer), current_style))
+
+        return segments
+
+    def _parse_ansi_sequence(self, sequence: str, current_style: Style) -> Style:
+        """Parse ANSI sequence and return updated style."""
+        if sequence.endswith("m"):
+            # SGR sequence
+            if sequence == "\033[0m":
+                return Style()  # Reset
+            elif sequence == "\033[7m":
+                return current_style + Style(reverse=True)
+            # For other sequences, we could parse them fully,
+            # but for now just return current style
+        return current_style
+
+    def _fill_to_width(self, segments: List[Segment], width: int) -> List[Segment]:
+        """Fill segments to specified width."""
         if width <= 0:
             return segments
 
-        # Calculate current width (excluding zero-length segments)
+        # Calculate current width
         current_width = sum(len(segment.text) for segment in segments)
 
         if current_width >= width:
             return segments
 
-        # Look for zero-width space markers that carry preserved background style
-        padding_style = Style()
-        for segment in reversed(segments):
-            if segment.text == "\u200b" and segment.style and segment.style.bgcolor:
-                # Found preserved background style marker
-                padding_style = Style(bgcolor=segment.style.bgcolor)
-                break
-
-        # Add padding to reach full width
+        # Add padding
         padding_length = width - current_width
-        return segments + [Segment(" " * padding_length, padding_style)]
+        return segments + [Segment(" " * padding_length)]

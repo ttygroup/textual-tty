@@ -1,192 +1,166 @@
 """
-Terminal Buffer: Rich Text-based terminal content storage.
+Terminal Buffer: Grid-based terminal content storage.
 
 This module provides the Buffer class that manages terminal screen content
-as a list of Rich Text objects with styling information.
+as a 2D grid of (ansi_code, character) tuples.
 """
 
 from __future__ import annotations
 
-from typing import List, Optional
-
-from rich.style import Style
-from rich.text import Text, Span
+from typing import List, Optional, Tuple
 
 from . import constants
 
 
+# Type alias for a cell: (optional ANSI code, character)
+Cell = Tuple[Optional[str], str]
+
+
 class Buffer:
     """
-    A buffer that stores terminal content as styled text lines.
+    A buffer that stores terminal content as a 2D grid.
+
+    Each cell contains a tuple of (ansi_code, character) where:
+    - ansi_code: Optional ANSI escape sequence for styling
+    - character: The actual character to display
     """
 
     def __init__(self, width: int, height: int) -> None:
         """Initialize buffer with given dimensions."""
         self.width = width
         self.height = height
-        self.lines: List[Text] = [Text() for _ in range(height)]
+        # Initialize grid with empty cells
+        self.grid: List[List[Cell]] = [[(None, " ") for _ in range(width)] for _ in range(height)]
 
-    def get_content(self) -> List[Text]:
-        """Get buffer content as a list of Rich Text objects."""
-        return self.lines.copy()
+    def get_content(self) -> List[List[Cell]]:
+        """Get buffer content as a 2D grid."""
+        return [row[:] for row in self.grid]
 
-    def set(self, x: int, y: int, text: str, style: Optional[Style] = None) -> None:
+    def get_cell(self, x: int, y: int) -> Cell:
+        """Get cell at position."""
+        if 0 <= y < self.height and 0 <= x < self.width:
+            return self.grid[y][x]
+        return (None, " ")
+
+    def set_cell(self, x: int, y: int, char: str, ansi_code: Optional[str] = None) -> None:
+        """Set a single cell at position."""
+        if 0 <= y < self.height and 0 <= x < self.width:
+            self.grid[y][x] = (ansi_code, char)
+
+    def set(self, x: int, y: int, text: str, ansi_code: Optional[str] = None) -> None:
         """Set text at position, overwriting existing content."""
         if not (0 <= y < self.height):
             return
 
-        line = self.lines[y]
+        for i, char in enumerate(text):
+            if x + i >= self.width:
+                break
+            self.grid[y][x + i] = (ansi_code, char)
 
-        if x < len(line.plain):
-            # Replace character in existing line
-            new_line = line[:x] + Text(text, style) + line[x + len(text) :]
-            self.lines[y] = new_line
-        else:
-            # Append to end of line
-            if len(line.plain) == 0:
-                # Starting fresh on empty line
-                new_line = Text()
-            else:
-                new_line = line.copy()
-            # Pad with spaces if needed
-            if len(new_line.plain) < x:
-                padding_length = x - len(new_line.plain)
-                padding = Text(" " * padding_length, Style())
-                # Add explicit span for padding only when extending existing content
-                if not padding.spans and padding_length > 0 and len(line.plain) > 0:
-                    padding.spans.append(Span(0, padding_length, Style()))
-                new_line = new_line + padding
-            new_line.append(text, style)
-            self.lines[y] = new_line
-
-    def insert(self, x: int, y: int, text: str, style: Optional[Style] = None) -> None:
+    def insert(self, x: int, y: int, text: str, ansi_code: Optional[str] = None) -> None:
         """Insert text at position, shifting existing content right."""
-        if not (0 <= y < self.height):
+        if not (0 <= y < self.height) or x >= self.width:
             return
 
-        line = self.lines[y]
+        # Get the current row
+        row = self.grid[y]
 
-        if x < len(line.plain):
-            # Insert in middle of existing line
-            inserted_text = Text(text, style)
-            # Ensure explicit span for inserted text with default style
-            if not inserted_text.spans and len(text) > 0 and (style is None or style == Style()):
-                inserted_text.spans.append(Span(0, len(text), style or Style()))
-            new_line = line[:x] + inserted_text + line[x:]
+        # Create new cells for the inserted text
+        new_cells = [(ansi_code, char) for char in text]
+
+        # Insert at position
+        if x < len(row):
+            # Split row and insert
+            new_row = row[:x] + new_cells + row[x:]
+            # Truncate to width
+            self.grid[y] = new_row[: self.width]
         else:
-            # Append to end of line
-            new_line = line.copy()
             # Pad with spaces if needed
-            if len(new_line.plain) < x:
-                padding_length = x - len(new_line.plain)
-                padding = Text(" " * padding_length, Style())
-                # Add explicit span for padding only when extending existing content
-                if not padding.spans and padding_length > 0 and len(line.plain) > 0:
-                    padding.spans.append(Span(0, padding_length, Style()))
-                new_line = new_line + padding
-            # For insert operations, ensure explicit spans for empty styles
-            if style is None or style == Style():
-                text_to_append = Text(text, style or Style())
-                if not text_to_append.spans and len(text) > 0:
-                    text_to_append.spans.append(Span(0, len(text), style or Style()))
-                new_line = new_line + text_to_append
-            else:
-                new_line.append(text, style)
-
-        # Truncate if line becomes too long
-        if len(new_line.plain) > self.width:
-            new_line = new_line[: self.width]
-
-        self.lines[y] = new_line
+            padding_needed = x - len(row)
+            if padding_needed > 0:
+                row.extend([(None, " ")] * padding_needed)
+            row.extend(new_cells)
+            # Truncate to width
+            self.grid[y] = row[: self.width]
 
     def delete(self, x: int, y: int, count: int = 1) -> None:
         """Delete characters at position."""
-        if not (0 <= y < self.height):
+        if not (0 <= y < self.height) or x >= self.width:
             return
 
-        line = self.lines[y]
-        if x >= len(line.plain):
-            return
+        row = self.grid[y]
 
-        # Delete characters by reconstructing line
-        end_pos = min(x + count, len(line.plain))
-        new_line = line[:x] + line[end_pos:]
-        self.lines[y] = new_line
+        # Delete characters and shift left
+        if x < len(row):
+            end_pos = min(x + count, len(row))
+            new_row = row[:x] + row[end_pos:]
+            # Pad with spaces to maintain width
+            while len(new_row) < self.width:
+                new_row.append((None, " "))
+            self.grid[y] = new_row
 
-    def clear_region(self, x1: int, y1: int, x2: int, y2: int, style: Optional[Style] = None) -> None:
+    def clear_region(self, x1: int, y1: int, x2: int, y2: int, ansi_code: Optional[str] = None) -> None:
         """Clear a rectangular region."""
-        if style is None:
-            style = Style()
-
         for y in range(max(0, y1), min(self.height, y2 + 1)):
-            line = self.lines[y]
-
-            if not line.plain or x1 >= len(line.plain):
-                continue
-
-            # Clear the specified range
-            clear_start = max(0, x1)
-            clear_end = min(len(line.plain), x2 + 1)
-
-            if clear_end <= clear_start:
-                continue
-
-            # Build new line with cleared region
-            cleared_text = Text(" " * (clear_end - clear_start), style)
-            # Ensure the cleared region has an explicit span only for default/empty style
-            if not cleared_text.spans and len(cleared_text.plain) > 0 and (style is None or style == Style()):
-                cleared_text.spans.append(Span(0, len(cleared_text.plain), style or Style()))
-            new_line = line[:clear_start] + cleared_text + line[clear_end:]
-            self.lines[y] = new_line
+            for x in range(max(0, x1), min(self.width, x2 + 1)):
+                self.grid[y][x] = (ansi_code, " ")
 
     def clear_line(self, y: int, mode: int = constants.ERASE_FROM_CURSOR_TO_END, cursor_x: int = 0) -> None:
         """Clear line content."""
         if not (0 <= y < self.height):
             return
 
-        line = self.lines[y]
-
         if mode == constants.ERASE_FROM_CURSOR_TO_END:
-            if cursor_x < len(line.plain):
-                self.lines[y] = line[:cursor_x]
-            # If cursor is at or beyond end, no need to clear
+            # Clear from cursor to end of line
+            for x in range(cursor_x, self.width):
+                self.grid[y][x] = (None, " ")
         elif mode == constants.ERASE_FROM_START_TO_CURSOR:
-            if cursor_x < len(line.plain):
-                cleared_part = Text(" " * cursor_x)
-                self.lines[y] = cleared_part + line[cursor_x:]
-            else:
-                # Clear entire line if cursor is beyond content
-                self.lines[y] = Text()
+            # Clear from start to cursor
+            for x in range(0, min(cursor_x + 1, self.width)):
+                self.grid[y][x] = (None, " ")
         elif mode == constants.ERASE_ALL:
-            self.lines[y] = Text()
+            # Clear entire line
+            self.grid[y] = [(None, " ") for _ in range(self.width)]
 
     def scroll_up(self, count: int) -> None:
         """Scroll content up, removing top lines and adding blank lines at bottom."""
         for _ in range(count):
-            self.lines.pop(0)
-            self.lines.append(Text())
+            self.grid.pop(0)
+            self.grid.append([(None, " ") for _ in range(self.width)])
 
     def scroll_down(self, count: int) -> None:
         """Scroll content down, removing bottom lines and adding blank lines at top."""
         for _ in range(count):
-            self.lines.pop()
-            self.lines.insert(0, Text())
+            self.grid.pop()
+            self.grid.insert(0, [(None, " ") for _ in range(self.width)])
 
     def resize(self, width: int, height: int) -> None:
         """Resize buffer to new dimensions."""
-        # Adjust number of lines FIRST, before updating height
-        if len(self.lines) < height:
-            # Add new lines
-            self.lines.extend([Text() for _ in range(height - len(self.lines))])
-        elif len(self.lines) > height:
-            # Remove excess lines
-            self.lines = self.lines[:height]
+        # Adjust number of rows
+        if len(self.grid) < height:
+            # Add new rows
+            for _ in range(height - len(self.grid)):
+                self.grid.append([(None, " ") for _ in range(width)])
+        elif len(self.grid) > height:
+            # Remove excess rows
+            self.grid = self.grid[:height]
 
-        # Update dimensions AFTER lines are properly sized
+        # Adjust width of each row
+        for y in range(len(self.grid)):
+            row = self.grid[y]
+            if len(row) < width:
+                # Extend row
+                row.extend([(None, " ")] * (width - len(row)))
+            elif len(row) > width:
+                # Truncate row
+                self.grid[y] = row[:width]
+
+        # Update dimensions
         self.width = width
         self.height = height
 
-        # Truncate lines that are too wide
-        for i in range(len(self.lines)):
-            if len(self.lines[i].plain) > width:
-                self.lines[i] = self.lines[i][:width]
+    def get_line_text(self, y: int) -> str:
+        """Get plain text content of a line (for debugging/testing)."""
+        if 0 <= y < self.height:
+            return "".join(cell[1] for cell in self.grid[y])
+        return ""

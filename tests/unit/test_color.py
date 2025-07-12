@@ -2,140 +2,200 @@
 Test cases for the terminal color handling module.
 """
 
-import pytest
-from textual.color import Color
-from rich.color import Color as RichColor
 from textual_tty import color as color_module
-from textual_tty.color import COLOR_PALETTE_SIZE
-
-# --- Tests for parse_color() ---
 
 
-def test_parse_color_handles_standard_css_name():
-    """`parse_color` should correctly parse a standard web color name."""
-    expected = Color.parse("red")
-    actual = color_module.parse_color("red")
-    assert actual == expected
+# --- Tests for get_color_code() ---
 
 
-def test_parse_color_handles_hex_code():
-    """`parse_color` should correctly parse a standard hexadecimal color code."""
-    expected = Color.parse("#00ff00")
-    actual = color_module.parse_color("#00ff00")
-    assert actual == expected
+def test_get_color_code_foreground_only():
+    """get_color_code should generate correct ANSI for foreground color."""
+    result = color_module.get_color_code(fg=1)
+    assert result == "\033[38;5;1m"
 
 
-def test_parse_color_handles_8bit_color_string():
-    """`parse_color` should correctly parse a 'color(n)' string."""
-    expected = Color.from_rich_color(RichColor.from_ansi(21))
-    actual = color_module.parse_color("color(21)")
-    assert actual == expected, "Should handle 8-bit color strings"
+def test_get_color_code_background_only():
+    """get_color_code should generate correct ANSI for background color."""
+    result = color_module.get_color_code(bg=2)
+    assert result == "\033[48;5;2m"
 
 
-def test_parse_color_handles_specific_x11_name():
-    """`parse_color` should fall back to the custom X11 name dictionary."""
-    # This color is in our custom X11_NAMES list but not a standard CSS name.
-    expected = Color.parse("#00bfff")  # DeepSkyBlue1
-    actual = color_module.parse_color("deepskyblue1")
-    assert actual == expected
+def test_get_color_code_both_colors():
+    """get_color_code should generate correct ANSI for both colors."""
+    result = color_module.get_color_code(fg=1, bg=2)
+    assert result == "\033[38;5;1;48;5;2m"
 
 
-def test_parse_color_is_case_insensitive_for_x11_names():
-    """`parse_color` should handle case variations in X11 names."""
-    expected = Color.parse("#00bfff")  # DeepSkyBlue1
-    actual = color_module.parse_color("DeepSkyBlue1")
-    assert actual == expected
+def test_get_color_code_no_colors():
+    """get_color_code should return empty string when no colors specified."""
+    result = color_module.get_color_code()
+    assert result == ""
 
 
-def test_parse_color_handles_x11_names_with_spaces():
-    """`parse_color` should correctly handle X11 names containing spaces."""
-    expected = Color.parse("#00bfff")
-    actual = color_module.parse_color("deep sky blue")
-    assert actual == expected
+# --- Tests for get_rgb_code() ---
 
 
-def test_parse_color_raises_valueerror_for_invalid_name():
-    """`parse_color` should raise ValueError for an unknown color name."""
-    with pytest.raises(ValueError, match="Unknown color"):
-        color_module.parse_color("not a real color")
+def test_get_rgb_code_foreground_only():
+    """get_rgb_code should generate correct ANSI for RGB foreground."""
+    result = color_module.get_rgb_code(fg_rgb=(255, 0, 0))
+    assert result == "\033[38;2;255;0;0m"
 
 
-def test_parse_color_handles_invalid_color_n_format():
-    """`parse_color` should raise ValueError for invalid color(n) format."""
-    with pytest.raises(ValueError, match="Unknown color"):
-        color_module.parse_color("color(abc)")  # Not a number
-
-    with pytest.raises(ValueError, match="Unknown color"):
-        color_module.parse_color("color(256)")  # Out of range
-
-    with pytest.raises(ValueError, match="Unknown color"):
-        color_module.parse_color("color(-1)")  # Negative
+def test_get_rgb_code_background_only():
+    """get_rgb_code should generate correct ANSI for RGB background."""
+    result = color_module.get_rgb_code(bg_rgb=(0, 255, 0))
+    assert result == "\033[48;2;0;255;0m"
 
 
-# --- Tests for Palette Management ---
+def test_get_rgb_code_both_colors():
+    """get_rgb_code should generate correct ANSI for both RGB colors."""
+    result = color_module.get_rgb_code(fg_rgb=(255, 0, 0), bg_rgb=(0, 255, 0))
+    assert result == "\033[38;2;255;0;0;48;2;0;255;0m"
 
 
-def test_palette_init_creates_correctly_sized_empty_list():
-    """`palette_init` should return a list of 256 None values."""
-    expected_size = COLOR_PALETTE_SIZE
-    expected_content = [None] * COLOR_PALETTE_SIZE
-
-    actual = color_module.palette_init()
-
-    assert len(actual) == expected_size
-    assert actual == expected_content
+def test_get_rgb_code_no_colors():
+    """get_rgb_code should return empty string when no colors specified."""
+    result = color_module.get_rgb_code()
+    assert result == ""
 
 
-def test_palette_set_stores_rgb_tuple_at_index():
-    """`palette_set` should correctly place an RGB tuple at a given index."""
-    palette = color_module.palette_init()
-    test_color = (255, 165, 0)  # Orange
-    test_index = 21
-
-    color_module.palette_set(palette, test_index, test_color)
-
-    assert palette[test_index] == test_color
+# --- Tests for get_style_code() ---
 
 
-def test_palette_get_retrieves_set_color():
-    """`palette_get` should retrieve a color that was previously set."""
-    palette = color_module.palette_init()
-    expected = (138, 43, 226)  # BlueViolet
-    index = 100
-
-    color_module.palette_set(palette, index, expected)
-    actual = color_module.palette_get(palette, index)
-
-    assert actual == expected
+def test_get_style_code_bold():
+    """get_style_code should generate correct ANSI for bold."""
+    result = color_module.get_style_code(bold=True)
+    assert result == "\033[1m"
 
 
-def test_palette_get_returns_none_for_unset_color():
-    """`palette_get` should return None for a palette index that hasn't been set."""
-    palette = color_module.palette_init()
-    actual = color_module.palette_get(palette, 50)
-    assert actual is None
+def test_get_style_code_multiple_styles():
+    """get_style_code should generate correct ANSI for multiple styles."""
+    result = color_module.get_style_code(bold=True, italic=True, underline=True)
+    assert result == "\033[1;3;4m"
 
 
-def test_palette_clear_resets_all_entries_to_none():
-    """`palette_clear` should change all set entries back to None."""
-    palette = color_module.palette_init()
-    color_module.palette_set(palette, 10, (255, 0, 0))
-    color_module.palette_set(palette, 20, (0, 255, 0))
-    color_module.palette_set(palette, 30, (0, 0, 255))
-    expected = [None] * 256
-
-    color_module.palette_clear(palette)
-
-    assert palette == expected
+def test_get_style_code_all_styles():
+    """get_style_code should handle all style attributes."""
+    result = color_module.get_style_code(
+        bold=True, dim=True, italic=True, underline=True, blink=True, reverse=True, conceal=True, strike=True
+    )
+    assert result == "\033[1;2;3;4;5;7;8;9m"
 
 
-def test_palette_get_returns_none_for_out_of_bounds():
-    """`palette_get` should return None for indices outside 0-255 range."""
-    palette = color_module.palette_init()
+def test_get_style_code_no_styles():
+    """get_style_code should return empty string when no styles specified."""
+    result = color_module.get_style_code()
+    assert result == ""
 
-    # Test negative index
-    assert color_module.palette_get(palette, -1) is None
 
-    # Test index >= 256
-    assert color_module.palette_get(palette, 256) is None
-    assert color_module.palette_get(palette, 1000) is None
+# --- Tests for get_combined_code() ---
+
+
+def test_get_combined_code_color_and_style():
+    """get_combined_code should combine colors and styles correctly."""
+    result = color_module.get_combined_code(fg=1, bg=2, bold=True, italic=True)
+    assert result == "\033[1;3;38;5;1;48;5;2m"
+
+
+def test_get_combined_code_rgb_takes_precedence():
+    """get_combined_code should use RGB colors over palette colors."""
+    result = color_module.get_combined_code(fg=1, fg_rgb=(255, 0, 0), bg=2, bg_rgb=(0, 255, 0))
+    assert result == "\033[38;2;255;0;0;48;2;0;255;0m"
+
+
+def test_get_combined_code_styles_only():
+    """get_combined_code should work with styles only."""
+    result = color_module.get_combined_code(bold=True, underline=True)
+    assert result == "\033[1;4m"
+
+
+def test_get_combined_code_colors_only():
+    """get_combined_code should work with colors only."""
+    result = color_module.get_combined_code(fg=1, bg=2)
+    assert result == "\033[38;5;1;48;5;2m"
+
+
+def test_get_combined_code_empty():
+    """get_combined_code should return empty string when nothing specified."""
+    result = color_module.get_combined_code()
+    assert result == ""
+
+
+# --- Tests for get_basic_color_code() ---
+
+
+def test_get_basic_color_code_normal_foreground():
+    """get_basic_color_code should handle normal foreground colors (0-7)."""
+    result = color_module.get_basic_color_code(1, is_bg=False)
+    assert result == "\033[31m"
+
+
+def test_get_basic_color_code_normal_background():
+    """get_basic_color_code should handle normal background colors (0-7)."""
+    result = color_module.get_basic_color_code(2, is_bg=True)
+    assert result == "\033[42m"
+
+
+def test_get_basic_color_code_bright_foreground():
+    """get_basic_color_code should handle bright foreground colors (8-15)."""
+    result = color_module.get_basic_color_code(9, is_bg=False)
+    assert result == "\033[91m"
+
+
+def test_get_basic_color_code_bright_background():
+    """get_basic_color_code should handle bright background colors (8-15)."""
+    result = color_module.get_basic_color_code(10, is_bg=True)
+    assert result == "\033[102m"
+
+
+def test_get_basic_color_code_out_of_range():
+    """get_basic_color_code should return empty string for invalid colors."""
+    assert color_module.get_basic_color_code(16) == ""
+    assert color_module.get_basic_color_code(-1) == ""
+
+
+# --- Tests for utility functions ---
+
+
+def test_reset_code():
+    """reset_code should return correct ANSI reset sequence."""
+    result = color_module.reset_code()
+    assert result == "\033[0m"
+
+
+def test_get_cursor_code():
+    """get_cursor_code should return correct ANSI cursor sequence."""
+    result = color_module.get_cursor_code()
+    assert result == "\033[7m"
+
+
+def test_get_clear_line_code():
+    """get_clear_line_code should return correct ANSI clear line sequence."""
+    result = color_module.get_clear_line_code()
+    assert result == "\033[K"
+
+
+# --- Tests for LRU caching behavior ---
+
+
+def test_functions_are_cached():
+    """Functions should return the same object for same inputs (LRU cache)."""
+    # Test that calling with same args returns cached result
+    result1 = color_module.get_combined_code(fg=1, bold=True)
+    result2 = color_module.get_combined_code(fg=1, bold=True)
+
+    # They should be equal (same result)
+    assert result1 == result2
+
+    # For LRU cache, they should actually be the same object
+    assert result1 is result2
+
+
+def test_cache_different_inputs():
+    """Different inputs should produce different cached results."""
+    result1 = color_module.get_combined_code(fg=1, bold=True)
+    result2 = color_module.get_combined_code(fg=2, bold=True)
+
+    assert result1 != result2
+    assert result1 == "\033[1;38;5;1m"
+    assert result2 == "\033[1;38;5;2m"

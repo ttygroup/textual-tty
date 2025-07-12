@@ -48,17 +48,12 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] make `framebuffer.py`
     - [ ] choose a backend
   - [ ] asciinema streaming -> terminal web
-- [x] resizing oddities
-  - [x] htop doesn't resize properly
-    - [caused by $LINES, $COLS in ncurses](https://linux.die.net/man/3/resize_term)
 - [ ] performance improvements
-  - [x] reduce draw calls
   - [ ] rewrite using ANSI buffer grid
   - [ ] parse with regex over large buffer sizes
   - [ ] lazily draw the outputs, render to Rich at the last moment
 - [ ] scrollback buffer
   - [ ] rewrite app so we have consistent + performant buffer class
-  - [x] understand text wrapping
   - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
@@ -69,6 +64,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] move tests
     - [ ] integration ./tests/integration
     - [ ] comparison scripts ./tests/integration/scripts
+    - [x] performance ./test/performance
   - [ ] more coverage
   - [ ] diagnostic tools + performance counters
 - [ ] reduce redundancy redundancy of repeated repeated code code

@@ -19,9 +19,6 @@ from .pty_handler import create_pty
 from .log import info, warning, exception
 from . import constants
 
-from rich.text import Text
-from rich.style import Style
-
 
 class Terminal:
     """
@@ -49,6 +46,12 @@ class Terminal:
         self.cursor_y = 0
         self.cursor_visible = True
 
+        # Mouse position
+        self.mouse_x = 0
+        self.mouse_y = 0
+
+        self.show_mouse = False
+
         # Terminal modes
         self.auto_wrap = True
         self.insert_mode = False
@@ -70,8 +73,8 @@ class Terminal:
         self.scroll_top = 0
         self.scroll_bottom = height - 1
 
-        # Character attributes for next write
-        self.current_style = None
+        # Current ANSI code for next write
+        self.current_ansi_code: Optional[str] = None
 
         # Last printed character (for REP command)
         self.last_printed_char = " "
@@ -79,7 +82,7 @@ class Terminal:
         # Saved cursor state (for DECSC/DECRC)
         self.saved_cursor_x = 0
         self.saved_cursor_y = 0
-        self.saved_style = None
+        self.saved_ansi_code: Optional[str] = None
 
         # Process management
         self.process: Optional[subprocess.Popen] = None
@@ -123,10 +126,25 @@ class Terminal:
 
     def get_content(self):
         """Get current screen content."""
-        return self.current_buffer.get_content()
+        content = self.current_buffer.get_content()
+        if self.show_mouse:
+            # Superimpose mouse cursor
+            x = self.mouse_x - 1  # Convert to 0-based index
+            y = self.mouse_y - 1
+            if 0 <= y < self.height and 0 <= x < self.width:
+                if y < len(content):
+                    line = content[y]
+                    if x < len(line.plain):
+                        # Create a new Text object for the line to avoid modifying the original
+                        new_line = line.copy()
+                        new_line.plain = line.plain[:x] + "↖" + line.plain[x + 1 :]
+                        # Re-apply spans
+                        new_line.spans = line.spans
+                        content[y] = new_line
+        return content
 
     # Methods called by parser
-    def write_text(self, text: str) -> None:
+    def write_text(self, text: str, ansi_code: Optional[str] = None) -> None:
         """Write text at cursor position."""
         # Handle line wrapping or clipping
         if self.cursor_x >= self.width:
@@ -136,11 +154,14 @@ class Terminal:
             else:
                 self.cursor_x = self.width - 1
 
+        # Use provided ANSI code or current one
+        code_to_use = ansi_code if ansi_code is not None else self.current_ansi_code
+
         # Insert or overwrite based on mode
         if self.insert_mode:
-            self.current_buffer.insert(self.cursor_x, self.cursor_y, text, self.current_style)
+            self.current_buffer.insert(self.cursor_x, self.cursor_y, text, code_to_use)
         else:
-            self.current_buffer.set(self.cursor_x, self.cursor_y, text, self.current_style)
+            self.current_buffer.set(self.cursor_x, self.cursor_y, text, code_to_use)
 
         # Move cursor forward by character count
         if self.auto_wrap or self.cursor_x < self.width - 1:
@@ -182,37 +203,27 @@ class Terminal:
     def clear_screen(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear screen."""
         if mode == constants.ERASE_FROM_CURSOR_TO_END:
-            # Clear current line from cursor to end, padding to full width
-            if 0 <= self.cursor_y < len(self.current_buffer.lines):
-                line = self.current_buffer.lines[self.cursor_y]
-                if self.cursor_x < len(line.plain):
-                    # Keep text before cursor, fill rest with spaces to full width
-                    kept_part = line[: self.cursor_x]
-                    spaces_needed = self.width - self.cursor_x
-                    if spaces_needed > 0:
-                        spaces = Text(" " * spaces_needed)
-                        self.current_buffer.lines[self.cursor_y] = kept_part + spaces
-                    else:
-                        self.current_buffer.lines[self.cursor_y] = kept_part
+            # Clear current line from cursor to end
+            self.current_buffer.clear_line(self.cursor_y, constants.ERASE_FROM_CURSOR_TO_END, self.cursor_x)
             # Clear all lines below cursor
-            for y in range(self.cursor_y + 1, min(self.height, len(self.current_buffer.lines))):
-                self.current_buffer.lines[y] = Text()
+            for y in range(self.cursor_y + 1, self.height):
+                self.current_buffer.clear_line(y, constants.ERASE_ALL)
         elif mode == constants.ERASE_FROM_START_TO_CURSOR:
             # Clear all lines above cursor
-            for y in range(min(self.cursor_y, len(self.current_buffer.lines))):
-                self.current_buffer.lines[y] = Text()
+            for y in range(self.cursor_y):
+                self.current_buffer.clear_line(y, constants.ERASE_ALL)
             self.clear_line(constants.ERASE_FROM_START_TO_CURSOR)
         elif mode == constants.ERASE_ALL:
-            for y in range(len(self.current_buffer.lines)):
-                self.current_buffer.lines[y] = Text()
+            for y in range(self.height):
+                self.current_buffer.clear_line(y, constants.ERASE_ALL)
 
     def clear_line(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear line."""
         self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x)
 
-    def clear_rect(self, x1: int, y1: int, x2: int, y2: int, style: Optional[Style] = None) -> None:
+    def clear_rect(self, x1: int, y1: int, x2: int, y2: int, ansi_code: Optional[str] = None) -> None:
         """Clear a rectangular region."""
-        self.current_buffer.clear_region(x1, y1, x2, y2, style)
+        self.current_buffer.clear_region(x1, y1, x2, y2, ansi_code)
 
     def alternate_screen_on(self) -> None:
         """Switch to alternate screen."""
@@ -274,23 +285,21 @@ class Terminal:
 
     def alignment_test(self) -> None:
         """Fill the screen with 'E' characters for alignment testing."""
-        from rich.text import Text
-
-        test_line = Text("E" * self.width)
+        test_text = "E" * self.width
         for y in range(self.height):
-            self.current_buffer.lines[y] = test_line
+            self.current_buffer.set(0, y, test_text)
 
     def save_cursor(self) -> None:
         """Save cursor position and attributes."""
         self.saved_cursor_x = self.cursor_x
         self.saved_cursor_y = self.cursor_y
-        self.saved_style = self.current_style
+        self.saved_ansi_code = self.current_ansi_code
 
     def restore_cursor(self) -> None:
         """Restore cursor position and attributes."""
         self.cursor_x = self.saved_cursor_x
         self.cursor_y = self.saved_cursor_y
-        self.current_style = self.saved_style
+        self.current_ansi_code = self.saved_ansi_code
 
     def set_scroll_region(self, top: int, bottom: int) -> None:
         """Set scroll region."""
@@ -300,26 +309,35 @@ class Terminal:
     def insert_lines(self, count: int) -> None:
         """Insert blank lines at cursor position."""
         for _ in range(count):
-            # Insert blank line at cursor row, shift everything down
-            self.current_buffer.lines.insert(self.cursor_y, Text())
-            # Remove lines from bottom to maintain screen height
-            if len(self.current_buffer.lines) > self.height:
-                self.current_buffer.lines.pop()
+            # Shift lines down and clear current line
+            for y in range(self.height - 1, self.cursor_y, -1):
+                if y - 1 >= 0:
+                    # Copy line above to current line
+                    for x in range(self.width):
+                        cell = self.current_buffer.get_cell(x, y - 1)
+                        self.current_buffer.set_cell(x, y, cell[1], cell[0])
+            # Clear the current line
+            self.current_buffer.clear_line(self.cursor_y, constants.ERASE_ALL)
 
     def delete_lines(self, count: int) -> None:
         """Delete lines at cursor position."""
         for _ in range(count):
-            if self.cursor_y < len(self.current_buffer.lines):
-                self.current_buffer.lines.pop(self.cursor_y)
-            # Add blank line at bottom
-            self.current_buffer.lines.append(Text())
+            # Shift lines up
+            for y in range(self.cursor_y, self.height - 1):
+                if y + 1 < self.height:
+                    # Copy line below to current line
+                    for x in range(self.width):
+                        cell = self.current_buffer.get_cell(x, y + 1)
+                        self.current_buffer.set_cell(x, y, cell[1], cell[0])
+            # Clear the bottom line
+            self.current_buffer.clear_line(self.height - 1, constants.ERASE_ALL)
 
-    def insert_characters(self, count: int) -> None:
+    def insert_characters(self, count: int, ansi_code: Optional[str] = None) -> None:
         """Insert blank characters at cursor position."""
         if not (0 <= self.cursor_y < self.height):
             return
         spaces = " " * count
-        self.current_buffer.insert(self.cursor_x, self.cursor_y, spaces, Style())
+        self.current_buffer.insert(self.cursor_x, self.cursor_y, spaces, ansi_code)
 
     def delete_characters(self, count: int) -> None:
         """Delete characters at cursor position."""
@@ -329,27 +347,11 @@ class Terminal:
 
     def scroll_up(self, count: int) -> None:
         """Scroll content up within scroll region."""
-        for _ in range(count):
-            # Remove line at top of scroll region
-            if self.scroll_top < len(self.current_buffer.lines):
-                self.current_buffer.lines.pop(self.scroll_top)
-            # Insert blank line at bottom of scroll region
-            self.current_buffer.lines.insert(self.scroll_bottom, Text())
-            # Ensure we don't exceed buffer size
-            while len(self.current_buffer.lines) > self.height:
-                self.current_buffer.lines.pop()
+        self.current_buffer.scroll_up(count)
 
     def scroll_down(self, count: int) -> None:
         """Scroll content down within scroll region."""
-        for _ in range(count):
-            # Remove line at bottom of scroll region
-            if self.scroll_bottom < len(self.current_buffer.lines):
-                self.current_buffer.lines.pop(self.scroll_bottom)
-            # Insert blank line at top of scroll region
-            self.current_buffer.lines.insert(self.scroll_top, Text())
-            # Ensure we don't exceed buffer size
-            while len(self.current_buffer.lines) > self.height:
-                self.current_buffer.lines.pop()
+        self.current_buffer.scroll_down(count)
 
     def set_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Set cursor position (alias for move_cursor)."""
@@ -441,6 +443,50 @@ class Terminal:
 
         # No special translation needed, send as-is
         self._send_to_pty(data)
+
+    def input_mouse(self, x: int, y: int, button: int, event_type: str, modifiers: set[str]) -> None:
+        """
+        Handle mouse input, cache position, and send appropriate sequence to PTY.
+
+        Args:
+            x: 1-based mouse column.
+            y: 1-based mouse row.
+            button: The button that was pressed/released.
+            event_type: "press", "release", or "move".
+            modifiers: A set of active modifiers ("shift", "meta", "ctrl").
+        """
+        # Cache mouse position
+        self.mouse_x = x
+        self.mouse_y = y
+
+        # Determine if we should send an event based on tracking modes
+        is_move = event_type == "move"
+        is_press_release = event_type in ("press", "release")
+
+        if is_move and not self.mouse_any_tracking:
+            return
+        if is_press_release and not self.mouse_tracking:
+            return
+
+        # SGR mode is the most common and detailed
+        if self.mouse_sgr_mode:
+            # Add modifier flags to the button code
+            if "shift" in modifiers:
+                button |= constants.MOUSE_MOD_SHIFT
+            if "meta" in modifiers:
+                button |= constants.MOUSE_MOD_META
+            if "ctrl" in modifiers:
+                button |= constants.MOUSE_MOD_CTRL
+
+            # Determine final character ('M' for press/move, 'm' for release)
+            final_char = "m" if event_type == "release" else "M"
+
+            # For movement, the button code is special
+            if is_move:
+                button = constants.MOUSE_BUTTON_MOVEMENT
+
+            mouse_seq = f"{constants.ESC}[<{button};{x};{y}{final_char}"
+            self._send_to_pty(mouse_seq)
 
     def _send_to_pty(self, data: str) -> None:
         """Send data directly to PTY."""

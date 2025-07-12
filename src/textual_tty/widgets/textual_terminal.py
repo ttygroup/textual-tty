@@ -55,6 +55,7 @@ class TextualTerminal(Terminal, Widget):
     width_chars: int = reactive(80, always_update=True)
     height_chars: int = reactive(24, always_update=True)
     current_buffer = reactive(None, always_update=True)
+    show_mouse: bool = reactive(False, always_update=True)
 
     def __init__(
         self,
@@ -156,7 +157,7 @@ class TextualTerminal(Terminal, Widget):
         if self.terminal_view is None:
             return
 
-        # Get the current screen content as Rich renderables
+        # Get the current screen content as grid
         content = self.get_content()
 
         # Update the scroll view
@@ -201,6 +202,10 @@ class TextualTerminal(Terminal, Widget):
         buffer_name = "alternate" if new_buffer is self.alt_buffer else "primary"
         self.post_message(self.BufferSwitched(buffer_name))
 
+    async def watch_show_mouse(self, old_show_mouse: bool, new_show_mouse: bool) -> None:
+        """Called when show_mouse changes."""
+        await self._update_display()
+
     async def on_resize(self, event) -> None:
         """Handle widget resize events from Textual."""
         debug(f"on_resize called with size: {event.size}")
@@ -215,28 +220,22 @@ class TextualTerminal(Terminal, Widget):
     # Input handling
     async def on_mouse_move(self, event) -> None:
         """Handle mouse movement events."""
-        if self.pty is None or not self.mouse_any_tracking:
+        if self.pty is None:
             return
 
-        # Convert screen coordinates to terminal coordinates
-        x = event.x + 1  # Terminal coordinates are 1-based
-        y = event.y + 1
-
-        # Send SGR mouse movement event
-        if self.mouse_sgr_mode:
-            mouse_seq = f"{constants.ESC}[<{constants.MOUSE_BUTTON_MOVEMENT};{x};{y}M"
-            self.pty.write(mouse_seq.encode("utf-8"))
+        self.input_mouse(
+            x=event.x + 1,
+            y=event.y + 1,
+            button=constants.MOUSE_BUTTON_MOVEMENT,  # Not relevant for move
+            event_type="move",
+            modifiers=self._get_modifiers(event),
+        )
 
     async def on_mouse_down(self, event) -> None:
         """Handle mouse button press events."""
-        if self.pty is None or not self.mouse_tracking:
+        if self.pty is None:
             return
 
-        # Convert screen coordinates to terminal coordinates
-        x = event.x + 1
-        y = event.y + 1
-
-        # Map mouse buttons
         button_map = {
             "left": constants.MOUSE_BUTTON_LEFT,
             "middle": constants.MOUSE_BUTTON_MIDDLE,
@@ -244,29 +243,19 @@ class TextualTerminal(Terminal, Widget):
         }
         button = button_map.get(event.button, constants.MOUSE_BUTTON_LEFT)
 
-        # Add modifier flags
-        if event.shift:
-            button |= constants.MOUSE_MOD_SHIFT
-        if event.meta:
-            button |= constants.MOUSE_MOD_META
-        if event.ctrl:
-            button |= constants.MOUSE_MOD_CTRL
-
-        # Send SGR mouse press event
-        if self.mouse_sgr_mode:
-            mouse_seq = f"{constants.ESC}[<{button};{x};{y}M"
-            self.pty.write(mouse_seq.encode("utf-8"))
+        self.input_mouse(
+            x=event.x + 1,
+            y=event.y + 1,
+            button=button,
+            event_type="press",
+            modifiers=self._get_modifiers(event),
+        )
 
     async def on_mouse_up(self, event) -> None:
         """Handle mouse button release events."""
-        if self.pty is None or not self.mouse_tracking:
+        if self.pty is None:
             return
 
-        # Convert screen coordinates to terminal coordinates
-        x = event.x + 1
-        y = event.y + 1
-
-        # Map mouse buttons
         button_map = {
             "left": constants.MOUSE_BUTTON_LEFT,
             "middle": constants.MOUSE_BUTTON_MIDDLE,
@@ -274,18 +263,13 @@ class TextualTerminal(Terminal, Widget):
         }
         button = button_map.get(event.button, constants.MOUSE_BUTTON_LEFT)
 
-        # Add modifier flags
-        if event.shift:
-            button |= constants.MOUSE_MOD_SHIFT
-        if event.meta:
-            button |= constants.MOUSE_MOD_META
-        if event.ctrl:
-            button |= constants.MOUSE_MOD_CTRL
-
-        # Send SGR mouse release event (lowercase 'm')
-        if self.mouse_sgr_mode:
-            mouse_seq = f"{constants.ESC}[<{button};{x};{y}m"
-            self.pty.write(mouse_seq.encode("utf-8"))
+        self.input_mouse(
+            x=event.x + 1,
+            y=event.y + 1,
+            button=button,
+            event_type="release",
+            modifiers=self._get_modifiers(event),
+        )
 
     async def on_key(self, event) -> None:
         """Handle key events."""
@@ -306,6 +290,17 @@ class TextualTerminal(Terminal, Widget):
 
         # If we couldn't handle the key, let Textual handle it
         # (but this means focus keys like Tab will still work for navigation)
+
+    def _get_modifiers(self, event) -> set[str]:
+        """Extract active modifiers from a mouse or key event."""
+        modifiers = set()
+        if event.shift:
+            modifiers.add("shift")
+        if event.meta:
+            modifiers.add("meta")
+        if event.ctrl:
+            modifiers.add("ctrl")
+        return modifiers
 
     def _handle_key_input(self, event) -> bool:
         """Parse Textual key event and route to appropriate Terminal input method."""
