@@ -13,6 +13,7 @@ import subprocess
 from typing import Optional, Dict, Protocol
 
 from . import constants
+from .log import measure_performance
 
 
 class PTYSocket(Protocol):
@@ -52,6 +53,7 @@ class UnixPTY:
         self._closed = False
         self.resize(rows, cols)
 
+    @measure_performance("UnixPTY")
     def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
         """Read data from the PTY."""
         if self._closed:
@@ -64,6 +66,7 @@ class UnixPTY:
                 raise
             return b""
 
+    @measure_performance("UnixPTY")
     def write(self, data: bytes) -> int:
         """Write data to the PTY."""
         if self._closed:
@@ -211,6 +214,7 @@ class WindowsPTY:
         except ImportError:
             raise OSError("pywinpty not installed. Install with: pip install textual-terminal[windows]")
 
+    @measure_performance("WindowsPTY")
     def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
         """Read data from the PTY."""
         if self._closed:
@@ -220,6 +224,7 @@ class WindowsPTY:
         except Exception:
             return b""
 
+    @measure_performance("WindowsPTY")
     def write(self, data: bytes) -> int:
         """Write data to the PTY."""
         if self._closed:

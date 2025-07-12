@@ -13,6 +13,8 @@ from rich.text import Text
 from rich.segment import Segment
 from rich.style import Style
 
+from ..log import measure_performance
+
 
 class TerminalScrollView(ScrollView):
     """High-performance terminal display using direct strip rendering."""
@@ -88,6 +90,7 @@ class TerminalScrollView(ScrollView):
         # Beyond all lines
         return (len(self._content_lines), 0)
 
+    @measure_performance("TerminalScrollView")
     def render_line(self, visual_y: int) -> Strip:
         """Render a single visual line."""
         # Account for scrolling

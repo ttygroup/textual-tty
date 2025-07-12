@@ -508,7 +508,7 @@ class Terminal:
 
                 # Read available data (non-blocking)
                 try:
-                    data = os.read(self.pty.master_fd, 4096)
+                    data = self.pty.read(4096)
                 except BlockingIOError:
                     # No data after all, continue
                     await asyncio.sleep(0.01)
