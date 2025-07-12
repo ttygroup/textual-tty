@@ -143,6 +143,24 @@ class Terminal:
                         content[y] = new_line
         return content
 
+    def capture_pane(self) -> str:
+        """Capture terminal content like tmux capture-pane."""
+        lines = []
+        for y in range(self.height):
+            lines.append(
+                self.current_buffer.get_line(
+                    y,
+                    width=self.width,
+                    cursor_x=self.cursor_x,
+                    cursor_y=self.cursor_y,
+                    show_cursor=self.cursor_visible,
+                    mouse_x=self.mouse_x,
+                    mouse_y=self.mouse_y,
+                    show_mouse=self.show_mouse,
+                )
+            )
+        return "\n".join(lines)
+
     # Methods called by parser
     def write_text(self, text: str, ansi_code: str = "") -> None:
         """Write text at cursor position."""

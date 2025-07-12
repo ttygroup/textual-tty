@@ -10,11 +10,9 @@ from textual.scroll_view import ScrollView
 from textual.geometry import Size
 from textual.strip import Strip
 from rich.segment import Segment
-from rich.text import Text
 
 from ..log import measure_performance
 from ..buffer import Cell
-from ..color import get_cursor_code, reset_code
 
 
 class TerminalScrollView(ScrollView):
@@ -60,49 +58,21 @@ class TerminalScrollView(ScrollView):
 
     @measure_performance("TerminalScrollView")
     def render_line(self, visual_y: int) -> Strip:
-        """Render a single visual line directly from grid."""
+        """Render a single visual line using terminal's ANSI output."""
         # Account for scrolling
         actual_visual_y = visual_y + int(self.scroll_y)
 
-        if actual_visual_y >= len(self._content_grid):
-            # Beyond content - return empty line
+        # Get terminal widget (parent)
+        terminal = self.parent
+        if not hasattr(terminal, "get_line_rich"):
             return Strip([Segment(" " * self.size.width)])
 
-        row = self._content_grid[actual_visual_y]
+        # Check if line exists
+        if actual_visual_y >= terminal.height:
+            return Strip([Segment(" " * self.size.width)])
 
-        # Build ANSI string from grid row
-        parts = []
-        cursor_x, cursor_y = self._cursor_position
-
-        # Process each cell up to viewport width
-        for x in range(min(len(row), self.size.width)):
-            ansi_code, char = row[x]
-
-            # Handle cursor position
-            if self._show_cursor and x == cursor_x and actual_visual_y == cursor_y:
-                # Add cursor style
-                parts.append(ansi_code)
-                parts.append(get_cursor_code())
-                parts.append(char)
-                parts.append(reset_code())
-            else:
-                # Normal cell
-                parts.append(ansi_code)
-                parts.append(char)
-
-        # Pad to width if needed
-        current_width = min(len(row), self.size.width)
-        if current_width < self.size.width:
-            # Reset all attributes for padding (including background)
-            parts.append(reset_code())
-            parts.append(" " * (self.size.width - current_width))
-
-        # Always end with a reset to prevent bleeding to next line
-        parts.append(reset_code())
-
-        # Create Rich Text from ANSI string and convert to segments
-        ansi_string = "".join(parts)
-        text = Text.from_ansi(ansi_string)
+        # Get Rich Text line with all formatting, cursors, and padding
+        text = terminal.get_line_rich(actual_visual_y, width=self.size.width)
         segments = list(text.render(self.app.console))
 
         return Strip(segments)

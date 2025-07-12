@@ -164,3 +164,59 @@ class Buffer:
         if 0 <= y < self.height:
             return "".join(cell[1] for cell in self.grid[y])
         return ""
+
+    def get_line(
+        self,
+        y: int,
+        width: int = None,
+        cursor_x: int = -1,
+        cursor_y: int = -1,
+        show_cursor: bool = False,
+        mouse_x: int = -1,
+        mouse_y: int = -1,
+        show_mouse: bool = False,
+    ) -> str:
+        """Get full ANSI sequence for a line (like tmux capture-pane)."""
+        if not (0 <= y < self.height):
+            return ""
+
+        from .color import get_cursor_code, reset_code
+
+        # Use buffer width if not specified
+        if width is None:
+            width = self.width
+
+        parts = []
+        row = self.grid[y]
+
+        # Process each cell up to specified width
+        for x in range(min(len(row), width)):
+            ansi_code, char = row[x]
+
+            # Handle mouse cursor (convert to 0-based, as original code does mouse_x - 1)
+            if show_mouse and x == (mouse_x - 1) and y == (mouse_y - 1):
+                char = "↖"
+
+            # Handle text cursor position
+            if show_cursor and x == cursor_x and y == cursor_y:
+                # Add cursor style
+                parts.append(ansi_code)
+                parts.append(get_cursor_code())
+                parts.append(char)
+                parts.append(reset_code())
+            else:
+                # Normal cell
+                parts.append(ansi_code)
+                parts.append(char)
+
+        # Pad to width if needed
+        current_width = min(len(row), width)
+        if current_width < width:
+            # Reset all attributes for padding (including background)
+            parts.append(reset_code())
+            parts.append(" " * (width - current_width))
+
+        # Always end with a reset to prevent bleeding to next line
+        parts.append(reset_code())
+
+        return "".join(parts)

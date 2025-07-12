@@ -139,6 +139,24 @@ class TextualTerminal(Terminal, Widget):
         """Handle widget unmounting."""
         self.stop_process()
 
+    def get_line_rich(self, y: int, width: int = None):
+        """Get a single line as Rich Text object."""
+        from rich.text import Text
+
+        if width is None:
+            width = self.width
+        ansi_line = self.current_buffer.get_line(
+            y,
+            width=width,
+            cursor_x=self.cursor_x,
+            cursor_y=self.cursor_y,
+            show_cursor=self.cursor_visible,
+            mouse_x=self.mouse_x,
+            mouse_y=self.mouse_y,
+            show_mouse=self.show_mouse,
+        )
+        return Text.from_ansi(ansi_line)
+
     def _handle_pty_data(self, data: bytes) -> None:
         """Handle PTY data by posting a Textual message."""
         self.post_message(self.PTYDataMessage(data))

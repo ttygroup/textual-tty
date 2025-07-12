@@ -214,6 +214,12 @@ def reset_foreground_code() -> str:
 
 
 @lru_cache(maxsize=1)
+def reset_background_code() -> str:
+    """Get ANSI code to reset background color only."""
+    return "\033[49m"
+
+
+@lru_cache(maxsize=1)
 def reset_text_attributes() -> str:
     """Reset text attributes but preserve background color."""
     return "\033[0;22;23;24;25;27;28;29;39m"
