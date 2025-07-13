@@ -168,6 +168,7 @@ class WinptyProcessWrapper:
     def __init__(self, pty):
         self.pty = pty
         self._returncode = None
+        self._pid = None
 
     def poll(self):
         """Check if process is still running."""
@@ -198,6 +199,13 @@ class WinptyProcessWrapper:
     def returncode(self):
         """Get the return code."""
         return self.poll()
+
+    @property
+    def pid(self):
+        """Get the process ID."""
+        if self._pid is None and hasattr(self.pty, "pid"):
+            self._pid = self.pty.pid
+        return self._pid
 
 
 class WindowsPTY:
