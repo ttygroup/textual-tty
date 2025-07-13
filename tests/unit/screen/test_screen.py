@@ -227,8 +227,7 @@ def test_write_cell_overwrite_at_start_of_line_with_style():
     screen.current_buffer.set(0, 0, "12345")
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "X2345     "
     assert screen.current_buffer.get_cell(0, 0) == ("\x1b[31m", "X")
 
@@ -238,8 +237,7 @@ def test_write_cell_overwrite_middle_of_line_with_style():
     screen.current_buffer.set(0, 0, "0123456789")
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "01234X6789"
     assert screen.current_buffer.get_cell(5, 0) == ("\x1b[31m", "X")
 
@@ -250,8 +248,7 @@ def test_write_cell_insert_middle_of_line_with_style():
     screen.current_buffer.set(0, 0, "0123456789")
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "01234X5678"
     assert screen.current_buffer.get_cell(5, 0) == ("\x1b[31m", "X")
 
@@ -262,8 +259,7 @@ def test_write_cell_insert_at_start_of_line_with_style():
     screen.current_buffer.set(0, 0, "0123456789")
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "X012345678"
     assert screen.current_buffer.get_cell(0, 0) == ("\x1b[31m", "X")
 
@@ -274,8 +270,7 @@ def test_write_cell_insert_at_end_of_line_with_style():
     screen.current_buffer.set(0, 0, "012345678")
     screen.cursor_x = 9
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "012345678X"
     assert screen.current_buffer.get_cell(9, 0) == ("\x1b[31m", "X")
 
@@ -285,8 +280,7 @@ def test_write_cell_insert_into_empty_line_with_style():
     screen.insert_mode = True
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "X         "
     assert screen.current_buffer.get_cell(0, 0) == ("\x1b[31m", "X")
 
@@ -295,8 +289,7 @@ def test_write_cell_overwrite_into_empty_line_with_style():
     screen = Terminal(width=10, height=5)
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "X         "
     assert screen.current_buffer.get_cell(0, 0) == ("\x1b[31m", "X")
 
@@ -306,8 +299,7 @@ def test_write_cell_overwrite_beyond_end_of_line_with_style():
     screen.current_buffer.set(0, 0, "abc")
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "abc  X    "
     assert screen.current_buffer.get_cell(5, 0) == ("\x1b[31m", "X")
 
@@ -318,8 +310,7 @@ def test_write_cell_insert_beyond_end_of_line_with_style():
     screen.current_buffer.set(0, 0, "abc")
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    screen.parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "abc  X    "
     assert screen.current_buffer.get_cell(5, 0) == ("\x1b[31m", "X")
 

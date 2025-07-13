@@ -29,14 +29,14 @@ def test_terminal_output_matches_reference(ansi_file):
         # Wait for terminal to process the cat command
         pilot.pause(0.5)
 
-        # Get the terminal widget
-        terminal = app.query_one(Terminal)
+    # Get the terminal widget
+    terminal = app.query_one(Terminal)
 
-        # Capture the rendered output using tmux capture format
-        captured_output = terminal.capture_pane()
+    # Capture the rendered output using tmux capture format
+    captured_output = terminal.capture_pane()
 
-        # Read expected output
-        expected_output = ansi_file.read_text()
+    # Read expected output
+    expected_output = ansi_file.read_text()
 
-        # Compare outputs
-        assert captured_output == expected_output, f"Output mismatch for {ansi_file.name}"
+    # Compare outputs
+    assert captured_output == expected_output, f"Output mismatch for {ansi_file.name}"

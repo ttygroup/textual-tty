@@ -1,5 +1,4 @@
 from textual_tty.terminal import Terminal
-from rich.text import Text
 from textual_tty.constants import DEFAULT_TERMINAL_WIDTH, DEFAULT_TERMINAL_HEIGHT, DECAWM_AUTOWRAP, IRM_INSERT_REPLACE
 
 
@@ -53,18 +52,18 @@ def test_alignment_test():
 
     expected_char = "E"
     for y in range(screen.height):
-        line = screen.current_buffer.lines[y]
-        assert len(line.plain) == screen.width
-        assert all(char == expected_char for char in line.plain)
+        line_text = screen.current_buffer.get_line_text(y)
+        assert len(line_text) == screen.width
+        assert all(char == expected_char for char in line_text)
 
 
 def test_alternate_screen_on_off_restores_lines():
     screen = Terminal(width=10, height=5)
-    screen.current_buffer.lines[0] = Text("Hello")
+    screen.current_buffer.set(0, 0, "Hello")
     screen.alternate_screen_on()
-    assert screen.current_buffer.lines[0].plain == ""
+    assert screen.current_buffer.get_line_text(0) == "          "
     screen.alternate_screen_off()
-    assert screen.current_buffer.lines[0].plain == "Hello"
+    assert screen.current_buffer.get_line_text(0) == "Hello     "
 
 
 def test_set_and_clear_modes():

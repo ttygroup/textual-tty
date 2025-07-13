@@ -14,12 +14,16 @@ def test_show_mouse_cursor():
     terminal.mouse_y = 3
 
     # Get the content and check for the cursor
-    content = terminal.get_content()
-    assert content[2].plain[4] == "↖"
+    content = terminal.capture_pane()
+    # The mouse cursor is at (5,3), which is index 4 of line 2 (0-indexed)
+    # The capture_pane output includes newlines, so we need to split it.
+    lines = content.split("\n")
+    assert lines[2][4] == "↖"
 
     # Disable the mouse cursor
     terminal.show_mouse = False
 
     # Get the content and check that the cursor is gone
-    content = terminal.get_content()
-    assert content[2].plain[4] != "↖"
+    content = terminal.capture_pane()
+    lines = content.split("\n")
+    assert lines[2][4] != "↖"
