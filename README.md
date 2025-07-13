@@ -1,10 +1,9 @@
 # textual-tty
 
 A pure Python terminal emulator for Textual apps, that aims for tmux
-compatibility.
+compatibility
 
-Currently lacks a cursor, any decent debugging tools, and is too chatty,
-but it's still somewhat usable.
+Currently buggy and a bit slow, but it's still somewhat usable.
 
 ## Demo
 
