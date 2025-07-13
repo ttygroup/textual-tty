@@ -168,7 +168,7 @@ class Terminal:
         if self.insert_mode:
             self.current_buffer.insert(self.cursor_x, self.cursor_y, text, code_to_use)
         else:
-            self.current_buffer.set(self.cursor_x, self.cursor_y, text, code_to_use)
+            self.current_buffer.set(self.cursor_x, self.cursor_y, text, ansi_code)
 
         # Move cursor forward by character count
         if self.auto_wrap or self.cursor_x < self.width - 1:
@@ -354,11 +354,35 @@ class Terminal:
 
     def scroll_up(self, count: int) -> None:
         """Scroll content up within scroll region."""
-        self.current_buffer.scroll_up(count)
+        # Only scroll within the defined scroll region
+        for _ in range(count):
+            if self.scroll_top < self.scroll_bottom:
+                # Shift lines up within the scroll region
+                for y in range(self.scroll_top, self.scroll_bottom):
+                    for x in range(self.width):
+                        cell = self.current_buffer.get_cell(x, y + 1)
+                        self.current_buffer.set_cell(x, y, cell[1], cell[0])
+                # Clear the last line of the scroll region
+                self.current_buffer.clear_line(self.scroll_bottom, constants.ERASE_ALL)
+            else:
+                # If scroll region is 1 line or invalid, just clear it
+                self.current_buffer.clear_line(self.scroll_top, constants.ERASE_ALL)
 
     def scroll_down(self, count: int) -> None:
         """Scroll content down within scroll region."""
-        self.current_buffer.scroll_down(count)
+        # Only scroll within the defined scroll region
+        for _ in range(count):
+            if self.scroll_top < self.scroll_bottom:
+                # Shift lines down within the scroll region
+                for y in range(self.scroll_bottom, self.scroll_top, -1):
+                    for x in range(self.width):
+                        cell = self.current_buffer.get_cell(x, y - 1)
+                        self.current_buffer.set_cell(x, y, cell[1], cell[0])
+                # Clear the first line of the scroll region
+                self.current_buffer.clear_line(self.scroll_top, constants.ERASE_ALL)
+            else:
+                # If scroll region is 1 line or invalid, just clear it
+                self.current_buffer.clear_line(self.scroll_top, constants.ERASE_ALL)
 
     def set_cursor(self, x: Optional[int], y: Optional[int]) -> None:
         """Set cursor position (alias for move_cursor)."""

@@ -564,6 +564,7 @@ class Parser:
         # Build the ANSI sequence from the original parameters
         params_str = ";".join(str(p) if p is not None else "" for p in self.parsed_params)
         self.current_ansi_sequence = f"\033[{params_str}m"
+        self.terminal.current_ansi_code = self.current_ansi_sequence
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""
