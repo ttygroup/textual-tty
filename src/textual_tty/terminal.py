@@ -8,7 +8,6 @@ create terminal widgets.
 
 from __future__ import annotations
 
-import os
 import sys
 import asyncio
 import subprocess
@@ -16,13 +15,8 @@ from typing import Any, Optional, Callable
 
 from .buffer import Buffer
 from .parser import Parser
-from .pty_handler import create_pty
 from .log import info, warning, exception
 from . import constants
-
-# Platform-specific imports
-if sys.platform != "win32":
-    import fcntl
 
 
 class Terminal:
@@ -32,6 +26,26 @@ class Terminal:
     This class handles all terminal logic but has no UI dependencies.
     Subclass this to create terminal widgets for specific UI frameworks.
     """
+
+    @staticmethod
+    def get_pty_handler(rows: int = constants.DEFAULT_TERMINAL_HEIGHT, cols: int = constants.DEFAULT_TERMINAL_WIDTH):
+        """Create a platform-appropriate PTY handler.
+
+        Args:
+            rows: Terminal height in characters
+            cols: Terminal width in characters
+
+        Returns:
+            PTY handler object with read/write/resize interface
+        """
+        if sys.platform == "win32":
+            from .pty_windows import WindowsPTY
+
+            return WindowsPTY(rows, cols)
+        else:
+            from .pty_unix import UnixPTY
+
+            return UnixPTY(rows, cols)
 
     def __init__(
         self,
@@ -543,7 +557,7 @@ class Terminal:
                 info("Starting terminal in stream mode")
 
                 # Create PTY and spawn child process (for output)
-                self.pty = create_pty(self.height, self.width)
+                self.pty = Terminal.get_pty_handler(self.height, self.width)
                 info(f"Created PTY: {self.width}x{self.height}")
                 self.process = self.pty.spawn_process(self.command)
                 info(f"Spawned process: pid={self.process.pid}")
@@ -556,7 +570,7 @@ class Terminal:
                 info(f"Starting terminal process: {self.command}")
 
                 # Create PTY socket
-                self.pty = create_pty(self.height, self.width)
+                self.pty = Terminal.get_pty_handler(self.height, self.width)
                 info(f"Created PTY: {self.width}x{self.height}")
 
                 # Spawn process attached to PTY
@@ -622,29 +636,16 @@ class Terminal:
 
     async def _async_read_from_pty(self) -> None:
         """Async task to read PTY data and dispatch to callback or process directly."""
-        if sys.platform != "win32":
-            # Make PTY non-blocking on Unix
-            flags = fcntl.fcntl(self.pty.master_fd, fcntl.F_GETFL)
-            fcntl.fcntl(self.pty.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        # Set PTY to non-blocking mode
+        self.pty.set_nonblocking()
 
         while self.pty is not None and not self.pty.closed:
             try:
-                # Wait for data to be available
-                loop = asyncio.get_event_loop()
-                ready, _, _ = await loop.run_in_executor(
-                    None, lambda: __import__("select").select([self.pty.master_fd], [], [], 0.1)
-                )
+                # Use the PTY's async read method
+                data = await self.pty.read_async(4096)
 
-                if not ready:
+                if not data:
                     # No data available, yield and continue
-                    await asyncio.sleep(0.01)
-                    continue
-
-                # Read available data (non-blocking)
-                try:
-                    data = self.pty.read(4096)
-                except BlockingIOError:
-                    # No data after all, continue
                     await asyncio.sleep(0.01)
                     continue
 
