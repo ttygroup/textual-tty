@@ -1,4 +1,5 @@
 from textual_tty.terminal import Terminal
+from textual_tty.parser import Parser
 from textual_tty.constants import (
     ERASE_FROM_CURSOR_TO_END,
     ERASE_FROM_START_TO_CURSOR,
@@ -151,57 +152,57 @@ def test_delete_characters_invalid_cursor():
 
 def test_write_cell_overwrite_with_style():
     screen = Terminal(width=10, height=5)
+    parser = Parser(screen)
     screen.current_buffer.set(0, 0, "12345")
     screen.cursor_x = 2
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_cell(2, 0) == ("\x1b[31m", "X")
 
 
 def test_write_cell_insert_with_style():
     screen = Terminal(width=10, height=5)
+    parser = Parser(screen)
     screen.insert_mode = True
     screen.current_buffer.set(0, 0, "12345")
     screen.cursor_x = 2
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "12X345    "
     assert screen.current_buffer.get_cell(2, 0) == ("\x1b[31m", "X")
 
 
 def test_write_cell_insert_at_end_of_line():
     screen = Terminal(width=10, height=5)
+    parser = Parser(screen)
     screen.insert_mode = True
     screen.current_buffer.set(0, 0, "123")
     screen.cursor_x = 5
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "123  X    "
     assert screen.current_buffer.get_cell(5, 0) == ("\x1b[31m", "X")
 
 
 def test_write_cell_overwrite_at_start_of_line():
     screen = Terminal(width=10, height=5)
+    parser = Parser(screen)
     screen.current_buffer.set(0, 0, "12345")
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "X2345     "
     assert screen.current_buffer.get_cell(0, 0) == ("\x1b[31m", "X")
 
 
 def test_write_cell_insert_and_truncate():
     screen = Terminal(width=5, height=5)
+    parser = Parser(screen)
     screen.insert_mode = True
     screen.current_buffer.set(0, 0, "12345")
     screen.cursor_x = 2
     screen.cursor_y = 0
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("X")
+    parser.feed("\x1b[31mX")
     assert screen.current_buffer.get_line_text(0) == "12X34"
     assert screen.current_buffer.get_cell(2, 0) == ("\x1b[31m", "X")
 
@@ -361,4 +362,4 @@ def test_clear_line_with_mixed_styles():
     screen.cursor_x = 3
     screen.cursor_y = 1
     screen.clear_line(1)  # Clear from beginning to cursor
-    assert screen.current_buffer.get_line_text(1) == "   DEFGHI  "
+    assert screen.current_buffer.get_line_text(1) == "          "

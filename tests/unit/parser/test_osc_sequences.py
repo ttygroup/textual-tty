@@ -97,9 +97,18 @@ def test_ps1_with_colors():
     assert "user@host:~/projects$ " in output
 
     # Check that styles were applied correctly
-    line = terminal.get_content()[0]
-    # The text should have different styled spans
-    assert len(line.spans) > 1  # Should have multiple styled sections
+    # We expect specific ANSI sequences to be present in the buffer
+    # This is a simplified check, as full ANSI parsing is complex
+    line_cells = terminal.current_buffer.get_content()[0]
+
+    # Check for bold green for "user@host"
+    assert ("\x1b[1;32m", "u") in line_cells
+
+    # Check for bold blue for "~/projects"
+    assert ("\x1b[1;34m", "~") in line_cells
+
+    # Check for reset code
+    assert ("\x1b[0m", ":") in line_cells or ("\x1b[0m", "$") in line_cells
 
 
 def test_osc_string_terminator():

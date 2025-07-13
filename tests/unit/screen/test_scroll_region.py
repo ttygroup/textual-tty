@@ -1,8 +1,6 @@
 """Tests for scroll region functionality."""
 
 from textual_tty.terminal import Terminal
-from rich.text import Text
-from rich.style import Style
 
 
 def test_scroll_up_within_region():
@@ -11,7 +9,7 @@ def test_scroll_up_within_region():
 
     # Fill screen with numbered lines
     for i in range(10):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
 
     # Set scroll region to middle of screen (rows 3-7, 0-based)
     screen.set_scroll_region(3, 7)
@@ -20,20 +18,20 @@ def test_scroll_up_within_region():
     screen.scroll_up(1)
 
     # Lines 0-2 should be unchanged
-    assert screen.current_buffer.lines[0].plain == "Line 0"
-    assert screen.current_buffer.lines[1].plain == "Line 1"
-    assert screen.current_buffer.lines[2].plain == "Line 2"
+    assert screen.current_buffer.get_line_text(0) == "Line 0    "
+    assert screen.current_buffer.get_line_text(1) == "Line 1    "
+    assert screen.current_buffer.get_line_text(2) == "Line 2    "
 
     # Lines 3-7 should have scrolled up
-    assert screen.current_buffer.lines[3].plain == "Line 4"
-    assert screen.current_buffer.lines[4].plain == "Line 5"
-    assert screen.current_buffer.lines[5].plain == "Line 6"
-    assert screen.current_buffer.lines[6].plain == "Line 7"
-    assert screen.current_buffer.lines[7].plain == ""  # New blank line
+    assert screen.current_buffer.get_line_text(3) == "Line 4    "
+    assert screen.current_buffer.get_line_text(4) == "Line 5    "
+    assert screen.current_buffer.get_line_text(5) == "Line 6    "
+    assert screen.current_buffer.get_line_text(6) == "Line 7    "
+    assert screen.current_buffer.get_line_text(7) == "          "
 
     # Lines 8-9 should be unchanged
-    assert screen.current_buffer.lines[8].plain == "Line 8"
-    assert screen.current_buffer.lines[9].plain == "Line 9"
+    assert screen.current_buffer.get_line_text(8) == "Line 8    "
+    assert screen.current_buffer.get_line_text(9) == "Line 9    "
 
 
 def test_scroll_down_within_region():
@@ -42,7 +40,7 @@ def test_scroll_down_within_region():
 
     # Fill screen with numbered lines
     for i in range(10):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
 
     # Set scroll region to middle of screen (rows 3-7, 0-based)
     screen.set_scroll_region(3, 7)
@@ -51,20 +49,20 @@ def test_scroll_down_within_region():
     screen.scroll_down(1)
 
     # Lines 0-2 should be unchanged
-    assert screen.current_buffer.lines[0].plain == "Line 0"
-    assert screen.current_buffer.lines[1].plain == "Line 1"
-    assert screen.current_buffer.lines[2].plain == "Line 2"
+    assert screen.current_buffer.get_line_text(0) == "Line 0    "
+    assert screen.current_buffer.get_line_text(1) == "Line 1    "
+    assert screen.current_buffer.get_line_text(2) == "Line 2    "
 
     # Lines 3-7 should have scrolled down
-    assert screen.current_buffer.lines[3].plain == ""  # New blank line
-    assert screen.current_buffer.lines[4].plain == "Line 3"
-    assert screen.current_buffer.lines[5].plain == "Line 4"
-    assert screen.current_buffer.lines[6].plain == "Line 5"
-    assert screen.current_buffer.lines[7].plain == "Line 6"
+    assert screen.current_buffer.get_line_text(3) == "          "
+    assert screen.current_buffer.get_line_text(4) == "Line 3    "
+    assert screen.current_buffer.get_line_text(5) == "Line 4    "
+    assert screen.current_buffer.get_line_text(6) == "Line 5    "
+    assert screen.current_buffer.get_line_text(7) == "Line 6    "
 
     # Lines 8-9 should be unchanged
-    assert screen.current_buffer.lines[8].plain == "Line 8"
-    assert screen.current_buffer.lines[9].plain == "Line 9"
+    assert screen.current_buffer.get_line_text(8) == "Line 8    "
+    assert screen.current_buffer.get_line_text(9) == "Line 9    "
 
 
 def test_line_feed_at_bottom_of_scroll_region():
@@ -73,7 +71,7 @@ def test_line_feed_at_bottom_of_scroll_region():
 
     # Fill screen with numbered lines
     for i in range(10):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
 
     # Set scroll region to rows 2-5 (0-based)
     screen.set_scroll_region(2, 5)
@@ -85,18 +83,18 @@ def test_line_feed_at_bottom_of_scroll_region():
     screen.line_feed()
 
     # Lines outside region should be unchanged
-    assert screen.current_buffer.lines[0].plain == "Line 0"
-    assert screen.current_buffer.lines[1].plain == "Line 1"
-    assert screen.current_buffer.lines[6].plain == "Line 6"
-    assert screen.current_buffer.lines[7].plain == "Line 7"
-    assert screen.current_buffer.lines[8].plain == "Line 8"
-    assert screen.current_buffer.lines[9].plain == "Line 9"
+    assert screen.current_buffer.get_line_text(0) == "Line 0    "
+    assert screen.current_buffer.get_line_text(1) == "Line 1    "
+    assert screen.current_buffer.get_line_text(6) == "Line 6    "
+    assert screen.current_buffer.get_line_text(7) == "Line 7    "
+    assert screen.current_buffer.get_line_text(8) == "Line 8    "
+    assert screen.current_buffer.get_line_text(9) == "Line 9    "
 
     # Lines within region should have scrolled up
-    assert screen.current_buffer.lines[2].plain == "Line 3"
-    assert screen.current_buffer.lines[3].plain == "Line 4"
-    assert screen.current_buffer.lines[4].plain == "Line 5"
-    assert screen.current_buffer.lines[5].plain == ""  # New blank line
+    assert screen.current_buffer.get_line_text(2) == "Line 3    "
+    assert screen.current_buffer.get_line_text(3) == "Line 4    "
+    assert screen.current_buffer.get_line_text(4) == "Line 5    "
+    assert screen.current_buffer.get_line_text(5) == "          "
 
 
 def test_multiple_scroll_regions():
@@ -105,31 +103,31 @@ def test_multiple_scroll_regions():
 
     # Fill screen with numbered lines
     for i in range(10):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
 
     # Set first scroll region (top half)
     screen.set_scroll_region(0, 4)
     screen.scroll_up(1)
 
     # Top half should be scrolled
-    assert screen.current_buffer.lines[0].plain == "Line 1"
-    assert screen.current_buffer.lines[4].plain == ""
+    assert screen.current_buffer.get_line_text(0) == "Line 1    "
+    assert screen.current_buffer.get_line_text(4) == "          "
 
     # Bottom half should be unchanged
-    assert screen.current_buffer.lines[5].plain == "Line 5"
-    assert screen.current_buffer.lines[9].plain == "Line 9"
+    assert screen.current_buffer.get_line_text(5) == "Line 5    "
+    assert screen.current_buffer.get_line_text(9) == "Line 9    "
 
     # Change scroll region to bottom half
     screen.set_scroll_region(5, 9)
     screen.scroll_up(1)
 
     # Top half should remain as it was
-    assert screen.current_buffer.lines[0].plain == "Line 1"
-    assert screen.current_buffer.lines[4].plain == ""
+    assert screen.current_buffer.get_line_text(0) == "Line 1    "
+    assert screen.current_buffer.get_line_text(4) == "          "
 
     # Bottom half should now be scrolled
-    assert screen.current_buffer.lines[5].plain == "Line 6"
-    assert screen.current_buffer.lines[9].plain == ""
+    assert screen.current_buffer.get_line_text(5) == "Line 6    "
+    assert screen.current_buffer.get_line_text(9) == "          "
 
 
 def test_reset_scroll_region():

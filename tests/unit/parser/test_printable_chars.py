@@ -30,7 +30,7 @@ def test_printable_characters(screen):
         call("r", ""),
         call("l", ""),
         call("d", ""),
-        call("!"),
+        call("!", ""),
     ]
     screen.write_text.assert_has_calls(calls)
 

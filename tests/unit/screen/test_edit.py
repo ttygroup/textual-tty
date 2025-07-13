@@ -1,41 +1,46 @@
 from textual_tty.terminal import Terminal
 from textual_tty import constants
+from textual_tty.parser import Parser
 
 
 def test_write_cell_overwrite():
     screen = Terminal(width=10, height=1)
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("A")
+    parser = Parser(screen)
+    parser = Parser(screen)
+    parser.feed("\x1b[31m")  # Set red color
+    parser.feed("A")
     assert screen.current_buffer.get_line_text(0) == "A         "
-    assert screen.current_buffer.get_cell(0, 0) == (screen.parser.current_ansi_sequence, "A")
+    assert screen.current_buffer.get_cell(0, 0) == ("\x1b[31m", "A")
     assert screen.cursor_x == 1
 
-    screen.parser.current_ansi_sequence = "\x1b[32m"
-    screen.write_text("B")
+    parser.feed("\x1b[32m")  # Set green color
+    parser.feed("B")
     assert screen.current_buffer.get_line_text(0) == "AB        "
-    assert screen.current_buffer.get_cell(1, 0) == (screen.parser.current_ansi_sequence, "B")
+    assert screen.current_buffer.get_cell(1, 0) == ("\x1b[32m", "B")
     assert screen.cursor_x == 2
 
     screen.set_cursor(0, 0)
-    screen.parser.current_ansi_sequence = "\x1b[34m"
-    screen.write_text("C")
+    parser.feed("\x1b[34m")  # Set blue color
+    parser.feed("C")
     assert screen.current_buffer.get_line_text(0) == "CB        "
-    assert screen.current_buffer.get_cell(0, 0) == (screen.parser.current_ansi_sequence, "C")
+    assert screen.current_buffer.get_cell(0, 0) == ("\x1b[34m", "C")
     assert screen.cursor_x == 1
 
 
 def test_write_cell_insert_mode():
     screen = Terminal(width=10, height=1)
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("A")
-    screen.parser.current_ansi_sequence = "\x1b[32m"
-    screen.write_text("B")
+    parser = Parser(screen)
+    parser = Parser(screen)
+    parser.feed("\x1b[31m")  # Set red color
+    parser.feed("A")
+    parser.feed("\x1b[32m")  # Set green color
+    parser.feed("B")
     screen.set_cursor(0, 0)
     screen.insert_mode = True
-    screen.parser.current_ansi_sequence = "\x1b[34m"
-    screen.write_text("C")
+    parser.feed("\x1b[34m")  # Set blue color
+    parser.feed("C")
     assert screen.current_buffer.get_line_text(0) == "CAB       "
-    assert screen.current_buffer.get_cell(0, 0) == (screen.parser.current_ansi_sequence, "C")
+    assert screen.current_buffer.get_cell(0, 0) == ("\x1b[34m", "C")
     assert screen.current_buffer.get_cell(1, 0) == ("\x1b[31m", "A")
     assert screen.current_buffer.get_cell(2, 0) == ("\x1b[32m", "B")
     assert screen.cursor_x == 1
@@ -43,18 +48,19 @@ def test_write_cell_insert_mode():
 
 def test_write_cell_autowrap():
     screen = Terminal(width=3, height=2)
-    screen.parser.current_ansi_sequence = "\x1b[31m"
-    screen.write_text("A")
-    screen.parser.current_ansi_sequence = "\x1b[32m"
-    screen.write_text("B")
-    screen.parser.current_ansi_sequence = "\x1b[34m"
-    screen.write_text("C")
+    parser = Parser(screen)
+    parser.feed("\x1b[31m")  # Set red color
+    parser.feed("A")
+    parser.feed("\x1b[32m")  # Set green color
+    parser.feed("B")
+    parser.feed("\x1b[34m")  # Set blue color
+    parser.feed("C")
     assert screen.current_buffer.get_line_text(0) == "ABC"
     assert screen.cursor_x == 3
     assert screen.cursor_y == 0
 
-    screen.parser.current_ansi_sequence = "\x1b[33m"
-    screen.write_text("D")  # Should wrap
+    parser.feed("\x1b[33m")  # Set yellow color
+    parser.feed("D")  # Should wrap
     assert screen.current_buffer.get_line_text(1) == "D  "
     assert screen.cursor_x == 1
     assert screen.cursor_y == 1
