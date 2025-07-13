@@ -38,11 +38,10 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
 ## todo / ideas
 
 - [ ] debug logger
-  - [ ] make file logging optional
   - [ ] add arg parser to demo app
+  - [ ] make file logging optional (and not default)
 - [ ] break terminal project out from Textual deps
   - [x] pick a snazzy name - bitty/titty
-  - [x] stdio -> pty wrapper
   - [ ] gui
     - [ ] make `framebuffer.py`
     - [ ] choose a backend
@@ -50,21 +49,17 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
 - [ ] performance improvements
   - [ ] parse with regex over large buffer sizes
 - [ ] scrollback buffer
-  - [ ] rewrite app so we have consistent + performant buffer class
+  - [ ] consistent + performant scrollback
   - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
     - [ ] figure out proper order
-  - [ ] corruption in stream
+  - [ ] corruption in stream - debug it
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
-- [ ] testing
-  - [ ] move tests
-    - [x] comparison scripts ./tests/integration/compare
-  - [x] fix coverage after refactor
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [ ] code code of of redundancy redundancy
 - [ ] add terminal visuals
-  - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
+  - [ ] bell flash effect (enabled in base class, disabled in `textual_terminal`)
 - [ ] Theme support
   - [ ] base terminal using config + themes
   - [ ] theme for textual widget using CSS styles
@@ -77,6 +72,5 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] wide chars detection
     - [ ] theme selector/editor
 - [ ] terminal quantizer
-  - [x] stdin mode
   - [ ] move inside app
 
