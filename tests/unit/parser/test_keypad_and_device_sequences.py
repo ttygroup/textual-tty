@@ -7,10 +7,15 @@ from textual_tty.constants import ESC, DECKPAM_APPLICATION_KEYPAD
 
 def render_terminal_to_string(terminal: Terminal) -> str:
     """Render the terminal content to a plain string for testing."""
-    lines = []
-    for line in terminal.get_content():
-        lines.append(line.plain)
-    return "\n".join(lines)
+    return "\n".join(render_lines_to_string(terminal.get_content()))
+
+
+def render_lines_to_string(lines: list[list[tuple[str, str]]]) -> list[str]:
+    """Render a list of lines to a list of strings for testing."""
+    output = []
+    for line in lines:
+        output.append("".join(char for _, char in line))
+    return output
 
 
 def test_keypad_application_mode():

@@ -202,7 +202,8 @@ class Buffer:
                 # Add cursor style
                 parts.append(ansi_code)
                 parts.append(get_cursor_code())
-                parts.append(char + reset_code())
+                parts.append(char)
+                parts.append("\033[27m")  # Turn off reverse video only
             else:
                 # Normal cell
                 parts.append(ansi_code)

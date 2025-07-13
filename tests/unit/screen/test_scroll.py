@@ -1,13 +1,11 @@
 from textual_tty.terminal import Terminal
-from rich.text import Text
-from rich.style import Style
 
 
 def test_scroll_up():
     screen = Terminal(width=10, height=5)
     # Fill screen with content
     for i in range(screen.height):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
 
     # Set scroll region to cover entire screen initially
     screen.set_scroll_region(0, screen.height - 1)
@@ -15,35 +13,35 @@ def test_scroll_up():
     # Scroll up by 1
     screen.scroll_up(1)
     expected_lines = [
-        Text("Line 1", style=Style()),
-        Text("Line 2", style=Style()),
-        Text("Line 3", style=Style()),
-        Text("Line 4", style=Style()),
-        Text("", style=Style()),  # New blank line at the bottom
+        "Line 1    ",
+        "Line 2    ",
+        "Line 3    ",
+        "Line 4    ",
+        "          ",
     ]
-    assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
+    assert [screen.current_buffer.get_line_text(i) for i in range(screen.height)] == expected_lines
 
     # Scroll up by 2
     screen = Terminal(width=10, height=5)
     for i in range(screen.height):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
     screen.set_scroll_region(0, screen.height - 1)
     screen.scroll_up(2)
     expected_lines = [
-        Text("Line 2", style=Style()),
-        Text("Line 3", style=Style()),
-        Text("Line 4", style=Style()),
-        Text("", style=Style()),
-        Text("", style=Style()),
+        "Line 2    ",
+        "Line 3    ",
+        "Line 4    ",
+        "          ",
+        "          ",
     ]
-    assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
+    assert [screen.current_buffer.get_line_text(i) for i in range(screen.height)] == expected_lines
 
 
 def test_scroll_down():
     screen = Terminal(width=10, height=5)
     # Fill screen with content
     for i in range(screen.height):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
 
     # Set scroll region to cover entire screen initially
     screen.set_scroll_region(0, screen.height - 1)
@@ -51,28 +49,28 @@ def test_scroll_down():
     # Scroll down by 1
     screen.scroll_down(1)
     expected_lines = [
-        Text("", style=Style()),  # New blank line at the top
-        Text("Line 0", style=Style()),
-        Text("Line 1", style=Style()),
-        Text("Line 2", style=Style()),
-        Text("Line 3", style=Style()),
+        "          ",
+        "Line 0    ",
+        "Line 1    ",
+        "Line 2    ",
+        "Line 3    ",
     ]
-    assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
+    assert [screen.current_buffer.get_line_text(i) for i in range(screen.height)] == expected_lines
 
     # Scroll down by 2
     screen = Terminal(width=10, height=5)
     for i in range(screen.height):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
     screen.set_scroll_region(0, screen.height - 1)
     screen.scroll_down(2)
     expected_lines = [
-        Text("", style=Style()),
-        Text("", style=Style()),
-        Text("Line 0", style=Style()),
-        Text("Line 1", style=Style()),
-        Text("Line 2", style=Style()),
+        "          ",
+        "          ",
+        "Line 0    ",
+        "Line 1    ",
+        "Line 2    ",
     ]
-    assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
+    assert [screen.current_buffer.get_line_text(i) for i in range(screen.height)] == expected_lines
 
 
 def test_set_scroll_region():
@@ -95,7 +93,7 @@ def test_line_feed_with_scrolling():
     screen = Terminal(width=10, height=5)
     # Fill screen up to the last line
     for i in range(screen.height - 1):
-        screen.current_buffer.lines[i] = Text(f"Line {i}", style=Style())
+        screen.current_buffer.set(0, i, f"Line {i}")
     screen.cursor_y = screen.height - 1  # Cursor on the last line
 
     # Set scroll region to cover entire screen
@@ -105,11 +103,11 @@ def test_line_feed_with_scrolling():
     screen.line_feed()
 
     expected_lines = [
-        Text("Line 1", style=Style()),
-        Text("Line 2", style=Style()),
-        Text("Line 3", style=Style()),
-        Text("", style=Style()),  # Line 0 scrolled off, new blank line at bottom
-        Text("", style=Style()),  # Original last line is now blank
+        "Line 1    ",
+        "Line 2    ",
+        "Line 3    ",
+        "          ",
+        "          ",
     ]
-    assert [line.plain for line in screen.get_content()] == [line.plain for line in expected_lines]
+    assert [screen.current_buffer.get_line_text(i) for i in range(screen.height)] == expected_lines
     assert screen.cursor_y == screen.height - 1  # Cursor should remain on the last line

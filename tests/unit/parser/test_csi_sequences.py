@@ -99,7 +99,7 @@ def test_csi_ich_insert_characters(screen):
     """Test CSI @ (ICH - Insert Characters) with parameter."""
     parser = Parser(screen)
     parser.feed("\x1b[5@")  # ESC[5@ -> insert 5 characters
-    screen.insert_characters.assert_called_once_with(5)
+    screen.insert_characters.assert_called_once_with(5, "")
 
 
 def test_csi_dch_delete_characters(screen):

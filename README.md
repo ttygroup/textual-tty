@@ -57,20 +57,18 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] blank background to end of line
     - [ ] figure out proper order
   - [ ] corruption in stream
-    - [ ]
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
 - [ ] testing
   - [ ] move tests
-    - [ ] integration ./tests/integration
     - [x] comparison scripts ./tests/integration/compare
-  - [ ] fix coverage after refactor
+  - [x] fix coverage after refactor
 - [ ] reduce redundancy redundancy of repeated repeated code code
   - [ ] code code of of redundancy redundancy
 - [ ] add terminal visuals
   - [ ] bell flash effect (enabled in base class, disabled in textual_terminal)
 - [ ] Theme support
   - [ ] base terminal using config + themes
-  - [ ] textual widget using CSS styles
+  - [ ] theme for textual widget using CSS styles
   - [ ] textual app using theme/css loader
 - [ ] flesh out terminal app
   - [ ] multiple tabs

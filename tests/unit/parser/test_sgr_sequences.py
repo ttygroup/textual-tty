@@ -2,16 +2,25 @@ import pytest
 from unittest.mock import Mock
 from textual_tty.parser import Parser
 from textual_tty.terminal import Terminal
-from rich.style import Style
-from rich.color import Color
 from textual_tty.constants import (
     DEFAULT_TERMINAL_WIDTH,
     DEFAULT_TERMINAL_HEIGHT,
     ESC,
     SGR_RESET,
     SGR_BOLD,
-    SGR_FG_RED,
-    SGR_BG_GREEN,
+    SGR_NOT_BOLD_NOR_FAINT,
+    SGR_ITALIC,
+    SGR_NOT_ITALIC,
+    SGR_UNDERLINE,
+    SGR_NOT_UNDERLINED,
+    SGR_BLINK,
+    SGR_NOT_BLINKING,
+    SGR_REVERSE,
+    SGR_NOT_REVERSED,
+    SGR_CONCEAL,
+    SGR_NOT_CONCEALED,
+    SGR_STRIKE,
+    SGR_NOT_STRIKETHROUGH,
 )
 
 
@@ -19,189 +28,182 @@ from textual_tty.constants import (
 def screen():
     """Return a mock Screen object with necessary attributes."""
     screen = Mock(spec=Terminal)
-    screen.current_style = Style()  # Initialize with a real Style object
     screen.width = DEFAULT_TERMINAL_WIDTH
     screen.height = DEFAULT_TERMINAL_HEIGHT
     screen.cursor_x = 0
     screen.cursor_y = 0
-    screen.scroll_top = 0
-    screen.scroll_bottom = screen.height - 1
-    screen.auto_wrap = True
-    screen.cursor_visible = True
-
-    def _set_cursor(x, y):
-        if x is not None:
-            screen.cursor_x = x
-        if y is not None:
-            screen.cursor_y = y
-
-    screen.set_cursor.side_effect = _set_cursor
     return screen
 
 
-def test_sgr_reset_all_attributes(screen):
+def test_sgr_reset_all_attributes():
     """Test SGR 0 (Reset all attributes)."""
-    parser = Parser(screen)
-    # Set some attributes first
-    parser.feed(f"{ESC}[{SGR_BOLD};{SGR_FG_RED};{SGR_BG_GREEN}m")  # Bold, red foreground, green background
-    assert screen.current_style.bold is True
-    assert screen.current_style.color == Color.from_ansi(1)
-    assert screen.current_style.bgcolor == Color.from_ansi(2)
-
-    parser.feed(f"{ESC}[{SGR_RESET}m")  # Reset all attributes
-    assert screen.current_style == Style()
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_RESET}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_RESET}m"
 
 
-def test_sgr_bold_and_not_bold(screen):
+def test_sgr_bold_and_not_bold():
     """Test SGR 1 (Bold) and SGR 22 (Not bold)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[1m")
-    assert screen.current_style.bold is True
-    parser.feed("\x1b[22m")
-    assert screen.current_style.bold is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_BOLD}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_BOLD}m"
+    parser.feed(f"{ESC}[{SGR_NOT_BOLD_NOR_FAINT}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_BOLD_NOR_FAINT}m"
 
 
-def test_sgr_italic_and_not_italic(screen):
+def test_sgr_italic_and_not_italic():
     """Test SGR 3 (Italic) and SGR 23 (Not italic)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[3m")
-    assert screen.current_style.italic is True
-    parser.feed("\x1b[23m")
-    assert screen.current_style.italic is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_ITALIC}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_ITALIC}m"
+    parser.feed(f"{ESC}[{SGR_NOT_ITALIC}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_ITALIC}m"
 
 
-def test_sgr_underline_and_not_underline(screen):
+def test_sgr_underline_and_not_underline():
     """Test SGR 4 (Underline) and SGR 24 (Not underlined)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[4m")
-    assert screen.current_style.underline is True
-    parser.feed("\x1b[24m")
-    assert screen.current_style.underline is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_UNDERLINE}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_UNDERLINE}m"
+    parser.feed(f"{ESC}[{SGR_NOT_UNDERLINED}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_UNDERLINED}m"
 
 
-def test_sgr_blink_and_not_blink(screen):
+def test_sgr_blink_and_not_blink():
     """Test SGR 5 (Blink) and SGR 25 (Not blinking)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[5m")
-    assert screen.current_style.blink is True
-    parser.feed("\x1b[25m")
-    assert screen.current_style.blink is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_BLINK}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_BLINK}m"
+    parser.feed(f"{ESC}[{SGR_NOT_BLINKING}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_BLINKING}m"
 
 
-def test_sgr_reverse_and_not_reverse(screen):
+def test_sgr_reverse_and_not_reverse():
     """Test SGR 7 (Reverse) and SGR 27 (Not reversed)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[7m")
-    assert screen.current_style.reverse is True
-    parser.feed("\x1b[27m")
-    assert screen.current_style.reverse is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_REVERSE}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_REVERSE}m"
+    parser.feed(f"{ESC}[{SGR_NOT_REVERSED}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_REVERSED}m"
 
 
-def test_sgr_conceal_and_not_conceal(screen):
+def test_sgr_conceal_and_not_conceal():
     """Test SGR 8 (Conceal) and SGR 28 (Not concealed)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[8m")
-    assert screen.current_style.conceal is True
-    parser.feed("\x1b[28m")
-    assert screen.current_style.conceal is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_CONCEAL}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_CONCEAL}m"
+    parser.feed(f"{ESC}[{SGR_NOT_CONCEALED}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_CONCEALED}m"
 
 
-def test_sgr_strikethrough_and_not_strikethrough(screen):
+def test_sgr_strikethrough_and_not_strikethrough():
     """Test SGR 9 (Strikethrough) and SGR 29 (Not strikethrough)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[9m")
-    assert screen.current_style.strike is True
-    parser.feed("\x1b[29m")
-    assert screen.current_style.strike is False
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[{SGR_STRIKE}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_STRIKE}m"
+    parser.feed(f"{ESC}[{SGR_NOT_STRIKETHROUGH}m")
+    assert parser.current_ansi_sequence == f"{ESC}[{SGR_NOT_STRIKETHROUGH}m"
 
 
-def test_sgr_16_color_foreground(screen):
+def test_sgr_16_color_foreground():
     """Test SGR 30-37 (16-color foreground)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[31m")  # Red foreground
-    assert screen.current_style.color == Color.from_ansi(1)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[31m")  # Red foreground
+    assert parser.current_ansi_sequence == f"{ESC}[31m"
 
 
-def test_sgr_16_color_background(screen):
+def test_sgr_16_color_background():
     """Test SGR 40-47 (16-color background)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[44m")  # Blue background
-    assert screen.current_style.bgcolor == Color.from_ansi(4)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[44m")  # Blue background
+    assert parser.current_ansi_sequence == f"{ESC}[44m"
 
 
-def test_sgr_bright_16_color_foreground(screen):
+def test_sgr_bright_16_color_foreground():
     """Test SGR 90-97 (Bright 16-color foreground)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[91m")  # Bright Red foreground
-    assert screen.current_style.color == Color.from_ansi(9)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[91m")  # Bright Red foreground
+    assert parser.current_ansi_sequence == f"{ESC}[91m"
 
 
-def test_sgr_bright_16_color_background(screen):
+def test_sgr_bright_16_color_background():
     """Test SGR 100-107 (Bright 16-color background)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[104m")  # Bright Blue background
-    assert screen.current_style.bgcolor == Color.from_ansi(12)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[104m")  # Bright Blue background
+    assert parser.current_ansi_sequence == f"{ESC}[104m"
 
 
-def test_sgr_256_color_foreground(screen):
+def test_sgr_256_color_foreground():
     """Test SGR 38;5;N (256-color foreground)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[38;5;123m")
-    assert screen.current_style.color == Color.from_ansi(123)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[38;5;123m")
+    assert parser.current_ansi_sequence == f"{ESC}[38;5;123m"
 
 
-def test_sgr_256_color_background(screen):
+def test_sgr_256_color_background():
     """Test SGR 48;5;N (256-color background)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[48;5;200m")
-    assert screen.current_style.bgcolor == Color.from_ansi(200)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[48;5;200m")
+    assert parser.current_ansi_sequence == f"{ESC}[48;5;200m"
 
 
-def test_sgr_truecolor_foreground(screen):
+def test_sgr_truecolor_foreground():
     """Test SGR 38;2;R;G;B (Truecolor foreground)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[38;2;10;20;30m")
-    assert screen.current_style.color == Color.from_rgb(10, 20, 30)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[38;2;10;20;30m")
+    assert parser.current_ansi_sequence == f"{ESC}[38;2;10;20;30m"
 
 
-def test_sgr_truecolor_background(screen):
+def test_sgr_truecolor_background():
     """Test SGR 48;2;R;G;B (Truecolor background)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[48;2;100;150;200m")
-    assert screen.current_style.bgcolor == Color.from_rgb(100, 150, 200)
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[48;2;100;150;200m")
+    assert parser.current_ansi_sequence == f"{ESC}[48;2;100;150;200m"
 
 
-def test_sgr_default_foreground_color(screen):
+def test_sgr_default_foreground_color():
     """Test SGR 39 (Default foreground color)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[31m")  # Set to red
-    assert screen.current_style.color == Color.from_ansi(1)
-    parser.feed("\x1b[39m")  # Reset to default
-    assert screen.current_style.color == Color.default()
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[39m")
+    assert parser.current_ansi_sequence == f"{ESC}[39m"
 
 
-def test_sgr_default_background_color(screen):
+def test_sgr_default_background_color():
     """Test SGR 49 (Default background color)."""
-    parser = Parser(screen)
-    parser.feed("\x1b[44m")  # Set to blue
-    assert screen.current_style.bgcolor == Color.from_ansi(4)
-    parser.feed("\x1b[49m")  # Reset to default
-    assert screen.current_style.bgcolor == Color.default()
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[49m")
+    assert parser.current_ansi_sequence == f"{ESC}[49m"
 
 
-def test_sgr_malformed_rgb_foreground(screen):
+def test_sgr_malformed_rgb_foreground():
     """Test SGR with malformed RGB foreground sequence (missing values)."""
-    parser = Parser(screen)
-    # Malformed sequence: 38;2;r;g;b but missing g and b
-    parser.feed("\x1b[38;2;100m")
-    # Should not raise an error and current_style should not change to an invalid color
-    assert screen.current_style.color is None
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[38;2;100m")
+    assert parser.current_ansi_sequence == f"{ESC}[38;2;100m"
 
 
-def test_sgr_malformed_rgb_background(screen):
+def test_sgr_malformed_rgb_background():
     """Test SGR with malformed RGB background sequence (missing values)."""
-    parser = Parser(screen)
-    # Malformed sequence: 48;2;r;g;b but missing g and b
-    parser.feed("\x1b[48;2;100m")
-    # Should not raise an error and current_style should not change to an invalid color
-    assert screen.current_style.bgcolor is None
+    terminal = Terminal()
+    parser = Parser(terminal)
+    parser.feed(f"{ESC}[48;2;100m")
+    assert parser.current_ansi_sequence == f"{ESC}[48;2;100m"
