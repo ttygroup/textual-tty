@@ -168,7 +168,7 @@ class Terminal:
         if self.insert_mode:
             self.current_buffer.insert(self.cursor_x, self.cursor_y, text, code_to_use)
         else:
-            self.current_buffer.set(self.cursor_x, self.cursor_y, text, ansi_code)
+            self.current_buffer.set(self.cursor_x, self.cursor_y, text, code_to_use)
 
         # Move cursor forward by character count
         if self.auto_wrap or self.cursor_x < self.width - 1:

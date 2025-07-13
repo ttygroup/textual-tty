@@ -146,8 +146,8 @@ class UnixPTY:
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)
 
         process = subprocess.Popen(
-            command,
-            shell=True,
+            command if isinstance(command, list) else [command],
+            shell=False,
             stdin=self.slave_fd,
             stdout=self.slave_fd,
             stderr=self.slave_fd,

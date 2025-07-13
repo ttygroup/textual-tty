@@ -35,6 +35,7 @@ Homepage = "https://bitplane.net/dev/python/textual-tty"
 dev = [
     "pre-commit",
     "pytest",
+    "pytest-asyncio",
     "coverage",
     "pytest-cov",
     "pydoc-markdown",
