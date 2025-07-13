@@ -330,7 +330,7 @@ def test_clear_line_from_beginning_to_cursor():
     screen.cursor_x = 5
     screen.cursor_y = 0
     screen.clear_line(ERASE_FROM_START_TO_CURSOR)
-    assert screen.current_buffer.get_line_text(0) == "     56789"
+    assert screen.current_buffer.get_line_text(0) == "      6789"
 
 
 def test_clear_line_entire_line():
@@ -353,4 +353,4 @@ def test_clear_line_with_mixed_styles():
     screen.cursor_x = 3
     screen.cursor_y = 1
     screen.clear_line(1)  # Clear from beginning to cursor
-    assert screen.current_buffer.get_line_text(1) == "          "
+    assert screen.current_buffer.get_line_text(1) == "    EFGHI "
