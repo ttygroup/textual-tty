@@ -278,17 +278,18 @@ class WindowsPTY:
         )
 
         # Use winpty to spawn the process attached to the PTY
-        # Convert command to bytes as required by winpty
+        # winpty.spawn expects a string, not bytes
         if isinstance(command, str):
             # For shell commands, use cmd.exe
             if command.strip().startswith(("cmd", "powershell", "pwsh")):
-                command_bytes = command.encode("utf-8")
+                spawn_command = command
             else:
-                command_bytes = f'cmd.exe /c "{command}"'.encode("utf-8")
+                spawn_command = f'cmd.exe /c "{command}"'
         else:
-            command_bytes = command
+            # If command is a list, join it
+            spawn_command = " ".join(command) if isinstance(command, list) else str(command)
 
-        self.pty.spawn(command_bytes)
+        self.pty.spawn(spawn_command)
 
         # Return a process-like object that provides compatibility with subprocess.Popen
         return WinptyProcessWrapper(self.pty)
