@@ -9,6 +9,7 @@ create terminal widgets.
 from __future__ import annotations
 
 import os
+import sys
 import asyncio
 import subprocess
 from typing import Any, Optional, Callable
@@ -18,6 +19,10 @@ from .parser import Parser
 from .pty_handler import create_pty
 from .log import info, warning, exception
 from . import constants
+
+# Platform-specific imports
+if sys.platform != "win32":
+    import fcntl
 
 
 class Terminal:
@@ -617,11 +622,10 @@ class Terminal:
 
     async def _async_read_from_pty(self) -> None:
         """Async task to read PTY data and dispatch to callback or process directly."""
-        import fcntl
-
-        # Make PTY non-blocking
-        flags = fcntl.fcntl(self.pty.master_fd, fcntl.F_GETFL)
-        fcntl.fcntl(self.pty.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        if sys.platform != "win32":
+            # Make PTY non-blocking on Unix
+            flags = fcntl.fcntl(self.pty.master_fd, fcntl.F_GETFL)
+            fcntl.fcntl(self.pty.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
         while self.pty is not None and not self.pty.closed:
             try:
