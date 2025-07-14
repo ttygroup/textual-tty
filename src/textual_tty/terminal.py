@@ -541,7 +541,7 @@ class Terminal:
         """Send data to PTY or stdout."""
         if self.pty:
             # PTY mode
-            self.pty.write(data.encode("utf-8"))
+            self.pty.write(data)
         elif self.stdout:
             # Stream mode
             self.stdout.write(data)
@@ -592,9 +592,10 @@ class Terminal:
                 # Read available data from stdin
                 import os
 
-                return os.read(self.stdin.fileno(), 1024)
+                data = os.read(self.stdin.fileno(), 1024)
+                return data.decode("utf-8", errors="replace")
             except (OSError, IOError):
-                return b""
+                return ""
 
         try:
             while True:
