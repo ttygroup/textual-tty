@@ -14,10 +14,10 @@ def test_cursor_keys_normal_mode():
 
     # Arrow keys should send ESC[A format
     terminal.input_key("up")
-    terminal.pty.write.assert_called_with(b"\x1b[A")
+    terminal.pty.write.assert_called_with("\x1b[A")
 
     terminal.input_key("down")
-    terminal.pty.write.assert_called_with(b"\x1b[B")
+    terminal.pty.write.assert_called_with("\x1b[B")
 
 
 def test_cursor_keys_application_mode():
@@ -28,10 +28,10 @@ def test_cursor_keys_application_mode():
 
     # Arrow keys should send ESC OA format
     terminal.input_key("up")
-    terminal.pty.write.assert_called_with(b"\x1bOA")
+    terminal.pty.write.assert_called_with("\x1bOA")
 
     terminal.input_key("down")
-    terminal.pty.write.assert_called_with(b"\x1bOB")
+    terminal.pty.write.assert_called_with("\x1bOB")
 
 
 def test_modified_cursor_keys():
@@ -42,7 +42,7 @@ def test_modified_cursor_keys():
 
     # Modified cursor keys should always use CSI format
     terminal.input_key("up", constants.KEY_MOD_CTRL)
-    terminal.pty.write.assert_called_with(b"\x1b[1;5A")
+    terminal.pty.write.assert_called_with("\x1b[1;5A")
 
 
 def test_control_characters():
@@ -52,11 +52,11 @@ def test_control_characters():
 
     # Ctrl+A should send \x01
     terminal.input_key("a", constants.KEY_MOD_CTRL)
-    terminal.pty.write.assert_called_with(b"\x01")
+    terminal.pty.write.assert_called_with("\x01")
 
     # Ctrl+C should send \x03
     terminal.input_key("c", constants.KEY_MOD_CTRL)
-    terminal.pty.write.assert_called_with(b"\x03")
+    terminal.pty.write.assert_called_with("\x03")
 
 
 def test_function_keys():
@@ -66,11 +66,11 @@ def test_function_keys():
 
     # F1 should send ESC OP
     terminal.input_fkey(1)
-    terminal.pty.write.assert_called_with(b"\x1bOP")
+    terminal.pty.write.assert_called_with("\x1bOP")
 
     # F5 should send ESC [15~
     terminal.input_fkey(5)
-    terminal.pty.write.assert_called_with(b"\x1b[15~")
+    terminal.pty.write.assert_called_with("\x1b[15~")
 
 
 def test_raw_input_passthrough():
@@ -80,11 +80,11 @@ def test_raw_input_passthrough():
 
     # Raw escape sequences should pass through
     terminal.input("\x1b[3~")  # Delete key
-    terminal.pty.write.assert_called_with(b"\x1b[3~")
+    terminal.pty.write.assert_called_with("\x1b[3~")
 
     # Regular characters should pass through
     terminal.input("hello")
-    terminal.pty.write.assert_called_with(b"hello")
+    terminal.pty.write.assert_called_with("hello")
 
 
 def test_unhandled_keys_fallback():
@@ -94,8 +94,8 @@ def test_unhandled_keys_fallback():
 
     # Backspace character should pass through as fallback
     terminal.input_key("\x7f")  # DEL character
-    terminal.pty.write.assert_called_with(b"\x7f")
+    terminal.pty.write.assert_called_with("\x7f")
 
     # Any other unrecognized character should pass through
     terminal.input_key("\x1b")  # ESC character
-    terminal.pty.write.assert_called_with(b"\x1b")
+    terminal.pty.write.assert_called_with("\x1b")
