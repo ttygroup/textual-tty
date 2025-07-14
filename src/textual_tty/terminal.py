@@ -627,6 +627,16 @@ class Terminal:
             self._pty_reader_task.cancel()
             self._pty_reader_task = None
 
+        # Kill the process
+        if self.process is not None:
+            try:
+                self.process.terminate()
+                # Give it a moment to terminate gracefully
+                if self.process.poll() is None:
+                    self.process.kill()
+            except (OSError, AttributeError) as e:
+                exception(f"Failed to terminate process: {e}")
+
         # Close PTY
         if self.pty is not None:
             self.pty.close()
