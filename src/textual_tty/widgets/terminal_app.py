@@ -80,7 +80,7 @@ class TerminalApp(SettableWindow):
         color: white;
     }
 
-    TerminalApp TextualTerminal > RichLog {
+    TerminalApp TextualTerminal > TerminalScrollView {
         scrollbar-size: 0 0;
         background: black;
         color: white;

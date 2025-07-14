@@ -40,7 +40,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
 - [ ] split pty out into a cross platform package
 - [ ] debug logger
   - [ ] add arg parser to demo app
-  - [ ] make file logging optional (and not default)
+  - [x] make file logging optional (and not default)
 - [ ] break terminal project out from Textual deps
   - [x] pick a snazzy name - bitty/titty
   - [ ] gui
@@ -74,4 +74,4 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] theme selector/editor
 - [ ] terminal quantizer
   - [ ] move inside app
-- [ ] Windows support
+- [x] Windows support
