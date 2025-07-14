@@ -15,7 +15,6 @@ from textual.reactive import reactive
 from textual.message import Message
 
 from ..terminal import Terminal
-from ..log import debug
 from .. import constants
 from .terminal_scroll_view import TerminalScrollView
 
@@ -225,8 +224,6 @@ class TextualTerminal(Terminal, Widget):
 
     async def on_resize(self, event) -> None:
         """Handle widget resize events from Textual."""
-        debug(f"on_resize called with size: {event.size}")
-
         # Update our reactive attributes
         self.width_chars = event.size.width
         self.height_chars = event.size.height
