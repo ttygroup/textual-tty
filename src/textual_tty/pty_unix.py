@@ -29,25 +29,26 @@ class UnixPTY(PTYBase):
         self.resize(rows, cols)
 
     @measure_performance("UnixPTY")
-    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
+    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:
         """Read data from the PTY."""
         if self._closed:
-            return b""
+            return ""
         try:
-            return os.read(self.master_fd, size)
+            data = os.read(self.master_fd, size)
+            return data.decode("utf-8", errors="replace")
         except OSError as e:
             if e.errno in (constants.EBADF, constants.EINVAL):
                 self._closed = True
                 raise
-            return b""
+            return ""
 
     @measure_performance("UnixPTY")
-    def write(self, data: bytes) -> int:
+    def write(self, data: str) -> int:
         """Write data to the PTY."""
         if self._closed:
             return 0
         try:
-            return os.write(self.master_fd, data)
+            return os.write(self.master_fd, data.encode("utf-8"))
         except OSError:
             return 0
 
@@ -131,10 +132,10 @@ class UnixPTY(PTYBase):
         flags = fcntl.fcntl(self.master_fd, fcntl.F_GETFL)
         fcntl.fcntl(self.master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-    async def read_async(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
-        """Async read from PTY. Returns empty bytes when no data available."""
+    async def read_async(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:
+        """Async read from PTY. Returns empty string when no data available."""
         if self._closed:
-            return b""
+            return ""
 
         loop = asyncio.get_event_loop()
         try:
@@ -145,17 +146,17 @@ class UnixPTY(PTYBase):
                 try:
                     data = os.read(self.master_fd, size)
                     loop.remove_reader(self.master_fd)
-                    future.set_result(data)
+                    future.set_result(data.decode("utf-8", errors="replace"))
                 except BlockingIOError:
                     loop.remove_reader(self.master_fd)
-                    future.set_result(b"")
+                    future.set_result("")
                 except OSError as e:
                     loop.remove_reader(self.master_fd)
                     if e.errno in (constants.EBADF, constants.EINVAL):
                         self._closed = True
-                    future.set_result(b"")
+                    future.set_result("")
 
             loop.add_reader(self.master_fd, read_ready)
             return await future
         except Exception:
-            return b""
+            return ""

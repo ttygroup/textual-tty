@@ -23,12 +23,12 @@ class PTYBase(ABC):
         self._closed = False
 
     @abstractmethod
-    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
+    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:
         """Read data from the PTY."""
         pass
 
     @abstractmethod
-    def write(self, data: bytes) -> int:
+    def write(self, data: str) -> int:
         """Write data to the PTY."""
         pass
 
@@ -58,6 +58,6 @@ class PTYBase(ABC):
         pass
 
     @abstractmethod
-    async def read_async(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
-        """Async read from PTY. Returns empty bytes when no data available."""
+    async def read_async(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:
+        """Async read from PTY. Returns empty string when no data available."""
         pass

@@ -76,17 +76,21 @@ class WindowsPTY(PTYBase):
             raise OSError("pywinpty not installed. Install with: pip install textual-terminal[windows]")
 
     @measure_performance("WindowsPTY")
-    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
+    def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:
         """Read data from the PTY."""
         if self._closed:
-            return b""
+            return ""
         try:
-            return self.pty.read(size)
+            data = self.pty.read(size)
+            # winpty might return bytes or str, ensure we return str
+            if isinstance(data, bytes):
+                return data.decode("utf-8", errors="replace")
+            return data or ""
         except Exception:
-            return b""
+            return ""
 
     @measure_performance("WindowsPTY")
-    def write(self, data: bytes) -> int:
+    def write(self, data: str) -> int:
         """Write data to the PTY."""
         if self._closed:
             return 0
@@ -156,17 +160,16 @@ class WindowsPTY(PTYBase):
         # pywinpty already provides non-blocking behavior
         pass
 
-    async def read_async(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> bytes:
-        """Async read from PTY. Returns empty bytes when no data available."""
+    async def read_async(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:
+        """Async read from PTY. Returns empty string when no data available."""
         if self._closed:
-            return b""
+            return ""
 
-        # Windows doesn't have the same file descriptor model as Unix
-        # We'll use a thread pool for async I/O
         loop = asyncio.get_event_loop()
         try:
-            # Run the blocking read in a thread pool
-            data = await loop.run_in_executor(None, self.pty.read, size, True)  # True for non-blocking
-            return data if data else b""
+            data = await loop.run_in_executor(None, self.pty.read, size)
+            if isinstance(data, bytes):
+                return data.decode("utf-8", errors="replace")
+            return data or ""
         except Exception:
-            return b""
+            return ""

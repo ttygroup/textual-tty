@@ -89,7 +89,7 @@ class TextualTerminal(Terminal, Widget):
     class PTYDataMessage(Message):
         """Message containing PTY data."""
 
-        def __init__(self, data: bytes) -> None:
+        def __init__(self, data: str) -> None:
             self.data = data
             super().__init__()
 
@@ -157,15 +157,14 @@ class TextualTerminal(Terminal, Widget):
         )
         return Text.from_ansi(ansi_line)
 
-    def _handle_pty_data(self, data: bytes) -> None:
+    def _handle_pty_data(self, data: str) -> None:
         """Handle PTY data by posting a Textual message."""
         self.post_message(self.PTYDataMessage(data))
 
     async def on_textual_terminal_ptydata_message(self, message: PTYDataMessage) -> None:
         """Handle PTY data messages through Textual's message system."""
         # Process the PTY data
-        text = message.data.decode("utf-8", errors="replace")
-        self.parser.feed(text)
+        self.parser.feed(message.data)
 
         # Update display
         await self._update_display()

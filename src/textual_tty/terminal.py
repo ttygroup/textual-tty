@@ -113,19 +113,18 @@ class Terminal:
         self._pty_reader_task: Optional[asyncio.Task] = None
 
         # PTY data callback for async handling
-        self._pty_data_callback: Optional[Callable[[bytes], None]] = None
+        self._pty_data_callback: Optional[Callable[[str], None]] = None
 
         # Parser
         self.parser = Parser(self)
 
-    def set_pty_data_callback(self, callback: Callable[[bytes], None]) -> None:
+    def set_pty_data_callback(self, callback: Callable[[str], None]) -> None:
         """Set callback for handling PTY data asynchronously."""
         self._pty_data_callback = callback
 
-    def _process_pty_data_sync(self, data: bytes) -> None:
+    def _process_pty_data_sync(self, data: str) -> None:
         """Process PTY data synchronously (fallback)."""
-        text = data.decode("utf-8", errors="replace")
-        self.parser.feed(text)
+        self.parser.feed(data)
 
     def resize(self, width: int, height: int) -> None:
         """Resize terminal to new dimensions."""
