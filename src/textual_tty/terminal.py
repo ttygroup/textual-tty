@@ -9,8 +9,6 @@ create terminal widgets.
 from __future__ import annotations
 
 import sys
-import os
-import signal
 import asyncio
 import subprocess
 from typing import Any, Optional, Callable
@@ -629,16 +627,7 @@ class Terminal:
             self._pty_reader_task.cancel()
             self._pty_reader_task = None
 
-        # Send SIGHUP to the process group (like a shell would)
-        if self.process is not None:
-            try:
-                # Send SIGHUP to the process group, not just the process
-                os.killpg(os.getpgid(self.process.pid), signal.SIGHUP)
-                info(f"Sent SIGHUP to process group {os.getpgid(self.process.pid)}")
-            except (OSError, AttributeError) as e:
-                info(f"Could not send SIGHUP to process group: {e}")
-
-        # Close PTY - this will cause I/O errors for any remaining processes
+        # Close PTY - let it handle platform-specific process cleanup
         if self.pty is not None:
             info("Closing PTY")
             self.pty.close()

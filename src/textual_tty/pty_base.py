@@ -21,6 +21,7 @@ class PTYBase(ABC):
         self.rows = rows
         self.cols = cols
         self._closed = False
+        self._process = None
 
     @abstractmethod
     def read(self, size: int = constants.DEFAULT_PTY_BUFFER_SIZE) -> str:

@@ -11,13 +11,14 @@ import pty
 import termios
 import struct
 import fcntl
+import signal
 import asyncio
 import subprocess
 from typing import Optional, Dict
 
 from .pty_base import PTYBase
 from . import constants
-from .log import measure_performance
+from .log import measure_performance, info
 
 
 class UnixPTY(PTYBase):
@@ -26,8 +27,6 @@ class UnixPTY(PTYBase):
     def __init__(self, rows: int = constants.DEFAULT_TERMINAL_HEIGHT, cols: int = constants.DEFAULT_TERMINAL_WIDTH):
         super().__init__(rows, cols)
         self.master_fd, self.slave_fd = pty.openpty()
-        from .log import info
-
         info(f"Created PTY: master_fd={self.master_fd}, slave_fd={self.slave_fd}")
         self.resize(rows, cols)
 
@@ -71,9 +70,15 @@ class UnixPTY(PTYBase):
     def close(self) -> None:
         """Close the PTY file descriptors."""
         if not self._closed:
-            from .log import info
-
             info(f"Closing PTY: master_fd={self.master_fd}, slave_fd={self.slave_fd}")
+
+            # Send SIGHUP to process group (like a shell would)
+            if self._process is not None:
+                try:
+                    os.killpg(os.getpgid(self._process.pid), signal.SIGHUP)
+                    info(f"Sent SIGHUP to process group {os.getpgid(self._process.pid)}")
+                except (OSError, AttributeError) as e:
+                    info(f"Could not send SIGHUP to process group: {e}")
 
             # Remove from asyncio event loop first
             try:
@@ -139,6 +144,9 @@ class UnixPTY(PTYBase):
         # Close slave fd in parent (child has its own copy)
         os.close(self.slave_fd)
         self.slave_fd = None
+
+        # Store process reference for cleanup
+        self._process = process
 
         return process
 

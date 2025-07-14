@@ -13,7 +13,7 @@ from typing import Optional, Dict
 
 from .pty_base import PTYBase
 from . import constants
-from .log import measure_performance
+from .log import measure_performance, info
 
 
 class WinptyProcessWrapper:
@@ -112,6 +112,14 @@ class WindowsPTY(PTYBase):
     def close(self) -> None:
         """Close the PTY."""
         if not self._closed:
+            # Terminate the Windows process
+            if self._process is not None:
+                try:
+                    self._process.terminate()
+                    info("Terminated Windows process")
+                except Exception as e:
+                    info(f"Could not terminate Windows process: {e}")
+
             try:
                 os.close(self.pty.fd)
             except Exception:
@@ -152,7 +160,10 @@ class WindowsPTY(PTYBase):
         self.pty.spawn(spawn_command)
 
         # Return a process-like object that provides compatibility with subprocess.Popen
-        return WinptyProcessWrapper(self.pty)
+        process = WinptyProcessWrapper(self.pty)
+        # Store process reference for cleanup
+        self._process = process
+        return process
 
     def set_nonblocking(self) -> None:
         """Set the PTY to non-blocking mode for async operations."""
