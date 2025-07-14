@@ -41,14 +41,6 @@ class WinptyProcessWrapper:
             time.sleep(constants.PTY_POLL_INTERVAL)
         return self.poll()
 
-    def terminate(self):
-        """Terminate the process."""
-        self.pty.close()
-
-    def kill(self):
-        """Kill the process."""
-        self.pty.close()
-
     @property
     def returncode(self):
         """Get the return code."""
