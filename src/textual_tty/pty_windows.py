@@ -113,7 +113,7 @@ class WindowsPTY(PTYBase):
         """Close the PTY."""
         if not self._closed:
             try:
-                self.pty.close()
+                os.close(self.pty.fd)
             except Exception:
                 pass
             self._closed = True

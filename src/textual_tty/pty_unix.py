@@ -26,6 +26,9 @@ class UnixPTY(PTYBase):
     def __init__(self, rows: int = constants.DEFAULT_TERMINAL_HEIGHT, cols: int = constants.DEFAULT_TERMINAL_WIDTH):
         super().__init__(rows, cols)
         self.master_fd, self.slave_fd = pty.openpty()
+        from .log import info
+
+        info(f"Created PTY: master_fd={self.master_fd}, slave_fd={self.slave_fd}")
         self.resize(rows, cols)
 
     @measure_performance("UnixPTY")
@@ -68,6 +71,20 @@ class UnixPTY(PTYBase):
     def close(self) -> None:
         """Close the PTY file descriptors."""
         if not self._closed:
+            from .log import info
+
+            info(f"Closing PTY: master_fd={self.master_fd}, slave_fd={self.slave_fd}")
+
+            # Remove from asyncio event loop first
+            try:
+                loop = asyncio.get_event_loop()
+                if self.master_fd and isinstance(self.master_fd, int):
+                    loop.remove_reader(self.master_fd)
+                    info(f"Removed master_fd {self.master_fd} from event loop")
+            except (RuntimeError, ValueError, OSError):
+                # Event loop not running or fd not registered
+                pass
+
             try:
                 if self.master_fd and isinstance(self.master_fd, int):
                     os.close(self.master_fd)
