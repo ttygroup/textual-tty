@@ -37,6 +37,7 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
 
 ## todo / ideas
 
+- [ ] split pty out into a cross platform package
 - [ ] debug logger
   - [ ] add arg parser to demo app
   - [ ] make file logging optional (and not default)

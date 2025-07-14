@@ -13,7 +13,7 @@ from typing import Optional, Dict
 
 from .pty_base import PTYBase
 from . import constants
-from .log import measure_performance, info
+from .log import measure_performance
 
 
 class WinptyProcessWrapper:
@@ -104,14 +104,6 @@ class WindowsPTY(PTYBase):
     def close(self) -> None:
         """Close the PTY."""
         if not self._closed:
-            # Terminate the Windows process
-            if self._process is not None:
-                try:
-                    self._process.terminate()
-                    info("Terminated Windows process")
-                except Exception as e:
-                    info(f"Could not terminate Windows process: {e}")
-
             try:
                 os.close(self.pty.fd)
             except Exception:
