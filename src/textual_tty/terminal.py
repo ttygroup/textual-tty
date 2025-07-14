@@ -15,7 +15,7 @@ from typing import Any, Optional, Callable
 
 from .buffer import Buffer
 from .parser import Parser
-from .log import info, warning, exception
+from .log import info, exception
 from . import constants
 
 
@@ -645,14 +645,13 @@ class Terminal:
                 data = await self.pty.read_async(4096)
 
                 if not data:
-                    # No data available, yield and continue
+                    # No data available, check if process has exited
+                    if self.process and self.process.poll() is not None:
+                        info("Process has exited, stopping terminal")
+                        self.stop_process()
+                        break
                     await asyncio.sleep(0.01)
                     continue
-
-                if not data:
-                    warning("Read returned empty data, process may have exited")
-                    self.stop_process()
-                    break
 
                 # Use callback if set, otherwise process directly
                 if self._pty_data_callback:

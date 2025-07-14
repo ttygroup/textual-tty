@@ -73,4 +73,4 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
     - [ ] theme selector/editor
 - [ ] terminal quantizer
   - [ ] move inside app
-
+- [ ] Windows support
