@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 from .log import debug
 from . import constants
+from .style import merge_ansi_styles
 
 
 class Parser:
@@ -53,8 +54,7 @@ class Parser:
         self._string_exit_handler: Optional[Callable] = None
 
         # --- Current Cell Attributes ---
-        # Just store the current ANSI sequence
-        self.current_ansi_sequence: str = ""
+        # ANSI sequence is stored in terminal.current_ansi_code
 
     def feed(self, data: str) -> None:
         """
@@ -96,7 +96,7 @@ class Parser:
                 self.terminal.carriage_return()
             elif ord(char) >= 0x20:  # Printable characters
                 # Use current ANSI sequence
-                self.terminal.write_text(char, self.current_ansi_sequence)
+                self.terminal.write_text(char, self.terminal.current_ansi_code)
         elif self.current_state == constants.ESCAPE:
             if char == "[":
                 self.current_state = constants.CSI_ENTRY
@@ -384,7 +384,7 @@ class Parser:
         elif final_char == "@":  # ICH - Insert Characters
             count = self._get_param(0, 1)
             # Use current ANSI sequence for inserted spaces
-            self.terminal.insert_characters(count, self.current_ansi_sequence)
+            self.terminal.insert_characters(count, self.terminal.current_ansi_code)
         elif final_char == "P":  # DCH - Delete Characters
             count = self._get_param(0, 1)
             self.terminal.delete_characters(count)
@@ -551,20 +551,22 @@ class Parser:
         """Reset terminal to initial state."""
         self.terminal.clear_screen(constants.ERASE_ALL)
         self.terminal.set_cursor(0, 0)
-        self.current_ansi_sequence = ""
+        self.terminal.current_ansi_code = ""
 
     def _csi_dispatch_sgr(self) -> None:
         """
         Handles SGR (Select Graphic Rendition) sequences to set text style.
-        Just store the original ANSI sequence.
+        Merges new style with existing style.
         """
         if not self.parsed_params:
             self.parsed_params = [0]  # Default to reset
 
         # Build the ANSI sequence from the original parameters
         params_str = ";".join(str(p) if p is not None else "" for p in self.parsed_params)
-        self.current_ansi_sequence = f"\033[{params_str}m"
-        self.terminal.current_ansi_code = self.current_ansi_sequence
+        new_ansi_sequence = f"\033[{params_str}m"
+        
+        # Merge with existing style
+        self.terminal.current_ansi_code = merge_ansi_styles(self.terminal.current_ansi_code, new_ansi_sequence)
 
     def _csi_dispatch_sm_rm(self, set_mode: bool) -> None:
         """Handle SM (Set Mode) and RM (Reset Mode) sequences."""

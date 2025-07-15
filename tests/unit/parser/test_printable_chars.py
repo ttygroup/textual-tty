@@ -9,6 +9,7 @@ def screen():
     """Return a mock Screen object."""
     screen = Mock(spec=Terminal)
     screen.current_style = Mock()
+    screen.current_ansi_code = ""
     return screen
 
 
@@ -18,19 +19,19 @@ def test_printable_characters(screen):
     parser.feed("Hello, World!")
 
     calls = [
-        call("H", ""),
-        call("e", ""),
-        call("l", ""),
-        call("l", ""),
-        call("o", ""),
-        call(",", ""),
-        call(" ", ""),
-        call("W", ""),
-        call("o", ""),
-        call("r", ""),
-        call("l", ""),
-        call("d", ""),
-        call("!", ""),
+        call("H", screen.current_ansi_code),
+        call("e", screen.current_ansi_code),
+        call("l", screen.current_ansi_code),
+        call("l", screen.current_ansi_code),
+        call("o", screen.current_ansi_code),
+        call(",", screen.current_ansi_code),
+        call(" ", screen.current_ansi_code),
+        call("W", screen.current_ansi_code),
+        call("o", screen.current_ansi_code),
+        call("r", screen.current_ansi_code),
+        call("l", screen.current_ansi_code),
+        call("d", screen.current_ansi_code),
+        call("!", screen.current_ansi_code),
     ]
     screen.write_text.assert_has_calls(calls)
 

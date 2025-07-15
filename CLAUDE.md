@@ -14,3 +14,11 @@
   don't run it yourself unless asked.
 - Claude is running in a tmux panel, so when the user says "peep the pane", use
   "tmux capture-pane -p -e -t" with the given pane. This is how we debug.
+
+## Important
+
+Don't put imports in functions without a good reason.
+
+## VERY IMPORTNT
+
+Remember not to put imports in functions.

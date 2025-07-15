@@ -16,6 +16,7 @@ def screen():
     screen.cursor_y = 0
     screen.scroll_top = 0
     screen.scroll_bottom = screen.height - 1
+    screen.current_ansi_code = ""
 
     def _set_cursor(x, y):
         if x is not None:
@@ -99,7 +100,7 @@ def test_csi_ich_insert_characters(screen):
     """Test CSI @ (ICH - Insert Characters) with parameter."""
     parser = Parser(screen)
     parser.feed("\x1b[5@")  # ESC[5@ -> insert 5 characters
-    screen.insert_characters.assert_called_once_with(5, "")
+    screen.insert_characters.assert_called_once_with(5, screen.current_ansi_code)
 
 
 def test_csi_dch_delete_characters(screen):

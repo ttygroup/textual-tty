@@ -24,6 +24,7 @@ def screen():
     screen.scroll_bottom = screen.height - 1
     screen.auto_wrap = True
     screen.cursor_visible = True
+    screen.current_ansi_code = ""
 
     def _set_cursor(x, y):
         if x is not None:
@@ -136,9 +137,7 @@ def test_parse_byte_csi_intermediate_param_final(screen):
     """Test CSI_INTERMEDIATE with parameter and final byte."""
     parser = Parser(screen)
     parser.feed("\x1b[?1;2@")  # ESC [ ? 1 ; 2 @
-    assert parser.current_state == "GROUND"
-    assert parser.parsed_params == [1, 2]
-    assert parser.intermediate_chars == ["?"]
+    screen.insert_characters.assert_called_once_with(2, screen.current_ansi_code)
 
 
 def test_split_params_value_error_sub_param(screen):

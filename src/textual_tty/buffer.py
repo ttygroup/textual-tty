@@ -105,7 +105,7 @@ class Buffer:
             for x in range(max(0, x1), min(self.width, x2 + 1)):
                 self.grid[y][x] = (ansi_code, " ")
 
-    def clear_line(self, y: int, mode: int = constants.ERASE_FROM_CURSOR_TO_END, cursor_x: int = 0) -> None:
+    def clear_line(self, y: int, mode: int = constants.ERASE_FROM_CURSOR_TO_END, cursor_x: int = 0, ansi_code: str = "") -> None:
         """Clear line content."""
         if not (0 <= y < self.height):
             return
@@ -113,14 +113,14 @@ class Buffer:
         if mode == constants.ERASE_FROM_CURSOR_TO_END:
             # Clear from cursor to end of line
             for x in range(cursor_x, self.width):
-                self.grid[y][x] = ("", " ")
+                self.grid[y][x] = (ansi_code, " ")
         elif mode == constants.ERASE_FROM_START_TO_CURSOR:
             # Clear from start to cursor
             for x in range(0, min(cursor_x + 1, self.width)):
-                self.grid[y][x] = ("", " ")
+                self.grid[y][x] = (ansi_code, " ")
         elif mode == constants.ERASE_ALL:
             # Clear entire line
-            self.grid[y] = [("", " ") for _ in range(self.width)]
+            self.grid[y] = [(ansi_code, " ") for _ in range(self.width)]
 
     def scroll_up(self, count: int) -> None:
         """Scroll content up, removing top lines and adding blank lines at bottom."""

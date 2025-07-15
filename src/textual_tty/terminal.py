@@ -17,6 +17,7 @@ from .buffer import Buffer
 from .parser import Parser
 from .log import info, exception
 from . import constants
+from .style import get_background
 
 
 class Terminal:
@@ -227,24 +228,29 @@ class Terminal:
 
     def clear_screen(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear screen."""
+        # Get just the background color from current style
+        bg_ansi = get_background(self.current_ansi_code)
+        
         if mode == constants.ERASE_FROM_CURSOR_TO_END:
             # Clear current line from cursor to end
-            self.current_buffer.clear_line(self.cursor_y, constants.ERASE_FROM_CURSOR_TO_END, self.cursor_x)
+            self.current_buffer.clear_line(self.cursor_y, constants.ERASE_FROM_CURSOR_TO_END, self.cursor_x, bg_ansi)
             # Clear all lines below cursor
             for y in range(self.cursor_y + 1, self.height):
-                self.current_buffer.clear_line(y, constants.ERASE_ALL)
+                self.current_buffer.clear_line(y, constants.ERASE_ALL, 0, bg_ansi)
         elif mode == constants.ERASE_FROM_START_TO_CURSOR:
             # Clear all lines above cursor
             for y in range(self.cursor_y):
-                self.current_buffer.clear_line(y, constants.ERASE_ALL)
+                self.current_buffer.clear_line(y, constants.ERASE_ALL, 0, bg_ansi)
             self.clear_line(constants.ERASE_FROM_START_TO_CURSOR)
         elif mode == constants.ERASE_ALL:
             for y in range(self.height):
-                self.current_buffer.clear_line(y, constants.ERASE_ALL)
+                self.current_buffer.clear_line(y, constants.ERASE_ALL, 0, bg_ansi)
 
     def clear_line(self, mode: int = constants.ERASE_FROM_CURSOR_TO_END) -> None:
         """Clear line."""
-        self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x)
+        # Get just the background color from current style
+        bg_ansi = get_background(self.current_ansi_code)
+        self.current_buffer.clear_line(self.cursor_y, mode, self.cursor_x, bg_ansi)
 
     def clear_rect(self, x1: int, y1: int, x2: int, y2: int, ansi_code: str = "") -> None:
         """Clear a rectangular region."""

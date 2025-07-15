@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./tests/performance/run_command.py timeout 20s ./demo/scripts/tv-static
+timeout 20s ./tests/performance/run_command.py ./demo/scripts/tv-static
