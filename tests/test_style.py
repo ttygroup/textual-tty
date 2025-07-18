@@ -129,3 +129,23 @@ def test_cache_effectiveness():
     bg1 = get_background("\033[31;41m")
     bg2 = get_background("\033[31;41m")
     assert bg1 is bg2  # Same object from cache
+
+
+def test_extract_fg_color_256():
+    """Test extracting 256-color foreground codes."""
+    assert extract_fg_color("\033[38;5;123m") == "38;5;123"
+
+
+def test_extract_bg_color_256():
+    """Test extracting 256-color background codes."""
+    assert extract_bg_color("\033[48;5;200m") == "48;5;200"
+
+
+def test_extract_fg_color_truecolor():
+    """Test extracting true-color foreground codes."""
+    assert extract_fg_color("\033[38;2;10;20;30m") == "38;2;10;20;30"
+
+
+def test_extract_bg_color_truecolor():
+    """Test extracting true-color background codes."""
+    assert extract_bg_color("\033[48;2;100;150;200m") == "48;2;100;150;200"

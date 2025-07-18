@@ -38,8 +38,6 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
 ## todo / ideas
 
 - [ ] split pty out into a cross platform package
-- [ ] debug logger
-  - [ ] add arg parser to demo app
 - [ ] break terminal project out from Textual deps
   - [x] pick a snazzy name - bitty/titty
   - [ ] gui
@@ -53,7 +51,6 @@ Do wtf you want, but don't blame me when it rips a hole in your trousers.
   - [ ] scrollbar support when used
 - [ ] bugs
   - [ ] blank background to end of line
-    - [ ] figure out proper order
   - [ ] corruption in stream - debug it
   - [ ] scroll region: scroll up in `vim` corrupts outside scroll region
 - [ ] reduce redundancy redundancy of repeated repeated code code
