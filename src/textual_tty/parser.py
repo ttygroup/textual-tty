@@ -564,7 +564,7 @@ class Parser:
         # Build the ANSI sequence from the original parameters
         params_str = ";".join(str(p) if p is not None else "" for p in self.parsed_params)
         new_ansi_sequence = f"\033[{params_str}m"
-        
+
         # Merge with existing style
         self.terminal.current_ansi_code = merge_ansi_styles(self.terminal.current_ansi_code, new_ansi_sequence)
 

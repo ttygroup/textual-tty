@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Profile the tv-static demo and save results."""
+"""Profile the passthrough demo running btop for performance analysis."""
 
 import cProfile
 import pstats
@@ -37,10 +37,10 @@ def main():
     git_hash = get_git_info()
 
     # Profile filename
-    profile_file = logs_dir / f"tv_static_profile_{timestamp}_{git_hash}.prof"
-    txt_file = logs_dir / f"tv_static_profile_{timestamp}_{git_hash}.txt"
+    profile_file = logs_dir / f"passthrough_btop_profile_{timestamp}_{git_hash}.prof"
+    txt_file = logs_dir / f"passthrough_btop_profile_{timestamp}_{git_hash}.txt"
 
-    print("Profiling tv-static for 20 seconds...")
+    print("Profiling passthrough.py with btop for 10 seconds...")
     print(f"Profile will be saved to: {profile_file}")
 
     # Create profiler
@@ -50,12 +50,10 @@ def main():
     profiler.enable()
 
     try:
-        # Run the tv-static demo with timeout
+        # Run the passthrough demo with btop using timeout
+        # Use run_command.py which handles TUI apps properly
         subprocess.run(
-            ["timeout", "20s", "python", "./tests/performance/run_command.py", "./demo/scripts/tv-static"],
-            capture_output=True,
-            text=True,
-            timeout=25,
+            ["timeout", "10s", "python", "./demo/passthrough.py", "btop"], capture_output=True, text=True, timeout=12
         )
 
     except subprocess.TimeoutExpired:
@@ -74,18 +72,31 @@ def main():
     import contextlib
 
     with open(txt_file, "w") as f:
-        f.write("TV-Static Performance Profile\n")
+        f.write("Passthrough + btop Performance Profile\n")
         f.write(f"Timestamp: {datetime.now().isoformat()}\n")
         f.write(f"Git commit: {git_hash}\n")
-        f.write("Profile duration: 20 seconds\n")
+        f.write("Profile duration: 10 seconds\n")
         f.write("=" * 80 + "\n\n")
 
         # Capture stats output to string then write to file
         output = io.StringIO()
         stats = pstats.Stats(profiler)
+
+        # First, show by cumulative time (total time including subcalls)
+        f.write("TOP 50 FUNCTIONS BY CUMULATIVE TIME:\n")
+        f.write("-" * 80 + "\n")
         stats.sort_stats("cumulative")
         with contextlib.redirect_stdout(output):
-            stats.print_stats(50)  # Top 50 functions
+            stats.print_stats(50)
+        f.write(output.getvalue())
+
+        # Also show by total time (time in the function itself)
+        output = io.StringIO()
+        f.write("\n\nTOP 50 FUNCTIONS BY TOTAL TIME:\n")
+        f.write("-" * 80 + "\n")
+        stats.sort_stats("tottime")
+        with contextlib.redirect_stdout(output):
+            stats.print_stats(50)
         f.write(output.getvalue())
 
     print(f"Profile saved to: {profile_file}")
@@ -95,6 +106,10 @@ def main():
     # Print top functions to console
     stats = pstats.Stats(profiler)
     stats.sort_stats("cumulative")
+    stats.print_stats(20)
+
+    print("\n\nTop 20 functions by total time (excluding subcalls):")
+    stats.sort_stats("tottime")
     stats.print_stats(20)
 
 

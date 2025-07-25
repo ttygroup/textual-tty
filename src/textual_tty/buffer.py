@@ -105,7 +105,9 @@ class Buffer:
             for x in range(max(0, x1), min(self.width, x2 + 1)):
                 self.grid[y][x] = (ansi_code, " ")
 
-    def clear_line(self, y: int, mode: int = constants.ERASE_FROM_CURSOR_TO_END, cursor_x: int = 0, ansi_code: str = "") -> None:
+    def clear_line(
+        self, y: int, mode: int = constants.ERASE_FROM_CURSOR_TO_END, cursor_x: int = 0, ansi_code: str = ""
+    ) -> None:
         """Clear line content."""
         if not (0 <= y < self.height):
             return

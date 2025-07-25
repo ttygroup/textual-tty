@@ -230,7 +230,7 @@ class Terminal:
         """Clear screen."""
         # Get just the background color from current style
         bg_ansi = get_background(self.current_ansi_code)
-        
+
         if mode == constants.ERASE_FROM_CURSOR_TO_END:
             # Clear current line from cursor to end
             self.current_buffer.clear_line(self.cursor_y, constants.ERASE_FROM_CURSOR_TO_END, self.cursor_x, bg_ansi)
