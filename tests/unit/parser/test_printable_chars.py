@@ -5,39 +5,39 @@ from textual_tty.terminal import Terminal
 
 
 @pytest.fixture
-def screen():
+def terminal():
     """Return a mock Screen object."""
-    screen = Mock(spec=Terminal)
-    screen.current_style = Mock()
-    screen.current_ansi_code = ""
-    return screen
+    terminal = Mock(spec=Terminal)
+    terminal.current_style = Mock()
+    terminal.current_ansi_code = ""
+    return terminal
 
 
-def test_printable_characters(screen):
-    """Test that printable characters are written to the screen."""
-    parser = Parser(screen)
+def test_printable_characters(terminal):
+    """Test that printable characters are written to the terminal."""
+    parser = Parser(terminal)
     parser.feed("Hello, World!")
 
     calls = [
-        call("H", screen.current_ansi_code),
-        call("e", screen.current_ansi_code),
-        call("l", screen.current_ansi_code),
-        call("l", screen.current_ansi_code),
-        call("o", screen.current_ansi_code),
-        call(",", screen.current_ansi_code),
-        call(" ", screen.current_ansi_code),
-        call("W", screen.current_ansi_code),
-        call("o", screen.current_ansi_code),
-        call("r", screen.current_ansi_code),
-        call("l", screen.current_ansi_code),
-        call("d", screen.current_ansi_code),
-        call("!", screen.current_ansi_code),
+        call("H", terminal.current_ansi_code),
+        call("e", terminal.current_ansi_code),
+        call("l", terminal.current_ansi_code),
+        call("l", terminal.current_ansi_code),
+        call("o", terminal.current_ansi_code),
+        call(",", terminal.current_ansi_code),
+        call(" ", terminal.current_ansi_code),
+        call("W", terminal.current_ansi_code),
+        call("o", terminal.current_ansi_code),
+        call("r", terminal.current_ansi_code),
+        call("l", terminal.current_ansi_code),
+        call("d", terminal.current_ansi_code),
+        call("!", terminal.current_ansi_code),
     ]
-    screen.write_text.assert_has_calls(calls)
+    terminal.write_text.assert_has_calls(calls)
 
 
-def test_empty_feed(screen):
+def test_empty_feed(terminal):
     """Test that feeding empty bytes doesn't break the parser."""
-    parser = Parser(screen)
+    parser = Parser(terminal)
     parser.feed("")
-    screen.write_text.assert_not_called()
+    terminal.write_text.assert_not_called()

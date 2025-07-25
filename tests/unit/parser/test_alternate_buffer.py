@@ -12,85 +12,85 @@ from textual_tty.constants import (
 
 
 @pytest.fixture
-def screen():
+def terminal():
     """Return a mock Screen object with necessary attributes."""
-    screen = Mock(spec=Terminal)
-    screen.current_style = Style()  # Initialize with a real Style object
-    screen.width = DEFAULT_TERMINAL_WIDTH
-    screen.height = DEFAULT_TERMINAL_HEIGHT
-    screen.cursor_x = 0
-    screen.cursor_y = 0
-    screen.scroll_top = 0
-    screen.scroll_bottom = screen.height - 1
-    screen.auto_wrap = True
-    screen.cursor_visible = True
+    terminal = Mock(spec=Terminal)
+    terminal.current_style = Style()  # Initialize with a real Style object
+    terminal.width = DEFAULT_TERMINAL_WIDTH
+    terminal.height = DEFAULT_TERMINAL_HEIGHT
+    terminal.cursor_x = 0
+    terminal.cursor_y = 0
+    terminal.scroll_top = 0
+    terminal.scroll_bottom = terminal.height - 1
+    terminal.auto_wrap = True
+    terminal.cursor_visible = True
 
     def _set_cursor(x, y):
         if x is not None:
-            screen.cursor_x = x
+            terminal.cursor_x = x
         if y is not None:
-            screen.cursor_y = y
+            terminal.cursor_y = y
 
-    screen.set_cursor.side_effect = _set_cursor
-    return screen
+    terminal.set_cursor.side_effect = _set_cursor
+    return terminal
 
 
-def test_alternate_buffer_enable(screen):
-    """Test CSI ? 1049 h (Enable alternate screen buffer)."""
-    parser = Parser(screen)
+def test_alternate_buffer_enable(terminal):
+    """Test CSI ? 1049 h (Enable alternate terminal buffer)."""
+    parser = Parser(terminal)
     parser.feed(f"{ESC}[?{ALT_SCREEN_BUFFER}h")
 
     # Should call alternate_screen_on
-    screen.alternate_screen_on.assert_called_once()
+    terminal.alternate_screen_on.assert_called_once()
 
 
-def test_alternate_buffer_disable(screen):
-    """Test CSI ? 1049 l (Disable alternate screen buffer)."""
-    parser = Parser(screen)
+def test_alternate_buffer_disable(terminal):
+    """Test CSI ? 1049 l (Disable alternate terminal buffer)."""
+    parser = Parser(terminal)
     parser.feed("\x1b[?1049l")
 
     # Should call alternate_screen_off
-    screen.alternate_screen_off.assert_called_once()
+    terminal.alternate_screen_off.assert_called_once()
 
 
-def test_alternate_buffer_enable_disable_sequence(screen):
+def test_alternate_buffer_enable_disable_sequence(terminal):
     """Test enabling then disabling alternate buffer."""
-    parser = Parser(screen)
+    parser = Parser(terminal)
 
     # Enable
     parser.feed("\x1b[?1049h")
-    screen.alternate_screen_on.assert_called_once()
+    terminal.alternate_screen_on.assert_called_once()
 
     # Disable
     parser.feed("\x1b[?1049l")
-    screen.alternate_screen_off.assert_called_once()
+    terminal.alternate_screen_off.assert_called_once()
 
 
-def test_alternate_buffer_with_other_modes(screen):
+def test_alternate_buffer_with_other_modes(terminal):
     """Test alternate buffer mode combined with other modes."""
-    parser = Parser(screen)
+    parser = Parser(terminal)
 
     # Multiple modes at once: cursor visibility + alternate buffer
     parser.feed("\x1b[?25;1049h")
 
     # Both should be called
-    assert screen.cursor_visible is True
-    screen.alternate_screen_on.assert_called_once()
+    assert terminal.cursor_visible is True
+    terminal.alternate_screen_on.assert_called_once()
 
 
-def test_alternate_buffer_mixed_set_reset(screen):
+def test_alternate_buffer_mixed_set_reset(terminal):
     """Test mixed set/reset operations on alternate buffer and other modes."""
-    parser = Parser(screen)
+    parser = Parser(terminal)
 
     # Enable cursor + alternate buffer
     parser.feed("\x1b[?25;1049h")
-    assert screen.cursor_visible is True
-    screen.alternate_screen_on.assert_called_once()
+    assert terminal.cursor_visible is True
+    terminal.alternate_screen_on.assert_called_once()
 
     # Disable cursor, keep alternate buffer enabled
     parser.feed("\x1b[?25l")
-    assert screen.cursor_visible is False
+    assert terminal.cursor_visible is False
 
     # Disable alternate buffer
     parser.feed("\x1b[?1049l")
-    screen.alternate_screen_off.assert_called_once()
+    terminal.alternate_screen_off.assert_called_once()

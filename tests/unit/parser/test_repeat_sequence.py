@@ -5,19 +5,18 @@ from textual_tty.terminal import Terminal
 from textual_tty.constants import ESC
 
 
-def test_rep_basic():
+def test_rep_basic(small_terminal):
     """Test basic REP functionality."""
-    terminal = Terminal(width=20, height=10)
-    parser = Parser(terminal)
+    parser = Parser(small_terminal)
 
     # Write a character, then repeat it
     parser.feed("A")
     parser.feed(f"{ESC}[5b")  # REP 5
 
     # Should have "AAAAAA" (1 original + 5 repeats)
-    line = terminal.current_buffer.get_line_text(0)
+    line = small_terminal.current_buffer.get_line_text(0)
     assert line[:6] == "AAAAAA"
-    assert terminal.cursor_x == 6
+    assert small_terminal.cursor_x == 6
 
 
 def test_rep_with_different_counts():

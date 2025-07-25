@@ -84,8 +84,31 @@ def has_pattern(ansi: str, patterns: tuple) -> bool:
 
 
 @lru_cache(maxsize=20000)
+def _extract_indexed_color(ansi: str, base_code: str) -> str:
+    """Extracts 256-color or true-color parameters from an ANSI sequence."""
+    if ";5;" in ansi or ";2;" in ansi:
+        # Strip the escape prefix and m suffix
+        if ansi.startswith("\033[") or ansi.startswith("\x1b["):
+            ansi = ansi[2:]
+        parts = ansi.rstrip("m").split(";")
+        for i, part in enumerate(parts):
+            if part == base_code:
+                if len(parts) > i + 1 and parts[i + 1] == "5":
+                    if len(parts) > i + 2:
+                        return f"{base_code};5;{parts[i+2]}"
+                elif len(parts) > i + 4 and parts[i + 1] == "2":
+                    return f"{base_code};2;{parts[i+2]};{parts[i+3]};{parts[i+4]}"
+    return ""
+
+
+@lru_cache(maxsize=20000)
 def extract_fg_color(ansi: str) -> str:
     """Extract foreground color parameter from ANSI sequence."""
+    # Check for 256-color or true-color first
+    indexed_color = _extract_indexed_color(ansi, "38")
+    if indexed_color:
+        return indexed_color
+
     # Check patterns in order of popularity
     if has_pattern(ansi, FG_RED_PATTERNS):
         return "31"
@@ -121,13 +144,17 @@ def extract_fg_color(ansi: str) -> str:
         return "97"
     elif has_pattern(ansi, FG_BRIGHT_BLACK_PATTERNS):
         return "90"
-    # TODO: Handle 256-color and RGB
     return ""
 
 
 @lru_cache(maxsize=20000)
 def extract_bg_color(ansi: str) -> str:
     """Extract background color parameter from ANSI sequence."""
+    # Check for 256-color or true-color first
+    indexed_color = _extract_indexed_color(ansi, "48")
+    if indexed_color:
+        return indexed_color
+
     # Check patterns in order of popularity
     if has_pattern(ansi, BG_BLACK_PATTERNS):
         return "40"
@@ -163,7 +190,6 @@ def extract_bg_color(ansi: str) -> str:
         return "106"
     elif has_pattern(ansi, BG_BRIGHT_WHITE_PATTERNS):
         return "107"
-    # TODO: Handle 256-color and RGB
     return ""
 
 

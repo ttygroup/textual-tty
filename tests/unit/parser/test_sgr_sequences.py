@@ -25,15 +25,15 @@ from textual_tty.constants import (
 
 
 @pytest.fixture
-def screen():
+def terminal():
     """Return a mock Screen object with necessary attributes."""
-    screen = Mock(spec=Terminal)
-    screen.width = DEFAULT_TERMINAL_WIDTH
-    screen.height = DEFAULT_TERMINAL_HEIGHT
-    screen.cursor_x = 0
-    screen.cursor_y = 0
-    screen.current_ansi_code = ""
-    return screen
+    terminal = Mock(spec=Terminal)
+    terminal.width = DEFAULT_TERMINAL_WIDTH
+    terminal.height = DEFAULT_TERMINAL_HEIGHT
+    terminal.cursor_x = 0
+    terminal.cursor_y = 0
+    terminal.current_ansi_code = ""
+    return terminal
 
 
 def test_sgr_reset_all_attributes():
@@ -41,7 +41,7 @@ def test_sgr_reset_all_attributes():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_RESET}m")
-    assert terminal.current_ansi_code == f"\x1b[0m"
+    assert terminal.current_ansi_code == "\x1b[0m"
 
 
 def test_sgr_bold_and_not_bold():
@@ -49,9 +49,9 @@ def test_sgr_bold_and_not_bold():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_BOLD}m")
-    assert terminal.current_ansi_code == f"\x1b[1m"
+    assert terminal.current_ansi_code == "\x1b[1m"
     parser.feed(f"{ESC}[{SGR_NOT_BOLD_NOR_FAINT}m")
-    assert terminal.current_ansi_code == f"\x1b[22m"
+    assert terminal.current_ansi_code == "\x1b[22m"
 
 
 def test_sgr_italic_and_not_italic():
@@ -59,9 +59,9 @@ def test_sgr_italic_and_not_italic():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_ITALIC}m")
-    assert terminal.current_ansi_code == f"\x1b[3m"
+    assert terminal.current_ansi_code == "\x1b[3m"
     parser.feed(f"{ESC}[{SGR_NOT_ITALIC}m")
-    assert terminal.current_ansi_code == f"\x1b[23m"
+    assert terminal.current_ansi_code == "\x1b[23m"
 
 
 def test_sgr_underline_and_not_underline():
@@ -69,9 +69,9 @@ def test_sgr_underline_and_not_underline():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_UNDERLINE}m")
-    assert terminal.current_ansi_code == f"\x1b[4m"
+    assert terminal.current_ansi_code == "\x1b[4m"
     parser.feed(f"{ESC}[{SGR_NOT_UNDERLINED}m")
-    assert terminal.current_ansi_code == f"\x1b[24m"
+    assert terminal.current_ansi_code == "\x1b[24m"
 
 
 def test_sgr_blink_and_not_blink():
@@ -79,9 +79,9 @@ def test_sgr_blink_and_not_blink():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_BLINK}m")
-    assert terminal.current_ansi_code == f"\x1b[5m"
+    assert terminal.current_ansi_code == "\x1b[5m"
     parser.feed(f"{ESC}[{SGR_NOT_BLINKING}m")
-    assert terminal.current_ansi_code == f"\x1b[25m"
+    assert terminal.current_ansi_code == "\x1b[25m"
 
 
 def test_sgr_reverse_and_not_reverse():
@@ -89,9 +89,9 @@ def test_sgr_reverse_and_not_reverse():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_REVERSE}m")
-    assert terminal.current_ansi_code == f"\x1b[7m"
+    assert terminal.current_ansi_code == "\x1b[7m"
     parser.feed(f"{ESC}[{SGR_NOT_REVERSED}m")
-    assert terminal.current_ansi_code == f"\x1b[27m"
+    assert terminal.current_ansi_code == "\x1b[27m"
 
 
 def test_sgr_conceal_and_not_conceal():
@@ -99,9 +99,9 @@ def test_sgr_conceal_and_not_conceal():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_CONCEAL}m")
-    assert terminal.current_ansi_code == f"\x1b[8m"
+    assert terminal.current_ansi_code == "\x1b[8m"
     parser.feed(f"{ESC}[{SGR_NOT_CONCEALED}m")
-    assert terminal.current_ansi_code == f"\x1b[28m"
+    assert terminal.current_ansi_code == "\x1b[28m"
 
 
 def test_sgr_strikethrough_and_not_strikethrough():
@@ -109,9 +109,9 @@ def test_sgr_strikethrough_and_not_strikethrough():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[{SGR_STRIKE}m")
-    assert terminal.current_ansi_code == f"\x1b[9m"
+    assert terminal.current_ansi_code == "\x1b[9m"
     parser.feed(f"{ESC}[{SGR_NOT_STRIKETHROUGH}m")
-    assert terminal.current_ansi_code == f"\x1b[29m"
+    assert terminal.current_ansi_code == "\x1b[29m"
 
 
 def test_sgr_16_color_foreground():
@@ -119,7 +119,7 @@ def test_sgr_16_color_foreground():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[31m")  # Red foreground
-    assert terminal.current_ansi_code == f"\x1b[31m"
+    assert terminal.current_ansi_code == "\x1b[31m"
 
 
 def test_sgr_16_color_background():
@@ -127,7 +127,7 @@ def test_sgr_16_color_background():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[44m")  # Blue background
-    assert terminal.current_ansi_code == f"\x1b[44m"
+    assert terminal.current_ansi_code == "\x1b[44m"
 
 
 def test_sgr_bright_16_color_foreground():
@@ -135,7 +135,7 @@ def test_sgr_bright_16_color_foreground():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[91m")  # Bright Red foreground
-    assert terminal.current_ansi_code == f"\x1b[91m"
+    assert terminal.current_ansi_code == "\x1b[91m"
 
 
 def test_sgr_bright_16_color_background():
@@ -143,7 +143,7 @@ def test_sgr_bright_16_color_background():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[104m")  # Bright Blue background
-    assert terminal.current_ansi_code == f"\x1b[104m"
+    assert terminal.current_ansi_code == "\x1b[104m"
 
 
 def test_sgr_256_color_foreground():
@@ -151,7 +151,7 @@ def test_sgr_256_color_foreground():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[38;5;123m")
-    assert terminal.current_ansi_code == f"\x1b[38;5;123m"
+    assert terminal.current_ansi_code == "\x1b[38;5;123m"
 
 
 def test_sgr_256_color_background():
@@ -159,7 +159,7 @@ def test_sgr_256_color_background():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[48;5;200m")
-    assert terminal.current_ansi_code == f"\x1b[48;5;200m"
+    assert terminal.current_ansi_code == "\x1b[48;5;200m"
 
 
 def test_sgr_truecolor_foreground():
@@ -167,7 +167,7 @@ def test_sgr_truecolor_foreground():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[38;2;10;20;30m")
-    assert terminal.current_ansi_code == f"\x1b[38;2;10;20;30m"
+    assert terminal.current_ansi_code == "\x1b[38;2;10;20;30m"
 
 
 def test_sgr_truecolor_background():
@@ -175,7 +175,7 @@ def test_sgr_truecolor_background():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[48;2;100;150;200m")
-    assert terminal.current_ansi_code == f"\x1b[48;2;100;150;200m"
+    assert terminal.current_ansi_code == "\x1b[48;2;100;150;200m"
 
 
 def test_sgr_default_foreground_color():
@@ -183,7 +183,7 @@ def test_sgr_default_foreground_color():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[39m")
-    assert terminal.current_ansi_code == f"\x1b[39m"
+    assert terminal.current_ansi_code == "\x1b[39m"
 
 
 def test_sgr_default_background_color():
@@ -191,7 +191,7 @@ def test_sgr_default_background_color():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[49m")
-    assert terminal.current_ansi_code == f"\x1b[49m"
+    assert terminal.current_ansi_code == "\x1b[49m"
 
 
 def test_sgr_malformed_rgb_foreground():
@@ -199,7 +199,7 @@ def test_sgr_malformed_rgb_foreground():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[38;2;100m")
-    assert terminal.current_ansi_code == f"\x1b[38;2;100m"
+    assert terminal.current_ansi_code == "\x1b[38;2;100m"
 
 
 def test_sgr_malformed_rgb_background():
@@ -207,7 +207,7 @@ def test_sgr_malformed_rgb_background():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[48;2;100m")
-    assert terminal.current_ansi_code == f"\x1b[48;2;100m"
+    assert terminal.current_ansi_code == "\x1b[48;2;100m"
 
 
 def test_sgr_multiple_attributes():
@@ -215,7 +215,7 @@ def test_sgr_multiple_attributes():
     terminal = Terminal()
     parser = Parser(terminal)
     parser.feed(f"{ESC}[1;31;44m")  # Bold, red foreground, blue background
-    assert terminal.current_ansi_code == f"\x1b[1;31;44m"
+    assert terminal.current_ansi_code == "\x1b[1;31;44m"
 
 
 def test_sgr_reset_and_then_set():
@@ -224,6 +224,6 @@ def test_sgr_reset_and_then_set():
     parser = Parser(terminal)
     parser.feed(f"{ESC}[1;31m")  # Bold and red
     parser.feed(f"{ESC}[0m")  # Reset
-    assert terminal.current_ansi_code == f"\x1b[0m"
+    assert terminal.current_ansi_code == "\x1b[0m"
     parser.feed(f"{ESC}[32m")  # Green
-    assert terminal.current_ansi_code == f"\x1b[32m"
+    assert terminal.current_ansi_code == "\x1b[32m"
