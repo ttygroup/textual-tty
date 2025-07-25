@@ -222,3 +222,54 @@ class Buffer:
         parts.append(reset_code())
 
         return "".join(parts)
+
+    def get_line_tuple(
+        self,
+        y: int,
+        width: int = None,
+        cursor_x: int = -1,
+        cursor_y: int = -1,
+        show_cursor: bool = False,
+        mouse_x: int = -1,
+        mouse_y: int = -1,
+        show_mouse: bool = False,
+    ) -> tuple:
+        """Get line as hashable tuple for caching: (ansi_code, char, ansi_code, char, ...)"""
+        if not (0 <= y < self.height):
+            return tuple()
+
+        from .color import get_cursor_code, reset_code
+
+        # Use buffer width if not specified
+        if width is None:
+            width = self.width
+
+        parts = []
+        row = self.grid[y]
+
+        # Process each cell up to specified width
+        for x in range(min(len(row), width)):
+            ansi_code, char = row[x]
+
+            # Handle mouse cursor (convert to 0-based, as original code does mouse_x - 1)
+            if show_mouse and x == (mouse_x - 1) and y == (mouse_y - 1):
+                char = "↖"
+
+            # Handle text cursor position
+            if show_cursor and x == cursor_x and y == cursor_y:
+                # Add cursor style
+                parts.extend(("ansi", ansi_code, "cursor", get_cursor_code(), "char", char, "cursor_end", "\033[27m"))
+            else:
+                # Normal cell
+                parts.extend(("ansi", ansi_code, "char", char))
+
+        # Pad to width if needed
+        current_width = min(len(row), width)
+        if current_width < width:
+            # Reset all attributes for padding (including background)
+            parts.extend(("reset", reset_code(), "pad", " " * (width - current_width)))
+
+        # Always end with a reset to prevent bleeding to next line
+        parts.extend(("final_reset", reset_code()))
+
+        return tuple(parts)

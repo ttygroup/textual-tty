@@ -17,6 +17,7 @@ from textual.message import Message
 from ..terminal import Terminal
 from .. import constants
 from .terminal_scroll_view import TerminalScrollView
+from ..rich_cache import tuple_to_rich
 
 
 class TextualTerminal(Terminal, Widget):
@@ -139,12 +140,12 @@ class TextualTerminal(Terminal, Widget):
         self.stop_process()
 
     def get_line_rich(self, y: int, width: int = None):
-        """Get a single line as Rich Text object."""
-        from rich.text import Text
-
+        """Get a single line as Rich Text object (cached)."""
         if width is None:
             width = self.width
-        ansi_line = self.current_buffer.get_line(
+
+        # Get line as hashable tuple for caching
+        line_tuple = self.current_buffer.get_line_tuple(
             y,
             width=width,
             cursor_x=self.cursor_x,
@@ -154,7 +155,9 @@ class TextualTerminal(Terminal, Widget):
             mouse_y=self.mouse_y,
             show_mouse=self.show_mouse,
         )
-        return Text.from_ansi(ansi_line)
+
+        # Convert tuple to Rich Text (cached)
+        return tuple_to_rich(line_tuple)
 
     def _handle_pty_data(self, data: str) -> None:
         """Handle PTY data by posting a Textual message."""
