@@ -156,11 +156,11 @@ class TerminalApp(SettableWindow):
 
     def is_running(self) -> bool:
         """Check if the process is still running."""
-        if self.program:
-            return self.program.is_running()
+        if self.terminal and self.terminal.process:
+            return self.terminal.process.poll() is None
         return False
 
     def terminate(self) -> None:
         """Terminate the running process."""
-        if self.program:
-            self.program.terminate()
+        if self.terminal:
+            self.terminal.stop_process()

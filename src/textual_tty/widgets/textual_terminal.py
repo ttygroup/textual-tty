@@ -52,8 +52,6 @@ class TextualTerminal(Terminal, Widget):
     cursor_x: int = reactive(0, always_update=True)
     cursor_y: int = reactive(0, always_update=True)
     command: str = reactive("/bin/bash", always_update=True)
-    width_chars: int = reactive(80, always_update=True)
-    height_chars: int = reactive(24, always_update=True)
     current_buffer = reactive(None, always_update=True)
     show_mouse: bool = reactive(False, always_update=True)
 
@@ -65,16 +63,12 @@ class TextualTerminal(Terminal, Widget):
         **kwargs: Any,
     ) -> None:
         """Initialize the terminal widget."""
-        # Initialize Widget first
-        Widget.__init__(self, **kwargs)
-
-        # Then initialize Terminal
+        # Initialize both parent classes
+        super().__init__(**kwargs)
         Terminal.__init__(self, command, width, height)
 
         # Set reactive values
         self.command = command
-        self.width_chars = width
-        self.height_chars = height
 
         # Terminal scroll view for display
         self.terminal_view: Optional[TerminalScrollView] = None
@@ -176,13 +170,8 @@ class TextualTerminal(Terminal, Widget):
         if self.terminal_view is None:
             return
 
-        # Get the current screen content as grid
-        content = self.get_content()
-
         # Update the scroll view
-        self.terminal_view.update_content(content)
-        self.terminal_view.set_cursor_position(self.cursor_x, self.cursor_y)
-        self.terminal_view.set_cursor_visible(self.cursor_visible)
+        self.terminal_view.update_content()
 
     def stop_process(self) -> None:
         """Override to post message when process exits."""
@@ -227,11 +216,7 @@ class TextualTerminal(Terminal, Widget):
 
     async def on_resize(self, event) -> None:
         """Handle widget resize events from Textual."""
-        # Update our reactive attributes
-        self.width_chars = event.size.width
-        self.height_chars = event.size.height
-
-        # Update the base Terminal size (this calls our resize method)
+        # Update the base Terminal size
         super().resize(event.size.width, event.size.height)
 
     # Input handling
