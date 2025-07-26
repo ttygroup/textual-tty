@@ -17,7 +17,7 @@ from textual.message import Message
 from bittty import Terminal
 from bittty import constants
 from .terminal_scroll_view import TerminalScrollView
-from ..rich_cache import tuple_to_rich
+from ..rich_cache import ansi_to_rich
 
 
 class TextualTerminal(Terminal, Widget):
@@ -63,8 +63,9 @@ class TextualTerminal(Terminal, Widget):
         **kwargs: Any,
     ) -> None:
         """Initialize the terminal widget."""
-        # Initialize both parent classes
-        super().__init__(**kwargs)
+        # Initialize Widget with its kwargs
+        Widget.__init__(self, **kwargs)
+        # Initialize Terminal with its specific parameters
         Terminal.__init__(self, command, width, height)
 
         # Set reactive values
@@ -138,8 +139,8 @@ class TextualTerminal(Terminal, Widget):
         if width is None:
             width = self.width
 
-        # Get line as hashable tuple for caching
-        line_tuple = self.current_buffer.get_line_tuple(
+        # Get line as ANSI string
+        ansi_line = self.current_buffer.get_line(
             y,
             width=width,
             cursor_x=self.cursor_x,
@@ -150,8 +151,8 @@ class TextualTerminal(Terminal, Widget):
             show_mouse=self.show_mouse,
         )
 
-        # Convert tuple to Rich Text (cached)
-        return tuple_to_rich(line_tuple)
+        # Convert ANSI string to Rich Text (cached)
+        return ansi_to_rich(ansi_line)
 
     def _handle_pty_data(self, data: str) -> None:
         """Handle PTY data by posting a Textual message."""
