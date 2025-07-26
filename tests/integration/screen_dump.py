@@ -8,7 +8,7 @@ and outputs the ANSI sequences to stdout.
 
 import argparse
 import asyncio
-from textual_tty.terminal import Terminal
+from bittty import Terminal
 
 
 async def main():

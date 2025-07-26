@@ -5,7 +5,7 @@ Integration tests comparing terminal output with reference tmux dumps.
 import asyncio
 import pytest
 from pathlib import Path
-from textual_tty.terminal import Terminal
+from bittty import Terminal
 
 
 def get_ansi_files():

@@ -12,7 +12,7 @@ from textual.strip import Strip
 from rich.segment import Segment
 
 from ..log import measure_performance
-from ..buffer import Cell
+from bittty.buffer import Cell
 
 
 class TerminalScrollView(ScrollView):

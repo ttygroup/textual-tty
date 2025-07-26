@@ -14,8 +14,8 @@ from textual.widget import Widget
 from textual.reactive import reactive
 from textual.message import Message
 
-from ..terminal import Terminal
-from .. import constants
+from bittty import Terminal
+from bittty import constants
 from .terminal_scroll_view import TerminalScrollView
 from ..rich_cache import tuple_to_rich
 
