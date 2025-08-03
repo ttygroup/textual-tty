@@ -1,7 +1,7 @@
 [project]
 name = "textual_tty"
 description = "A tty for Textual UIs"
-version = "0.2.1"
+version = "0.2.2"
 authors = [
     { name = "Gareth Davidson", email = "gaz@bitplane.net" }
 ]
@@ -19,7 +19,7 @@ classifiers = [
 
 dependencies = [
     "textual",
-    "bittty",
+    "bittty=0.0.5",
     "pywinpty ; sys_platform == 'win32'",
     "textual-window"
 ]
