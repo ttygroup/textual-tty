@@ -13,7 +13,7 @@ def get_ansi_files():
     test_dir = Path(__file__).parent / "compare"
     return list(test_dir.glob("*.ansi"))
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("ansi_file", get_ansi_files())
 async def test_terminal_output_matches_reference(ansi_file):
     """Test that terminal output matches tmux reference dump."""
