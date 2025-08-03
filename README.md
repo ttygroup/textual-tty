@@ -20,9 +20,10 @@ Read the demo code for more info.
 
 ## Links
 
-* [🏠 home](https://bitplane.net/dev/python/textual-tty)
+* [🏠 home](https://ttygroup.github.io/textual-tty)
+* [🗔  bittty](https://bitplane.net/dev/python/bittty)
 * [🐍 pypi](https://pypi.org/project/textual-tty)
-* [🐱 github](https://github.com/bitplane/textual-tty)
+* [🐱 github](https://github.com/ttygroup/textual-tty)
 
 ## License
 
