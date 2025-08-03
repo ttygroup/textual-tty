@@ -5,7 +5,8 @@ htmlcov
 dist
 coverage.json
 *.log
-docs/pydoc
+docs/pydoc.md
 *.txt
 *.jsonl
 *.prof
+site

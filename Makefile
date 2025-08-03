@@ -3,7 +3,7 @@
 		pre-commit update-pre-commit
 
 
-PROJECT_NAME := textual_tty
+PROJECT_NAME := textual-tty
 
 
 all: dev coverage  ## builds everything
@@ -18,8 +18,7 @@ test: .venv/.installed-dev  ## run the project's tests
 coverage: .venv/.installed-dev scripts/coverage.sh  ## build the html coverage report
 	scripts/coverage.sh $(PROJECT_NAME)
 
-docs: .venv/.installed-dev scripts/docs.sh docs/index.md README.md pyproject.toml ## build the documentation
-	scripts/docs.sh
+docs: .docs/index.html ## build the documentation
 
 clean:  ## delete caches and the venv
 	scripts/clean.sh
@@ -29,8 +28,8 @@ pre-commit: .git/hooks/pre-commit  ## install pre-commit into the git repo
 update-pre-commit: scripts/update-pre-commit.sh  ## autoupdate pre-commit
 	scripts/update-pre-commit.sh
 
-dist: scripts/dist.sh pyproject.toml ## build the distributable files
-	scripts/dist.sh
+dist: scripts/dist.sh ## build the distributable files
+	scripts/dist.sh $(PROJECT_NAME)
 
 release: scripts/release.sh ## publish to pypi
 	scripts/release.sh $(PROJECT_NAME)

@@ -44,6 +44,7 @@ dev = [
     "twine",
     "ruff",
     "mkdocs",
+    "mkdocs-material",
     "textual-window"
 ]
 
