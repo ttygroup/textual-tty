@@ -18,7 +18,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "textual",
+    "textual~=5.1",
     "bittty==0.0.5",
     "pywinpty ; sys_platform == 'win32'",
     "textual-window"
