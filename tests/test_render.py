@@ -122,10 +122,10 @@ async def test_sync_output_holds_repaints():
         term = app.query_one(Terminal)
         await pilot.pause()
         seen = term._seen_gen
-        term._on_pty_data("\x1b[?2026hheld text")  # the production feed path marks dirty
+        term.feed("\x1b[?2026hheld text")  # the production feed path marks dirty
         await pilot.pause(0.1)
         assert term._seen_gen == seen  # ticks passed, no observation happened
-        term._on_pty_data("\x1b[?2026l")
+        term.feed("\x1b[?2026l")
         await pilot.pause(0.1)
         assert term._seen_gen > seen
         assert "held text" in term.render_line(0).text

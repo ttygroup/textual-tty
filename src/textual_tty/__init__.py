@@ -6,8 +6,9 @@ resizable `Window`. The board underneath is bittty — reach it as
 """
 
 from .debug_log import DebugLog
+from .monitor import Monitor
 from .terminal_window import TerminalWindow
 from .widget import Terminal
 from .window import Window
 
-__all__ = ["Terminal", "TerminalWindow", "Window", "DebugLog"]
+__all__ = ["Monitor", "Terminal", "TerminalWindow", "Window", "DebugLog"]
