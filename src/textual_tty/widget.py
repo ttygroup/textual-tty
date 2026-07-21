@@ -109,6 +109,14 @@ class _Chrome(Chrome):
     def on_prompt_mark(self, mark: str, row: int) -> None:
         """OSC 133 marks become useful with scrollback (logloglog); nothing to do yet."""
 
+    def on_window_request(self, kind: str) -> None:
+        self.widget.post_message(Terminal.WindowRequest(kind))
+
+    def on_window_state(self, event) -> None:
+        self.widget.post_message(
+            Terminal.WindowStateChanged(event.iconified, event.maximized, event.fullscreen, event.position)
+        )
+
 
 class Terminal(Widget):
     """A terminal emulator widget: a bittty Board rendered as Textual content."""
@@ -147,6 +155,31 @@ class Terminal(Widget):
             self.cwd = cwd
             super().__init__()
 
+    class WindowRequest(Message):
+        """The child asked for a window action: "raise" / "lower" / "refresh"."""
+
+        def __init__(self, kind: str) -> None:
+            self.kind = kind
+            super().__init__()
+
+    class WindowStateChanged(Message):
+        """The child changed window state via XTWINOPS."""
+
+        def __init__(self, iconified: bool, maximized: bool, fullscreen: bool, position: tuple[int, int]) -> None:
+            self.iconified = iconified
+            self.maximized = maximized
+            self.fullscreen = fullscreen
+            self.position = position
+            super().__init__()
+
+    class BoardResized(Message):
+        """The child resized the board itself (CSI 8 t); the chrome should follow."""
+
+        def __init__(self, width: int, height: int) -> None:
+            self.width = width
+            self.height = height
+            super().__init__()
+
     def __init__(
         self,
         command: str | list[str] = "/bin/bash",
@@ -169,6 +202,7 @@ class Terminal(Widget):
         self._sync = False  # mode 2026: hold repaints until the child releases the frame
         self._cursor_phase = True  # blink: False hides the cursor for half a period
         self.mouse_mode = "off"  # the child's mouse-tracking mode, pushed by the chrome
+        self._board_size = (self.board.width, self.board.height)  # detects child-driven CSI 8 t resizes
         self.cwd = ""  # the child's OSC 7 working directory, as a plain path
         self.icon_title = ""  # OSC 1; stored but not rendered anywhere yet
         self._base_pointer = "default"  # the OSC 22 shape; link hover overrides it transiently
@@ -234,6 +268,13 @@ class Terminal(Widget):
             self._sync = False  # a dead child can't hold the frame hostage
             self.post_message(self.ProcessExited(self._process.poll()))
         self._check_palette()
+        board_size = (self.board.width, self.board.height)
+        if board_size != self._board_size:
+            self._board_size = board_size
+            # A change we didn't cause (our on_resize keeps them equal) is the child's
+            # CSI 8 t — tell the chrome so the window can follow the board.
+            if board_size != (self.size.width, self.size.height):
+                self.post_message(self.BoardResized(*board_size))
         if not self._dirty or self._sync:
             return
         self._dirty = False
