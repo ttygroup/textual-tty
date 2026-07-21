@@ -14,6 +14,7 @@ from textual.widgets import Button, Footer, Header, Input
 
 from .debug_log import DebugLog
 from .terminal_window import TerminalWindow
+from .widget import Terminal
 from .window import Window
 
 
@@ -89,7 +90,13 @@ class DemoApp(App):
     # --- actions --- #
 
     def action_new_terminal(self) -> None:
-        self._spawn(self._default_shell())
+        """Open a shell — in the focused terminal's directory when it told us one (OSC 7)."""
+        shell = self._default_shell()
+        focused = self.focused
+        if isinstance(focused, Terminal) and focused.cwd:
+            self._spawn(["sh", "-c", f"cd {shlex.quote(focused.cwd)} && exec {shlex.quote(shell)}"])
+        else:
+            self._spawn(shell)
 
     def action_toggle_debug(self) -> None:
         existing = self.query("#debug-window")

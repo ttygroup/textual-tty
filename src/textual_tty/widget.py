@@ -8,17 +8,19 @@ from video memory in render_line, repainting only rows the board dirtied.
 
 from __future__ import annotations
 
+from urllib.parse import unquote, urlparse
+
 from bittty import Board, TerminalCaps, constants
 from bittty.terminals import Terminal as Chrome
 from rich.segment import Segment
 from rich.style import Style as RichStyle
 from textual import events
+from textual.color import Color as TextualColor
+from textual.css.constants import VALID_POINTER
 from textual.geometry import Region
 from textual.message import Message
 from textual.strip import Strip
 from textual.widget import Widget
-
-from textual.color import Color as TextualColor
 
 from .styles import rich_color, to_rich_style
 
@@ -49,6 +51,26 @@ _MOUSE_BUTTONS = {
     3: constants.MOUSE_BUTTON_RIGHT,
 }
 
+# X11 cursor-font names (what OSC 22 usually carries) -> Textual pointer shapes.
+# Names already valid for Textual pass straight through.
+_POINTER_SHAPES = {
+    "xterm": "text",
+    "ibeam": "text",
+    "hand": "pointer",
+    "hand1": "pointer",
+    "hand2": "pointer",
+    "cross": "crosshair",
+    "watch": "wait",
+    "left_ptr": "default",
+}
+
+
+def _cwd_path(cwd: str) -> str:
+    """OSC 7 carries a file:// URL; give apps a plain path."""
+    if cwd.startswith("file://"):
+        return unquote(urlparse(cwd).path)
+    return cwd
+
 
 class _Chrome(Chrome):
     """The board-facing jack: present events become Textual messages."""
@@ -61,6 +83,7 @@ class _Chrome(Chrome):
         self.widget.post_message(Terminal.Bell())
 
     def on_title(self, title: str, icon_title: str) -> None:
+        self.widget.icon_title = icon_title
         self.widget.post_message(Terminal.TitleChanged(title, icon_title))
 
     def on_sync_output(self, enabled: bool) -> None:
@@ -68,6 +91,23 @@ class _Chrome(Chrome):
 
     def on_mouse_mode(self, mode: str, sgr: bool) -> None:
         self.widget.mouse_mode = mode
+
+    def on_notify(self, text: str) -> None:
+        self.widget.app.notify(text)
+
+    def on_clipboard(self, selection: str, text: str) -> None:
+        if selection == "c":  # the clipboard proper; primary/cut-buffers stay board-side
+            self.widget.app.copy_to_clipboard(text)
+
+    def on_cwd(self, cwd: str) -> None:
+        self.widget.cwd = _cwd_path(cwd)
+        self.widget.post_message(Terminal.CwdChanged(self.widget.cwd))
+
+    def on_pointer(self, shape: str) -> None:
+        self.widget.set_pointer(shape)
+
+    def on_prompt_mark(self, mark: str, row: int) -> None:
+        """OSC 133 marks become useful with scrollback (logloglog); nothing to do yet."""
 
 
 class Terminal(Widget):
@@ -100,6 +140,13 @@ class Terminal(Widget):
             self.exit_code = exit_code
             super().__init__()
 
+    class CwdChanged(Message):
+        """The child reported its working directory (OSC 7), as a plain path."""
+
+        def __init__(self, cwd: str) -> None:
+            self.cwd = cwd
+            super().__init__()
+
     def __init__(
         self,
         command: str | list[str] = "/bin/bash",
@@ -122,12 +169,22 @@ class Terminal(Widget):
         self._sync = False  # mode 2026: hold repaints until the child releases the frame
         self._cursor_phase = True  # blink: False hides the cursor for half a period
         self.mouse_mode = "off"  # the child's mouse-tracking mode, pushed by the chrome
+        self.cwd = ""  # the child's OSC 7 working directory, as a plain path
+        self.icon_title = ""  # OSC 1; stored but not rendered anywhere yet
+        self._base_pointer = "default"  # the OSC 22 shape; link hover overrides it transiently
 
     # --- lifecycle --- #
 
+    def set_pointer(self, shape: str) -> None:
+        """OSC 22 — adopt the child's requested mouse-pointer shape."""
+        mapped = _POINTER_SHAPES.get(shape, shape)
+        self._base_pointer = mapped if mapped in VALID_POINTER else "default"
+        self.styles.pointer = self._base_pointer
+
     async def on_mount(self) -> None:
-        # Textual composites truecolor and downconverts for the real terminal itself.
-        self._chrome.set_caps(TerminalCaps(color_depth="truecolor"))
+        # Textual composites truecolor and downconverts for the real terminal itself;
+        # the widget's own background is the closest physical fact to an OSC 11 answer.
+        self._chrome.set_caps(TerminalCaps(color_depth="truecolor", background=self.background_colors[1].rgb))
         self.board.set_pty_data_callback(self._on_pty_data)
         await self.board.start_process()
         self._process = self.board.process
