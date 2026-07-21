@@ -1,6 +1,13 @@
-"""textual-terminal: A terminal emulator for Textual apps."""
+"""textual-tty: terminal emulator widgets for Textual, powered by bittty.
 
-from bittty import Terminal, Buffer
-from .widgets.textual_terminal import TextualTerminal
+`Terminal` is the emulator widget; `TerminalWindow` puts one in a draggable,
+resizable `Window`. The board underneath is bittty — reach it as
+`terminal.board` for anything the widget doesn't surface.
+"""
 
-__all__ = ["Terminal", "TextualTerminal", "Buffer"]
+from .debug_log import DebugLog
+from .terminal_window import TerminalWindow
+from .widget import Terminal
+from .window import Window
+
+__all__ = ["Terminal", "TerminalWindow", "Window", "DebugLog"]

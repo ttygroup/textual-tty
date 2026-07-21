@@ -3,7 +3,7 @@
 A terminal emulator for Textual apps, using `bittty`, my pure Python terminal
 emulator.
 
-Currently buggy and a bit slow, but it's still somewhat usable.
+Terminals in your terminal: draggable, resizable windows running real ptys.
 
 ## Demo
 
@@ -13,10 +13,21 @@ uvx textual-tty
 
 ## Usage
 
-1. `TextualTerminal`, a bittty.Terminal subclass for textual.
-2. `TerminalApp`, a terminal emulator in a window.
+```python
+from textual_tty import Terminal, TerminalWindow, Window
 
-Read the demo code for more info.
+# A terminal as a plain widget: composes a bittty Board, never subclasses it.
+yield Terminal(command="htop")
+
+# Or in a draggable, resizable window that closes when the process exits.
+yield TerminalWindow(command=["vim", "README.md"])
+```
+
+`Terminal` posts `Bell`, `TitleChanged` and `ProcessExited` messages; anything
+deeper is on `terminal.board` (the bittty emulator). `Window` is a bare-bones
+draggable/resizable window you can use for other things too.
+
+Read the demo code (`textual_tty/demo.py`) for a working app.
 
 ## Links
 

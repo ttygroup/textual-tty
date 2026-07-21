@@ -1,7 +1,7 @@
 [project]
 name = "textual_tty"
 description = "A tty for Textual UIs"
-version = "0.2.4"
+version = "0.3.0"
 authors = [
     { name = "Gareth Davidson", email = "gaz@bitplane.net" }
 ]
@@ -18,10 +18,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "textual",
-    "bittty==0.0.5",
+    "textual>=8.2",
+    "bittty>=0.1.0,<0.2",
     "pywinpty ; sys_platform == 'win32'",
-    "textual-window~=0.8"
 ]
 
 [project.scripts]
@@ -45,7 +44,6 @@ dev = [
     "ruff",
     "mkdocs",
     "mkdocs-material",
-    "textual-window"
 ]
 
 [build-system]
