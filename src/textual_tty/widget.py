@@ -8,6 +8,7 @@ from video memory in render_line, repainting only rows the board dirtied.
 
 from __future__ import annotations
 
+import webbrowser
 from urllib.parse import unquote, urlparse
 
 from bittty import Board, TerminalCaps, constants
@@ -180,6 +181,14 @@ class Terminal(Widget):
             self.height = height
             super().__init__()
 
+    class LinkClicked(Message):
+        """An OSC 8 hyperlink was clicked."""
+
+        def __init__(self, uri: str, link_id: str | None) -> None:
+            self.uri = uri
+            self.link_id = link_id
+            super().__init__()
+
     def __init__(
         self,
         command: str | list[str] = "/bin/bash",
@@ -347,7 +356,34 @@ class Terminal(Widget):
             run.append(char)
         if run:
             segments.append(Segment("".join(run), self._to_rich(run_style)))
-        return Strip(segments).adjust_cell_length(width)
+        strip = Strip(segments).adjust_cell_length(width)
+
+        selection = self.text_selection
+        if selection is not None:
+            span = selection.get_span(y)
+            if span is not None:
+                start, end = span
+                if end == -1:
+                    end = width
+                style = self.screen.get_component_rich_style("screen--selection")
+                before, selected, after = strip.divide([start, end, width])
+                strip = Strip.join([before, selected.apply_style(style), after])
+        return strip
+
+    # --- selection: Textual's built-in machinery over video memory --- #
+
+    @property
+    def allow_select(self) -> bool:
+        """Selection only while the child isn't tracking the mouse — they never fight."""
+        return self.mouse_mode == "off"
+
+    def get_selection(self, selection) -> tuple[str, str] | None:
+        page = self.board.blitter.current_buffer
+        text = "\n".join(page.get_line_text(y).rstrip() for y in range(page.height))
+        return selection.extract(text), "\n"
+
+    def selection_updated(self, selection) -> None:
+        self.refresh()
 
     def on_resize(self, event: events.Resize) -> None:
         if event.size.width and event.size.height:
@@ -391,6 +427,19 @@ class Terminal(Widget):
 
     def on_mouse_move(self, event: events.MouseMove) -> None:
         self._input_mouse(event, constants.MOUSE_BUTTON_MOVEMENT, "move")
+        # Hovering an OSC 8 link shows a hand; leaving restores the child's OSC 22 shape.
+        pointer = "pointer" if self.board.link_at(event.offset.x, event.offset.y) else self._base_pointer
+        if self.styles.pointer != pointer:
+            self.styles.pointer = pointer
+
+    def on_click(self, event: events.Click) -> None:
+        link = self.board.link_at(event.offset.x, event.offset.y)
+        if link is None:
+            return
+        uri, link_id = link
+        self.post_message(self.LinkClicked(uri, link_id))
+        if event.ctrl:
+            webbrowser.open(uri)
 
     def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
         self._wheel(event, constants.MOUSE_BUTTON_WHEEL_DOWN, "down")

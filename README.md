@@ -23,8 +23,12 @@ yield Terminal(command="htop")
 yield TerminalWindow(command=["vim", "README.md"])
 ```
 
-`Terminal` posts `Bell`, `TitleChanged` and `ProcessExited` messages; anything
-deeper is on `terminal.board` (the bittty emulator). `Window` is a bare-bones
+`Terminal` speaks the whole seam: bracketed paste, OSC palette/title/cwd/
+clipboard/notifications, DECSCUSR cursor shapes, synchronized output, mouse
+reporting with drag-selection when the child isn't tracking, OSC 8 links
+(ctrl+click opens), and XTWINOPS — a child can move, raise, and resize its
+own window. Discrete events arrive as Textual messages; anything deeper is
+on `terminal.board` (the bittty emulator). `Window` is a bare-bones
 draggable/resizable window you can use for other things too.
 
 Read the demo code (`textual_tty/demo.py`) for a working app.
