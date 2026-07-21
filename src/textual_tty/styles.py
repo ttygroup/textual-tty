@@ -2,33 +2,27 @@
 
 Cells come straight off the board's video memory as (Style, char) pairs;
 mapping the Style object directly to Rich skips the old round-trip of
-rendering ANSI text and having Rich parse it back.
+rendering ANSI text and having Rich parse it back. Colours resolve through
+the board's palette device, so OSC 4/10/11 redefinitions render truthfully;
+callers cache per Style and invalidate on `palette.generation`.
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
-
-from bittty.style import Color, Style
+from bittty.style import Style
 from rich.color import Color as RichColor
 from rich.style import Style as RichStyle
 
 
-def _rich_color(color: Color | None) -> RichColor | None:
-    if color is None or color.mode == "default":
-        return None
-    if color.mode == "indexed":
-        return RichColor.from_ansi(color.value)
-    r, g, b = color.value
-    return RichColor.from_rgb(r, g, b)
+def rich_color(rgb: tuple[int, int, int] | None) -> RichColor | None:
+    return None if rgb is None else RichColor.from_rgb(*rgb)
 
 
-@lru_cache(maxsize=4096)
-def to_rich_style(style: Style) -> RichStyle:
+def to_rich_style(style: Style, palette) -> RichStyle:
     """Map a bittty style onto Rich; unset (None) attributes inherit."""
     return RichStyle(
-        color=_rich_color(style.fg),
-        bgcolor=_rich_color(style.bg),
+        color=rich_color(palette.resolve(style.fg)),
+        bgcolor=rich_color(palette.resolve(style.bg)),
         bold=style.bold,
         dim=style.dim,
         italic=style.italic,

@@ -18,7 +18,9 @@ from textual.message import Message
 from textual.strip import Strip
 from textual.widget import Widget
 
-from .styles import to_rich_style
+from textual.color import Color as TextualColor
+
+from .styles import rich_color, to_rich_style
 
 # Textual modifier sets -> bittty's xterm-style modifier parameter.
 _MODIFIERS = {
@@ -47,8 +49,6 @@ _MOUSE_BUTTONS = {
     3: constants.MOUSE_BUTTON_RIGHT,
 }
 
-_CURSOR = RichStyle(reverse=True)
-
 
 class _Chrome(Chrome):
     """The board-facing jack: present events become Textual messages."""
@@ -62,6 +62,12 @@ class _Chrome(Chrome):
 
     def on_title(self, title: str, icon_title: str) -> None:
         self.widget.post_message(Terminal.TitleChanged(title, icon_title))
+
+    def on_sync_output(self, enabled: bool) -> None:
+        self.widget.set_sync_output(enabled)
+
+    def on_mouse_mode(self, mode: str, sgr: bool) -> None:
+        self.widget.mouse_mode = mode
 
 
 class Terminal(Widget):
@@ -111,6 +117,11 @@ class Terminal(Widget):
         self._last_cursor: tuple[int, int] | None = None  # cursor cell drawn last frame
         self._process = None  # our own handle: the board nulls its reference when it reaps
         self._exited = False
+        self._style_cache: dict = {}  # bittty Style -> Rich Style, valid for one palette generation
+        self._palette_gen = -1
+        self._sync = False  # mode 2026: hold repaints until the child releases the frame
+        self._cursor_phase = True  # blink: False hides the cursor for half a period
+        self.mouse_mode = "off"  # the child's mouse-tracking mode, pushed by the chrome
 
     # --- lifecycle --- #
 
@@ -121,6 +132,7 @@ class Terminal(Widget):
         await self.board.start_process()
         self._process = self.board.process
         self.set_interval(1 / 60, self._tick)
+        self.set_interval(0.5, self._blink)
 
     def on_unmount(self) -> None:
         self.board.stop_process()
@@ -136,11 +148,36 @@ class Terminal(Widget):
         self.board.parser.feed(data)
         self._dirty = True
 
+    def set_sync_output(self, enabled: bool) -> None:
+        """Mode 2026: hold repaints while the child composes a frame."""
+        self._sync = enabled
+        if not enabled:
+            self._dirty = True  # flush everything held back during the sync
+
+    def _check_palette(self) -> None:
+        """A palette op ran: drop cached conversions and re-tint the widget defaults."""
+        palette = self.board.palette
+        if palette.generation == self._palette_gen:
+            return
+        self._palette_gen = palette.generation
+        self._style_cache.clear()
+        self.styles.color = TextualColor(*palette.foreground)
+        self.styles.background = TextualColor(*palette.background)
+        self.refresh()
+
+    def _to_rich(self, style) -> RichStyle:
+        cached = self._style_cache.get(style)
+        if cached is None:
+            cached = self._style_cache[style] = to_rich_style(style, self.board.palette)
+        return cached
+
     def _tick(self) -> None:
         if self._process is not None and not self._exited and self._process.poll() is not None:
             self._exited = True
+            self._sync = False  # a dead child can't hold the frame hostage
             self.post_message(self.ProcessExited(self._process.poll()))
-        if not self._dirty:
+        self._check_palette()
+        if not self._dirty or self._sync:
             return
         self._dirty = False
 
@@ -163,6 +200,25 @@ class Terminal(Widget):
             width = self.size.width
             self.refresh(*(Region(0, y, width, 1) for y in rows))
 
+    def _cursor_style(self, base: RichStyle) -> RichStyle:
+        """The cursor cell's style: shape-aware (DECSCUSR), coloured by OSC 12.
+
+        A cell grid can't draw a bar, so bar falls back to the block look.
+        """
+        if self.board.cursor.shape == "underline":
+            return base + RichStyle(underline=True)
+        palette = self.board.palette
+        return base + RichStyle(color=rich_color(palette.background), bgcolor=rich_color(palette.cursor))
+
+    def _blink(self) -> None:
+        """Toggle the blink phase while a blinking cursor is focused."""
+        if self.has_focus and self.board.modes.cursor_blinking:
+            self._cursor_phase = not self._cursor_phase
+            self._refresh_cursor_row()
+        elif not self._cursor_phase:
+            self._cursor_phase = True
+            self._refresh_cursor_row()
+
     def render_line(self, y: int) -> Strip:
         page = self.board.blitter.current_buffer
         width = self.size.width
@@ -170,7 +226,7 @@ class Terminal(Widget):
             return Strip.blank(width)
 
         cursor_x = -1
-        if self.has_focus and self.board.modes.cursor_visible and y == self.board.cursor.y:
+        if self.has_focus and self._cursor_phase and self.board.modes.cursor_visible and y == self.board.cursor.y:
             cursor_x = self.board.cursor.x
 
         segments = []
@@ -180,19 +236,19 @@ class Terminal(Widget):
         for x, (style, char) in enumerate(row[:width]):
             if x == cursor_x:
                 if run:
-                    segments.append(Segment("".join(run), to_rich_style(run_style)))
+                    segments.append(Segment("".join(run), self._to_rich(run_style)))
                     run = []
-                segments.append(Segment(char, to_rich_style(style) + _CURSOR))
+                segments.append(Segment(char, self._cursor_style(self._to_rich(style))))
                 run_style = None
                 continue
             if style is not run_style and style != run_style:
                 if run:
-                    segments.append(Segment("".join(run), to_rich_style(run_style)))
+                    segments.append(Segment("".join(run), self._to_rich(run_style)))
                     run = []
                 run_style = style
             run.append(char)
         if run:
-            segments.append(Segment("".join(run), to_rich_style(run_style)))
+            segments.append(Segment("".join(run), self._to_rich(run_style)))
         return Strip(segments).adjust_cell_length(width)
 
     def on_resize(self, event: events.Resize) -> None:
@@ -215,6 +271,10 @@ class Terminal(Widget):
         event.stop()
         event.prevent_default()
 
+    def on_paste(self, event: events.Paste) -> None:
+        self.board.display.input_paste(event.text)
+        event.stop()
+
     def _input_mouse(self, event: events.MouseEvent, button: int, event_type: str) -> None:
         modifiers = set()
         if event.shift:
@@ -235,10 +295,20 @@ class Terminal(Widget):
         self._input_mouse(event, constants.MOUSE_BUTTON_MOVEMENT, "move")
 
     def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
-        self._input_mouse(event, constants.MOUSE_BUTTON_WHEEL_DOWN, "press")
+        self._wheel(event, constants.MOUSE_BUTTON_WHEEL_DOWN, "down")
 
     def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
-        self._input_mouse(event, constants.MOUSE_BUTTON_WHEEL_UP, "press")
+        self._wheel(event, constants.MOUSE_BUTTON_WHEEL_UP, "up")
+
+    def _wheel(self, event: events.MouseEvent, button: int, arrow: str) -> None:
+        """Wheel arbitration: tracking child, then alternate-scroll arrows, then Textual."""
+        if self.mouse_mode != "off":
+            self._input_mouse(event, button, "press")
+            event.stop()
+        elif self.board.blitter.in_alt_screen and self.board.modes.alternate_scroll_mode:
+            for _ in range(3):
+                self.board.display.input_key(arrow)
+            event.stop()
 
     def on_focus(self) -> None:
         self.board.display.focus_in()
